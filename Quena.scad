@@ -10,7 +10,8 @@ th=415;   //total height : tuned down a quarter tone = 405.8
 hole_shift = (th-400)/2;
 bl=10;    //bezel length
 bw=11;    //bezel width
-bos=35;    //bezel outer slope angle
+bos=37;    //bezel outer slope angle
+bl_adjz=2; // bezel z adjust
 bis=5;    //bezel inner slope angle
 ov=15;    //part overlap sleve
 p1=th/3;     // heigh of part1
@@ -64,17 +65,17 @@ module tube(){
   difference(){
     cylinder(h=th,d=od);
     translate([0,0,-1])cylinder(h=th+2,d=id);
-    translate([0,0,bl])rotate([0,bos,0])translate([id/2+bw/2+(od-id)/4,0,-od])
+    translate([0,0,bl+bl_adjz])rotate([0,bos,0])translate([id/2+bw/2+(od-id)/4,0,-od])
       cylinder(h=od*2,d=bw*1.3);
     translate([0,0,bl])rotate([0,-bis,0])translate([id/2-bw/2+(od-id)/4-0.2,0,-od])
       cylinder(h=od*2,d=bw);
   // holes
   //translate([0,0,bl+147])rotate([180,90,0])cylinder(h=od,d=5.3);  removes thumb hole
-  translate([0,0,bl+179+hole_shift])rotate([0,90,0])cylinder(h=od,d=10.13);  
-  translate([0,0,bl+204+hole_shift])rotate([0,90,0])cylinder(h=od,d=10.13);  
-  translate([0,0,bl+237.5+hole_shift])rotate([5,90,0])cylinder(h=od,d=12);  
-  translate([0,0,bl+270+hole_shift])rotate([0,90,0])cylinder(h=od,d=10);  
-  translate([0,0,bl+292+hole_shift])rotate([0,90,0])cylinder(h=od,d=12);  
+  translate([0,0,bl+179+hole_shift])rotate([0,90,0])cylinder(h=od,d=10.13+0.25);  
+  translate([0,0,bl+204+hole_shift])rotate([0,90,0])cylinder(h=od,d=10.13-0.25);  
+  translate([0,0,bl+237.5+hole_shift])rotate([5,90,0])cylinder(h=od,d=12-0.75);  
+  translate([0,0,bl+270+hole_shift])rotate([0,90,0])cylinder(h=od,d=10-1.25);  
+  translate([0,0,bl+292+hole_shift])rotate([0,90,0])cylinder(h=od,d=12-0.75);  
   translate([0,0,bl+334-2+hole_shift])rotate([-5,90,0])cylinder(h=od,d=9.08);  
   }
 }
