@@ -6,12 +6,12 @@ $fn=180;
 
 id=17.5;  //internal diamenter
 od=22;    //outer diameter
-th=415;   //total height : tuned down a quarter tone = 405.8
+th=417;   //total height : tuned down a quarter tone = 405.8
 hole_shift = (th-400)/2;
 bl=10;    //bezel length
-bw=11;    //bezel width
+bw=9;    //bezel width
 bos=37;    //bezel outer slope angle
-bl_adjz=2; // bezel z adjust
+bl_adjz=0; // bezel z adjust
 bis=5;    //bezel inner slope angle
 ov=15;    //part overlap sleve
 p1=th/3;     // heigh of part1
