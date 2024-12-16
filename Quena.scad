@@ -6,10 +6,10 @@ $fn=180;
 
 id=17.5;  //internal diamenter
 od=22;    //outer diameter
-th=417;   //total height : tuned down a quarter tone = 405.8
-hole_shift = (th-400)/2;
+th=416;   //total height : tuned down a quarter tone = 405.8
+hole_shift = (th-404)/2;
 bl=10;    //bezel length
-bw=9;    //bezel width
+bw=10;    //bezel width
 bos=37;    //bezel outer slope angle
 bl_adjz=0; // bezel z adjust
 bis=5;    //bezel inner slope angle
@@ -71,7 +71,7 @@ module tube(){
       cylinder(h=od*2,d=bw);
   // holes
   //translate([0,0,bl+147])rotate([180,90,0])cylinder(h=od,d=5.3);  removes thumb hole
-  translate([0,0,bl+179+hole_shift])rotate([0,90,0])cylinder(h=od,d=10.13+0.25);  
+  translate([0,0,bl+179+hole_shift])rotate([0,90,0])cylinder(h=od,d=10.13+0.25+0.5);  
   translate([0,0,bl+204+hole_shift])rotate([0,90,0])cylinder(h=od,d=10.13-0.25);  
   translate([0,0,bl+237.5+hole_shift])rotate([5,90,0])cylinder(h=od,d=12-0.75);  
   translate([0,0,bl+270+hole_shift])rotate([0,90,0])cylinder(h=od,d=10-1.25);  
