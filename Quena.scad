@@ -6,17 +6,18 @@ $fn=180;
 
 id=17.5;  //internal diamenter
 od=22;    //outer diameter
-th=416;   //total height : tuned down a quarter tone = 405.8
+th=413;   //total height : tuned down a quarter tone = 405.8
 hole_shift = (th-404)/2;
 bl=10;    //bezel length
-bw=10;    //bezel width
+bw=12;    //bezel width
 bos=37;    //bezel outer slope angle
-bl_adjz=0; // bezel z adjust
+bl_adjz=-3; // bezel z adjust
 bis=5;    //bezel inner slope angle
 ov=15;    //part overlap sleve
 p1=th/3;     // heigh of part1
 p2=2*th/3-p1-10; // height of part 2
 p3=th-p1-p2; //height of part 3
+epsilon = 0.001;
 
 translate([0,-2*od,0])part1();
 part2();
@@ -34,7 +35,7 @@ module part2(){
   tube();
   translate([0,0,p1+p2])cylinder(h=p3,d=od*1.1);
   cylinder(h=p1,d=od*1.1);
-  translate([0,0,p1])sleve();
+  translate([0,0,p1-epsilon])sleve();
  }
  color("green")translate([0,0,p2])sleve_wide();
 }
@@ -42,7 +43,7 @@ module part3(){
  translate([0,0,-p1-p2])difference(){
   tube();
   cylinder(h=p1+p2,d=od*1.1);
-  translate([0,0,p1+p2])sleve();
+  translate([0,0,p1+p2-epsilon])sleve();
  }
 }
 
@@ -50,14 +51,15 @@ module part3(){
 module sleve_wide(){
  difference(){
    cylinder(h=ov,d=od-(od-id)/2+0.25);
-   cylinder(h=ov,d=id);
+    translate([0,0,-epsilon/2])
+   cylinder(h=ov+epsilon,d=id);
  }    
 }
 
 module sleve(){
  difference(){
    cylinder(h=ov,d=od-(od-id)/2);
-   cylinder(h=ov,d=id);
+   cylinder(h=ov,d=id-epsilon);
  }    
 }
 
