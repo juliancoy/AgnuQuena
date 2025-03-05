@@ -5,8 +5,8 @@
 $fn=180;
 
 id=17.5;  //internal diamenter
-od=22;    //outer diameter
-th=413;   //total height : tuned down a quarter tone = 405.8
+od=22;    //outer diameter 
+th=411.5;   //total height : tuned down a quarter tone = 405.8
 hole_shift = (th-404)/2;
 angled_transition_z = 2;
 bl=10;    //bezel length
@@ -18,7 +18,7 @@ ov=13;    //part overlap sleve
 p1=th/3;     // heigh of part1
 p2=2*th/3-p1-10; // height of part 2
 p3=th-p1-p2; //height of part 3
-epsilon = 0.001;
+epsilon = 0.004;
 friction_expand = 0.25;
 
 translate([0,-2*od,0])part1();
@@ -89,12 +89,12 @@ module tube(){
       cylinder(h=od*2,d=bw);
   // holes
   //translate([0,0,bl+147])rotate([180,90,0])cylinder(h=od,d=5.3);  removes thumb hole
-  translate([0,0,bl+179+hole_shift])rotate([0,90,0])cylinder(h=od,d=10.13+0.25+0.5);  
-  translate([0,0,bl+204+hole_shift])rotate([0,90,0])cylinder(h=od,d=10.13-0.25);  
-  translate([0,0,bl+237.5+hole_shift])rotate([5,90,0])cylinder(h=od,d=12-0.75);  
-  translate([0,0,bl+270+hole_shift])rotate([0,90,0])cylinder(h=od,d=10-1.25);  
-  translate([0,0,bl+292+hole_shift])rotate([0,90,0])cylinder(h=od,d=12-0.75);  
-  translate([0,0,bl+334-2+hole_shift])rotate([-5,90,0])cylinder(h=od,d=9.08);  
+  translate([0,0,bl+334-1+hole_shift])rotate([-5,90,0])cylinder(h=od,d=10);     // A
+  translate([0,0,bl+299+hole_shift])rotate([0,90,0])cylinder(h=od,d=9.5);        // B
+  translate([0,0,bl+271.5+hole_shift])rotate([0,90,0])cylinder(h=od,d=10-0.5);     // C
+  translate([0,0,bl+236.5+hole_shift])rotate([5,90,0])cylinder(h=od,d=12-1.5);   // D
+  translate([0,0,bl+206+hole_shift])rotate([0,90,0])cylinder(h=od,d=11);  // E
+  translate([0,0,bl+178.5+hole_shift])rotate([0,90,0])cylinder(h=od,d=10.13+1);  //F#
   }
 }
 //translate([-bw/2,-bw/2,0])cube([bw,bw,bl]);
