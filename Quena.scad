@@ -20,10 +20,11 @@ p2=2*th/3-p1-10; // height of part 2
 p3=th-p1-p2; //height of part 3
 epsilon = 0.004;
 friction_expand = 0.25;
+tube_spacing_factor = 1.2;
 
-translate([0,-2*od,0])part1();
+translate([0,-tube_spacing_factor*od,0])part1();
 part2();
-translate([0,2*od,0])part3();
+translate([0,tube_spacing_factor*od,0])part3();
 
 module transition(){
     translate([0,0,ov-epsilon]) cylinder(h=angled_transition_z,d1=od-(od-id)/2, d2=id);
