@@ -17,8 +17,8 @@ hole_shift = (th - 404) / 2;
 angled_transition_z = 2;
 bl = 10;    // bezel length
 bw = 12;    // bezel width
-bos = 37;   // bezel outer slope angle
-bl_adjz = -3; // bezel z adjust
+bos = 20;   // bezel outer slope angle
+bl_adjz = -5; // bezel z adjust
 bis = 5;    // bezel inner slope angle
 ov = 13;    // part overlap sleeve
 p1 = th / 3;     // height of part1
@@ -26,7 +26,7 @@ p2 = 2 * th / 3 - p1 - 10; // height of part 2
 p3 = th - p1 - p2; // height of part 3
 epsilon = 0.004;
 friction_expand_default = 0.25;
-tube_spacing_factor = 1.2;
+tube_spacing_factor = 1;
 
 translate([0, -tube_spacing_factor * od, 0]) part1();
 part2();
@@ -100,19 +100,37 @@ module sleve_wide(height_on_tube_normalized, friction_expand) {
     
 }
 
+module end_blown_cut_round(){
+    /*
+    translate([0, 0, bl]) 
+    rotate([0, -bis, 0]) 
+    translate([id / 2 - bw / 2 + (od - id) / 4 - 0.2, 0, -od])
+    cylinder(h = od * 2, d = bw);*/
+    
+    translate([0, 0, bl + bl_adjz]) 
+    rotate([0, bos, 0]) 
+    translate([id / 2 + bw / 2 + (od - id) / 4, 0, -od])
+    scale([1,2,1])
+    cylinder(h = od * 2, d = bw * 1.3);
+}
+
+
+module end_blown_cut_square(){
+    cube_width = bw * 1.3;
+    translate([-10, -od, 0]) 
+    rotate([0, bos, 0]) 
+    translate([id / 2 + bw / 2 + (od - id) / 4, 0, -od])
+    cube([cube_width, od*2, od*2]);
+}
+
+
 module tube() {
     difference() {
         cylinder(h = th, d1 = od, d2 = odo);
         tube_negative();
-        translate([0, 0, bl + bl_adjz]) 
-        rotate([0, bos, 0]) 
-        translate([id / 2 + bw / 2 + (od - id) / 4, 0, -od])
-        cylinder(h = od * 2, d = bw * 1.3);
         
-        translate([0, 0, bl]) 
-        rotate([0, -bis, 0]) 
-        translate([id / 2 - bw / 2 + (od - id) / 4 - 0.2, 0, -od])
-        cylinder(h = od * 2, d = bw);
+        // Active edge
+        end_blown_cut_square();
         
         // holes
         // translate([0, 0, bl + 147]) rotate([180, 90, 0]) cylinder(h = od, d = 5.3);  // removes thumb hole
