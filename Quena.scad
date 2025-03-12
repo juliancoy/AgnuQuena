@@ -9,7 +9,7 @@ id = 17.5;  // internal diameter at mouthpiece
 od = id + shell_width;  // outer diameter at mouthpiece
 
 // Taper to the outlet (o)
-taper = 8;
+taper = 0;
 ido = id - taper;
 odo = od - taper;
 th = 411.5;   // total height : tuned down a quarter tone = 405.8
