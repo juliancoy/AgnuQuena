@@ -2,6 +2,8 @@
 //
 // OpenScad design by @agnuca 2020 https://github.com/agnunez
 // Data from https://danelyepez.blogspot.com/2019/02/blog-post.html
+// Modified by Julian Coy 2024-2025
+// https://github.com/juliancoy/AgnuQuena
 
 $fn = 180;
 shell_width = 4.5;
@@ -26,7 +28,7 @@ p2 = 2 * th / 3 - p1 - 10; // height of part 2
 p3 = th - p1 - p2; // height of part 3
 epsilon = 0.004;
 friction_expand_default = 0.25;
-tube_spacing_factor = 1;
+tube_spacing_factor = 1.1;
 
 translate([0, -tube_spacing_factor * od, 0]) part1();
 part2();
