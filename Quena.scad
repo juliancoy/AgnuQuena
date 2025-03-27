@@ -137,11 +137,11 @@ module tube() {
         // holes
         // translate([0, 0, bl + 147]) rotate([180, 90, 0]) cylinder(h = od, d = 5.3);  // removes thumb hole
         translate([0, 0, bl + 334 - 1 + hole_shift]) rotate([-5, 90, 0]) cylinder(h = od, d = 10);     // A
-        translate([0, 0, bl + 299 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 9.5);        // B
-        translate([0, 0, bl + 271.5 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10 - 0.5);     // C
-        translate([0, 0, bl + 236.5 + hole_shift]) rotate([5, 90, 0]) cylinder(h = od, d = 12 - 1.5);   // D
+        translate([0, 0, bl + 299 + hole_shift]) rotate([5, 90, 0]) cylinder(h = od, d = 10);        // B
+        translate([0, 0, bl + 272 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10 - 0.5);     // C
+        translate([0, 0, bl + 236.5 + hole_shift]) rotate([5, 90, 0]) cylinder(h = od, d = 12 - 1);   // D
         translate([0, 0, bl + 206 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 11);  // E
-        translate([0, 0, bl + 178.5 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10.13 + 1);  // F#
+        translate([0, 0, bl + 178.5 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10.13 + 1.25);  // F#
     }
 }
 
