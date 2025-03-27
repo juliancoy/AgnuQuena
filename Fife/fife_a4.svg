@@ -1,0 +1,30 @@
+
+<svg width='40mm' height='416mm' viewBox='0 0 40 416' xmlns='http://www.w3.org/2000/svg'>
+  <!-- Centerline -->
+  <line x1='20.0' y1='0' x2='20.0' y2='416' stroke='gray' stroke-dasharray='2 2'/>
+
+  <!-- Cut point indicators -->
+  <line x1='0' y1='0' x2='40' y2='0' stroke='black' stroke-width='0.5'/>
+  <text x='2' y='6' font-size='6'>Top Cut</text>
+
+  <line x1='0' y1='395.17272727272723' x2='40' y2='395.17272727272723' stroke='black' stroke-width='0.5'/>
+  <text x='2' y='393.17272727272723' font-size='6'>Bottom Cut</text>
+
+  <!-- Embouchure hole -->
+  <circle cx='20.0' cy='20' r='5.0' fill='red' />
+  <text x='26.0' y='24' font-size='6'>Embouchure</text>
+
+  <!-- Tone holes -->
+  <circle cx='20.0' cy='20' r='3.0' fill='blue' />
+  <text x='26.0' y='24' font-size='6'>A4</text>
+  <circle cx='20.0' cy='55' r='3.0' fill='blue' />
+  <text x='26.0' y='59' font-size='6'>B4</text>
+  <circle cx='20.0' cy='85' r='3.0' fill='blue' />
+  <text x='26.0' y='89' font-size='6'>C#5</text>
+  <circle cx='20.0' cy='115' r='3.0' fill='blue' />
+  <text x='26.0' y='119' font-size='6'>D5</text>
+  <circle cx='20.0' cy='145' r='3.0' fill='blue' />
+  <text x='26.0' y='149' font-size='6'>E5</text>
+  <circle cx='20.0' cy='175' r='3.0' fill='blue' />
+  <text x='26.0' y='179' font-size='6'>F#5</text>
+</svg>
