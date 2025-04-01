@@ -40,7 +40,7 @@ ideal_positions = {
 
 # Apply embouchure offset correction to all positions
 for key in ideal_positions:
-    ideal_positions[key] -= embouchure_offset
+    ideal_positions[key] += embouchure_offset
 
 # Fine-tuned ergonomic positions based on considerations in the document
 # These positions are measured from embouchure
@@ -129,6 +129,17 @@ with open("flute_a_major_six_hole.svg", "w") as f:
     hand_labels = ["R3", "R2", "R1", "L3", "L2", "L1"]  # Finger labels: Right/Left hand, finger number
     
     for i, note in enumerate(notes):
+
+        if False: # Ideal Positions
+            position = ideal_positions[note]
+            diameter = hole_diameters[note]
+            
+            # Draw the hole
+            f.write(f"""  <!-- {note} Hole (Hole {6-i}) -->
+    <circle cx="{svg_width/2}" cy="{position}" r="{diameter/2}" 
+            fill="none" stroke="yellow" stroke-width="1.5"/>
+    """)
+
         position = adjusted_positions[note]
         diameter = hole_diameters[note]
         

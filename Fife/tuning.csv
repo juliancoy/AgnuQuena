@@ -1,0 +1,9 @@
+Expected_Note,Expected_Frequency,Actual_Frequency_StockIn_1_5cm,Actual_Frequency_StockOut
+A4,440.0,460,464
+B4,493.88,497,505
+C#4,554.37,538,543
+D4,587.33,582,588
+E4,659.25,644,652
+F#4,739.99,714,721
+G#4,830.61,798,796
+A5,880.0,915,910
