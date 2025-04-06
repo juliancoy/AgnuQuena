@@ -5,7 +5,19 @@
 // Modified by Julian Coy 2024-2025
 // https://github.com/juliancoy/AgnuQuena
 
-$fn = 180;
+// Measured frequency for 100% infill PLA
+
+// Note  Expected  Actual (Hz)
+// G     392       387
+// A     440       433
+// B     493.88    488
+// C     523       517
+// D     587.33    577
+// E     659.25    649
+// F#    740       740
+// G     784       778
+
+$fn = 180; 
 shell_width = 4.5;
 id = 17.5;  // internal diameter at mouthpiece
 od = id + shell_width;  // outer diameter at mouthpiece
@@ -17,12 +29,13 @@ odo = od - taper;
 th = 411.5;   // total height : tuned down a quarter tone = 405.8
 hole_shift = (th - 404) / 2;
 angled_transition_z = 2;
+
 bl = 10;    // bezel length
 bw = 12;    // bezel width
 bos = 20;   // bezel outer slope angle
-bl_adjz = -5; // bezel z adjust
-bis = 5;    // bezel inner slope angle
+bl_adjz=-3; // bezel z adjust
 ov = 13;    // part overlap sleeve
+ov_male = ov - 0.8; // z space left between merges. leave some gap to make sure they can close completely
 p1 = th / 3;     // height of part1
 p2 = 2 * th / 3 - p1 - 10; // height of part 2
 p3 = th - p1 - p2; // height of part 3
@@ -33,12 +46,6 @@ tube_spacing_factor = 1.1;
 translate([0, -tube_spacing_factor * od, 0]) part1();
 part2();
 translate([0, tube_spacing_factor * od, 0]) part3();
-
-// angled transition part between breaks
-module transition() {
-    translate([0, 0, ov - epsilon]) 
-    cylinder(h = angled_transition_z, d1 = od - (od - id) / 2, d2 = id);
-}
 
 module tube_negative() {
     translate([0, 0, -epsilon])
@@ -95,10 +102,10 @@ module sleve_wide(height_on_tube_normalized, friction_expand) {
     idltt = idltt_id + idltt_ido ; // outer diameter linear interpolate top
 
     
-    cylinder(h = ov, d1 = obot, d2=otop);
+    cylinder(h = ov_male, d1 = obot, d2=otop);
     
     // angled top part
-    translate([0, 0, ov-epsilon]) cylinder(h = angled_transition_z, d1 = otop, d2 = idltt);
+    translate([0, 0, ov_male-epsilon]) cylinder(h = angled_transition_z, d1 = otop, d2 = idltt);
     
 }
 
@@ -132,7 +139,7 @@ module tube() {
         tube_negative();
         
         // Active edge
-        end_blown_cut_square();
+        end_blown_cut_round();
         
         // holes
         // translate([0, 0, bl + 147]) rotate([180, 90, 0]) cylinder(h = od, d = 5.3);  // removes thumb hole
@@ -141,7 +148,7 @@ module tube() {
         translate([0, 0, bl + 272 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10 - 0.5);     // C
         translate([0, 0, bl + 236.5 + hole_shift]) rotate([5, 90, 0]) cylinder(h = od, d = 12 - 1);   // D
         translate([0, 0, bl + 206 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 11);  // E
-        translate([0, 0, bl + 178.5 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10.13 + 1.25);  // F#
+        translate([0, 0, bl + 178.5 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10.13 + 0.75);  // F#
     }
 }
 
