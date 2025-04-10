@@ -5,18 +5,6 @@
 // Modified by Julian Coy 2024-2025
 // https://github.com/juliancoy/AgnuQuena
 
-// Measured frequency for 100% infill PLA
-
-// Note  Expected  Actual (Hz)
-// G     392       387
-// A     440       433
-// B     493.88    488
-// C     523       517
-// D     587.33    577
-// E     659.25    649
-// F#    740       740
-// G     784       778
-
 $fn = 180; 
 shell_width = 4.5;
 id = 17.5;  // internal diameter at mouthpiece
@@ -26,62 +14,87 @@ od = id + shell_width;  // outer diameter at mouthpiece
 taper = 0;
 ido = id - taper;
 odo = od - taper;
-th = 411.5;   // total height : tuned down a quarter tone = 405.8
+th = 408.5;   // total height : tuned down a quarter tone = 405.8
+notch_length = 3; // estimate
+al = th - notch_length; // Acoustic length from tone edge
+
 hole_shift = (th - 404) / 2;
 angled_transition_z = 2;
 
 bl = 10;    // bezel length
 bw = 12;    // bezel width
 bos = 20;   // bezel outer slope angle
-bl_adjz=-3; // bezel z adjust
+bl_adjz=-6; // bezel z adjust
 ov = 13;    // part overlap sleeve
 ov_male = ov - 0.8; // z space left between merges. leave some gap to make sure they can close completely
-p1 = th / 3;     // height of part1
-p2 = 2 * th / 3 - p1 - 10; // height of part 2
-p3 = th - p1 - p2; // height of part 3
+
+p0 = 15;
+p1 = 5; // height of part1
+p2 = 127; // height of part 2
+p3 = th - p0 - p1 - p2; // height of part 3 (whatever's left)
+echo(p3);
 epsilon = 0.004;
 friction_expand_default = 0.25;
 tube_spacing_factor = 1.1;
 
+translate([0, -tube_spacing_factor * od * 2, 0]) part0();
 translate([0, -tube_spacing_factor * od, 0]) part1();
 part2();
 translate([0, tube_spacing_factor * od, 0]) part3();
+
+//translate([20,0,0]) tube();
 
 module tube_negative() {
     translate([0, 0, -epsilon])
     cylinder(h = th + 2, d1 = id, d2 = ido);
 }
 
-module part1() {
+module part0(){
     difference() {
         tube();
-        translate([0, 0, p1]) cylinder(h = th, d = od * 1.1);
+        translate([0, 0, p0]) cylinder(h = th, d = od * 1.1);
     }
     difference() {
-        color("green") translate([0, 0, p1]) sleve_wide(p1 / th, friction_expand_default);
+        color("green") translate([0, 0, p0]) sleve_wide(p1 / th, friction_expand_default);
+        translate([0, 0, 0]) tube_negative();
+    }
+}
+
+module part1() {
+    translate([0, 0, -p0]) difference() {
+        tube();
+        translate([0, 0, p1]) cylinder(h = th, d = od * 1.1);
+        cylinder(h = p0, d = od * 1.1);
+        translate([0, 0, p0 - epsilon]) sleve_wide(p0 / th, 0);
+    }
+    difference() {
+        color("green") translate([0, 0, p1]) sleve_wide((p1) / th, friction_expand_default);
         translate([0, 0, 0]) tube_negative();
     }
 }
 
 module part2() {
-    translate([0, 0, -p1]) difference() {
+    translate_z = p0 + p1 + p2;
+    difference() {
+        translate([0, 0, -translate_z])
         tube();
-        translate([0, 0, p1 + p2]) cylinder(h = p3, d = od * 1.1);
-        cylinder(h = p1, d = od * 1.1);
+        translate([0, 0,translate_z]) cylinder(h = th, d = od * 1.1);
+        cylinder(h = p1, d = od * 1.1); // bottom cut
         translate([0, 0, p1 - epsilon]) sleve_wide(p1 / th, 0);
     }
     difference(){
-        color("green") translate([0, 0, p2]) sleve_wide((p1 + p2) / th, friction_expand_default);
-        translate([0, 0, - p1]) tube_negative();
+        color("green") translate([0, 0, p2]) sleve_wide((p0 + p1 + p2) / th, friction_expand_default);
+
+        translate([0, 0, - translate_z]) tube_negative();
     }
 }
 
 
 module part3() {
-    translate([0, 0, -p1 - p2]) difference() {
+    translate([0, 0, -p2 - p1- p0 ]) difference() {
         tube();
-        translate([0, 0, p1 + p2 - epsilon]) sleve_wide((p1 + p2) / th, 0);
-        cylinder(h=p1+p2,d=od*1.1);
+        translate([0, 0, p1 + p2 + p0 - epsilon]) sleve_wide((p1 + p2) / th, 0);
+        cylinder(h=p0+p1+p2,d=od*1.1);
     }
 }
 
@@ -131,7 +144,7 @@ module end_blown_cut_square(){
     translate([id / 2 + bw / 2 + (od - id) / 4, 0, -od])
     cube([cube_width, od*2, od*2]);
 }
-
+//
 
 module tube() {
     difference() {
@@ -141,14 +154,25 @@ module tube() {
         // Active edge
         end_blown_cut_round();
         
+        // Measured frequency for 100% infill PLA
+        // Note  Expected  Actual (Hz)
+        // G     392       391
+        // A     440       443
+        // B     493.88    488
+        // C     523       528
+        // D     587.33    595
+        // E     659.25    660
+        // F#    740       745
+        // G     784       785
+
         // holes
         // translate([0, 0, bl + 147]) rotate([180, 90, 0]) cylinder(h = od, d = 5.3);  // removes thumb hole
         translate([0, 0, bl + 334 - 1 + hole_shift]) rotate([-5, 90, 0]) cylinder(h = od, d = 10);     // A
-        translate([0, 0, bl + 299 + hole_shift]) rotate([5, 90, 0]) cylinder(h = od, d = 10);        // B
-        translate([0, 0, bl + 272 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10 - 0.5);     // C
-        translate([0, 0, bl + 236.5 + hole_shift]) rotate([5, 90, 0]) cylinder(h = od, d = 12 - 1);   // D
+        translate([0, 0, bl + 298.25 + hole_shift]) rotate([5, 90, 0]) cylinder(h = od, d = 10);        // B
+        translate([0, 0, bl + 272.75 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10 - 0.5);     // C
+        translate([0, 0, bl + 237.5 + hole_shift]) rotate([5, 90, 0]) cylinder(h = od, d = 12 - 1);   // D
         translate([0, 0, bl + 206 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 11);  // E
-        translate([0, 0, bl + 178.5 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10.13 + 0.75);  // F#
+        translate([0, 0, bl + 179 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10.13 + 0.75);  // F#
     }
 }
 
