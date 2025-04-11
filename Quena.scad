@@ -29,20 +29,16 @@ ov = 13;    // part overlap sleeve
 ov_male = ov - 0.8; // z space left between merges. leave some gap to make sure they can close completely
 
 p0 = 15;
-p1 = 140; // height of part1
+p1 = 127; // height of part1
 p2 = 127; // height of part 2
 p3 = th - p0 - p1 - p2; // height of part 3 (whatever's left)
 part_lengths = [p0,p1,p2,p3];
+part_start = [0,p0,p0+p1,p0+p1+p2];
 
 echo(p3);
 epsilon = 0.004;
 friction_expand_default = 0.25;
 tube_spacing_factor = 1.1;
-
-translate([0, -tube_spacing_factor * od * 2, 0]) part0();
-translate([0, -tube_spacing_factor * od, -p0]) part1();
-translate([0, 0, -p0-p1]) part2();
-translate([0, tube_spacing_factor * od, -p0-p1-p2]) part3();
 
 //translate([20,0,0]) tube();
 
@@ -51,61 +47,34 @@ module tube_negative() {
     cylinder(h = th + 2, d1 = id, d2 = ido);
 }
 
-module part0(){
-    difference() {
-        tube();
-        translate([0, 0, p0]) cylinder(h = th, d = od * 1.1);
-    }
-    difference() {
-        color("green") translate([0, 0, p0]) sleve_wide(p1 / th, friction_expand_default);
-        translate([0, 0, 0]) tube_negative();
-    }
-}
-
-module part1() {
-}
-
-module part2() {
-    translate_z = p0 + p1 + p2;
-    difference() {
-        tube();
-        translate([0, 0, p2]) cylinder(h = th, d = od * 1.1); // top cut
-        cylinder(h = p1, d = od * 1.1); // bottom cut
-        translate([0, 0, p1 - epsilon]) sleve_wide(p1 / th, 0);
-    }
-    difference(){
-        color("green") translate([0, 0, p2]) sleve_wide((p0 + p1 + p2) / th, friction_expand_default);
-
-        translate([0, 0, - translate_z]) tube_negative();
-    }
-}
-
-module part3() {
-    difference() {
-        tube();
-        translate([0, 0, p1 + p2 + p0 - epsilon]) sleve_wide((p1 + p2) / th, 0);
-        cylinder(h=p0+p1+p2,d=od*1.1);
-    }
-}
-
 height_to_cut = 0;
-for (i = [0,1,2,3]){
-
-    translate([50,-tube_spacing_factor * od * i,0]){
-        
-        difference() {
-            tube();
-            translate([0, 0, part_lengths[i]]) cylinder(h = th, d = od * 1.1);    // top cut
-            cylinder(h = p0, d = od * 1.1); // bottom cut
-            translate([0, 0, p0 - epsilon]) sleve_wide(p0 / th, 0);
+module piecewise(){
+    for (i = [0,1,2,3]){
+        echo(part_lengths[i]);
+        translate([0,-tube_spacing_factor * od * i,0]){
+            
+            difference() {
+                translate([0, 0, -part_start[i]]) tube();
+                translate([0, 0, part_lengths[i]]) cylinder(h = th, d = od * 1.1);    // top cut
+                
+                if(i > 0) translate([0, 0, p0 - epsilon]) sleve_wide(p0 / th, 0); // bottom insert
+            }
+            
+            if(i < 3){ // top connector insert
+                difference() {
+                    color("green") translate([0, 0, part_lengths[i]]) sleve_wide((part_lengths[i]) / th, friction_expand_default);
+                    tube_negative();
+                }
+            }
+            height_to_cut = height_to_cut + part_lengths[i];
         }
-        difference() {
-            color("green") translate([0, 0, p1]) sleve_wide((p1) / th, friction_expand_default);
-            translate([0, 0, 0]) tube_negative();
-        }
-        height_to_cut = height_to_cut + part_lengths[i];
-        echo(i);
     }
+}
+
+difference(){
+    piecewise();
+    cube_cut = 400;
+    translate([0,0,-cube_cut/2]) cube([cube_cut,cube_cut,cube_cut], center=true);
 }
 
 // i added a little width to make it fit more snugly
@@ -168,7 +137,7 @@ module tube() {
         // Note  Expected  Actual (Hz)
         // G     392       391
         // A     440       443
-        // B     493.88    488
+//        // B     493.88    488
         // C     523       528
         // D     587.33    595
         // E     659.25    660
@@ -181,7 +150,7 @@ module tube() {
         translate([0, 0, bl + 298.25 + hole_shift]) rotate([5, 90, 0]) cylinder(h = od, d = 10);        // B
         translate([0, 0, bl + 272.75 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10 - 0.5);     // C
         translate([0, 0, bl + 237.5 + hole_shift]) rotate([5, 90, 0]) cylinder(h = od, d = 12 - 1);   // D
-        translate([0, 0, bl + 206 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 11);  // E
+        translate([0, 0, bl + 206 + hole_shift]) rotate([-5, 90, 0]) cylinder(h = od, d = 11);  // E
         translate([0, 0, bl + 179 + hole_shift]) rotate([0, 90, 0]) cylinder(h = od, d = 10.13 + 0.75);  // F#
     }
 }
