@@ -29,18 +29,20 @@ ov = 13;    // part overlap sleeve
 ov_male = ov - 0.8; // z space left between merges. leave some gap to make sure they can close completely
 
 p0 = 15;
-p1 = 5; // height of part1
+p1 = 140; // height of part1
 p2 = 127; // height of part 2
 p3 = th - p0 - p1 - p2; // height of part 3 (whatever's left)
+part_lengths = [p0,p1,p2,p3];
+
 echo(p3);
 epsilon = 0.004;
 friction_expand_default = 0.25;
 tube_spacing_factor = 1.1;
 
 translate([0, -tube_spacing_factor * od * 2, 0]) part0();
-translate([0, -tube_spacing_factor * od, 0]) part1();
-part2();
-translate([0, tube_spacing_factor * od, 0]) part3();
+translate([0, -tube_spacing_factor * od, -p0]) part1();
+translate([0, 0, -p0-p1]) part2();
+translate([0, tube_spacing_factor * od, -p0-p1-p2]) part3();
 
 //translate([20,0,0]) tube();
 
@@ -61,24 +63,13 @@ module part0(){
 }
 
 module part1() {
-    translate([0, 0, -p0]) difference() {
-        tube();
-        translate([0, 0, p1]) cylinder(h = th, d = od * 1.1);
-        cylinder(h = p0, d = od * 1.1);
-        translate([0, 0, p0 - epsilon]) sleve_wide(p0 / th, 0);
-    }
-    difference() {
-        color("green") translate([0, 0, p1]) sleve_wide((p1) / th, friction_expand_default);
-        translate([0, 0, 0]) tube_negative();
-    }
 }
 
 module part2() {
     translate_z = p0 + p1 + p2;
     difference() {
-        translate([0, 0, -translate_z])
         tube();
-        translate([0, 0,translate_z]) cylinder(h = th, d = od * 1.1);
+        translate([0, 0, p2]) cylinder(h = th, d = od * 1.1); // top cut
         cylinder(h = p1, d = od * 1.1); // bottom cut
         translate([0, 0, p1 - epsilon]) sleve_wide(p1 / th, 0);
     }
@@ -89,12 +80,31 @@ module part2() {
     }
 }
 
-
 module part3() {
-    translate([0, 0, -p2 - p1- p0 ]) difference() {
+    difference() {
         tube();
         translate([0, 0, p1 + p2 + p0 - epsilon]) sleve_wide((p1 + p2) / th, 0);
         cylinder(h=p0+p1+p2,d=od*1.1);
+    }
+}
+
+height_to_cut = 0;
+for (i = [0,1,2,3]){
+
+    translate([50,-tube_spacing_factor * od * i,0]){
+        
+        difference() {
+            tube();
+            translate([0, 0, part_lengths[i]]) cylinder(h = th, d = od * 1.1);    // top cut
+            cylinder(h = p0, d = od * 1.1); // bottom cut
+            translate([0, 0, p0 - epsilon]) sleve_wide(p0 / th, 0);
+        }
+        difference() {
+            color("green") translate([0, 0, p1]) sleve_wide((p1) / th, friction_expand_default);
+            translate([0, 0, 0]) tube_negative();
+        }
+        height_to_cut = height_to_cut + part_lengths[i];
+        echo(i);
     }
 }
 
