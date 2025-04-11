@@ -20,6 +20,7 @@ al = th - notch_length; // Acoustic length from tone edge
 
 hole_shift = (th - 404) / 2;
 angled_transition_z = 2;
+accent_ring_z = 2;
 
 bl = 10;    // bezel length
 bw = 12;    // bezel width
@@ -28,22 +29,22 @@ bl_adjz=-6; // bezel z adjust
 ov = 13;    // part overlap sleeve
 ov_male = ov - 0.8; // z space left between merges. leave some gap to make sure they can close completely
 
-p0 = 15;
+p0 = 17;
 p1 = 127; // height of part1
-p2 = 127; // height of part 2
+p2 = 120; // height of part 2
 p3 = th - p0 - p1 - p2; // height of part 3 (whatever's left)
 part_lengths = [p0,p1,p2,p3];
 part_start = [0,p0,p0+p1,p0+p1+p2];
 
 echo(p3);
-epsilon = 0.004;
+e = 0.004;
 friction_expand_default = 0.25;
 tube_spacing_factor = 1.1;
 
 //translate([20,0,0]) tube();
 
 module tube_negative() {
-    translate([0, 0, -epsilon])
+    translate([0, 0, -e])
     cylinder(h = th + 2, d1 = id, d2 = ido);
 }
 
@@ -55,15 +56,28 @@ module piecewise(){
             
             difference() {
                 translate([0, 0, -part_start[i]]) tube();
+                if(i<3)
+                translate([0, 0, part_lengths[i]-accent_ring_z]) cylinder(h = th, d = od * 1.1);    // top cut
+                
+                if(i==3)
                 translate([0, 0, part_lengths[i]]) cylinder(h = th, d = od * 1.1);    // top cut
                 
-                if(i > 0) translate([0, 0, p0 - epsilon]) sleve_wide(p0 / th, 0); // bottom insert
+                if(i > 0) translate([0,0,-e]) sleve_wide(part_start[i] / th, 0); // bottom insert
             }
             
             if(i < 3){ // top connector insert
                 difference() {
-                    color("green") translate([0, 0, part_lengths[i]]) sleve_wide((part_lengths[i]) / th, friction_expand_default);
+                    color("green") translate([0, 0, part_lengths[i]-accent_ring_z]) sleve_wide((part_lengths[i]) / th, friction_expand_default);
                     tube_negative();
+                }
+                
+                // also create its accent ring
+                translate([od*1.1, 0, 0])
+                difference(){
+                cylinder(h=2, d = od);
+                translate([0,0,-e])
+                scale([1,1,1.1])
+                cylinder(h=accent_ring_z, d = id);
                 }
             }
             height_to_cut = height_to_cut + part_lengths[i];
@@ -97,7 +111,7 @@ module sleve_wide(height_on_tube_normalized, friction_expand) {
     cylinder(h = ov_male, d1 = obot, d2=otop);
     
     // angled top part
-    translate([0, 0, ov_male-epsilon]) cylinder(h = angled_transition_z, d1 = otop, d2 = idltt);
+    translate([0, 0, ov_male-e]) cylinder(h = angled_transition_z, d1 = otop, d2 = idltt);
     
 }
 
