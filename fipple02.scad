@@ -24,24 +24,25 @@ Douter = od/2;
 Dinner = id/2-0.5;
 TotalHeight = 42;
 BodyHeight = 25;
-AirHeight = 15;
-AirWidth = 9;
-AirDepth = 1.9;
+WindowHeight = 18;
+WindowWidth = 11.2;
+WindowDepth = 1;
 LipGap = 5;
 LipRadius = 12;
-toneHoleHeight = 11.8; 
-toneHoleWidth = 9;
+fastAirHeight = 10; 
+fastAirWidth = 11.2;
 fippleBaseHeight = 2;
-WedgeHeight = 0.8 * toneHoleHeight;
-WedgeWidth = 12.5;
-WedgeDepth = 4;
+BladeHeight = 17;
+BladeWidth = 20;
+BladeDepth = 7;
+BladeDepthTop = 0.4;
 
 
 mouthpiece_active_length = 22.5; // distance from mouthpiece start to active edge
 
 // shows the expected active length of the mouthpiece
 // the top of this cylinder should be at the wind active edge
-%translate([Dhalf, 0,]) cylinder(r = 3, h = mouthpiece_active_length+ov_male);
+//%translate([Dhalf, 0,]) cylinder(r = 3, h = mouthpiece_active_length+ov_male);
 
 module MainBody()
 {
@@ -52,11 +53,11 @@ module MainBody()
 		translate([0,0,-e]) 
 		cylinder(r = Dinner, h = BodyHeight+e*2);
 		// this is the tone hole
-		translate([Douter - LipGap, -(AirWidth / 2) , TotalHeight - BodyHeight - AirHeight/4]) 
-		cube([LipGap,AirWidth, AirHeight-3]);  // had to subtract a twiddle-factor here, the 3.
-		// air stream canal
-		translate([Douter-LipGap, -toneHoleWidth / 2 , BodyHeight]) 
-		cube([AirDepth,toneHoleWidth, TotalHeight-BodyHeight+e]);
+		translate([Douter - LipGap, -(WindowWidth / 2) , TotalHeight - BodyHeight - WindowHeight/2]) 
+		cube([LipGap,WindowWidth, WindowHeight]);  
+		// Window 
+		translate([Douter-LipGap, -fastAirWidth / 2 , BodyHeight]) 
+		cube([WindowDepth,fastAirWidth, WindowHeight+e]);
 		// lip-part cut out
 		rotate(90, [1,0,0])
 		translate([-1 * TotalHeight / 4, TotalHeight, -1 * Douter])
@@ -68,10 +69,10 @@ module BladeBase()
 {
 	difference()
 	{
-		translate([0,0,BodyHeight - toneHoleHeight - fippleBaseHeight ])
+		translate([0,0,BodyHeight - fastAirHeight - fippleBaseHeight ])
 		cylinder(fippleBaseHeight,Dinner,Dinner);
 		rotate([0,0,180])
-		translate([-(Douter - LipGap),-Dinner, BodyHeight - toneHoleHeight - fippleBaseHeight- e ])
+		translate([-(Douter - LipGap),-Dinner, BodyHeight - fastAirHeight - fippleBaseHeight- e ])
 		cube([2*Dinner,2*Dinner,fippleBaseHeight+e*2]);
 	}
 }
@@ -79,21 +80,38 @@ module BladeBase()
 
 module Blade()
 {
-    translate([Douter - LipGap + AirDepth/2 + WedgeDepth/2, WedgeWidth/2, BodyHeight - toneHoleHeight])
-    {
-        rotate(90,[1,0,0])
-        rotate(90,[0,0,1])
-        linear_extrude(height = WedgeWidth)
-        {
-            polygon([ [0,0], [0,WedgeDepth], [WedgeHeight, WedgeDepth/2] ]);
+    difference(){
+        intersection(){
+            translate([Douter - LipGap + WindowDepth/2 + BladeDepth/2, BladeWidth/2, BodyHeight-WindowHeight])
+            {
+                rotate(90,[1,0,0])
+                rotate(90,[0,0,1])
+                linear_extrude(height = BladeWidth)
+                {
+                    polygon([ [0,0], [0,BladeDepth], [BladeHeight, BladeDepth/2 + BladeDepthTop/2], [BladeHeight, BladeDepth/2 - BladeDepthTop/2] ]);
+                }
+            }
+            cylinder(h=100, r=Douter);
         }
+        
+        translate([0,0,BodyHeight-WindowHeight+BladeHeight+1])
+        scale([1,2,1])
+        rotate([0,90,0])
+        cylinder(h=100, r=3, center=true);
+        
+        
+        translate([0, 0, BodyHeight-WindowHeight-e])
+        cylinder(h=BladeHeight-5, r1=Dinner, r2=Dinner -3);
+        
     }
 }
+
 
 translate([0,0,ov_male]){
     MainBody();
     //BladeBase();
     Blade();
+    
 }
 
 difference(){
