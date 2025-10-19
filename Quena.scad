@@ -1,5 +1,5 @@
 // Agnuquena. Quena by agnuca
-//
+//c
 // OpenScad design by @agnuca 2020 https://github.com/agnunez
 // Data from https://danelyepez.blogspot.com/2019/02/blog-post.html
 // Modified by Julian Coy 2024-2025
@@ -24,26 +24,28 @@ hd = (id+od)/2; // half diameter
 taper = 0;
 ido = id - taper;
 odo = od - taper;
-unacoustic_length = 14; 
-mouthpiece_active_length = 22.5; // distance from mouthpiece start to active edge
+mouthpiece_total_length = 30;
+unacoustic_length = 6; 
+mouthpiece_active_length = mouthpiece_total_length-unacoustic_length; // distance from mouthpiece start to active edge
 
+//acoustic_length = 404.5; // Acoustic length from tone edge
 acoustic_length = 404.5; // Acoustic length from tone edge
 total_height = acoustic_length + unacoustic_length;   // total height
 
 angled_transition_z = 2;
-accent_ring_z = 4;
+accent_ring_z = 0;
 
 ov = 15;    // part overlap sleeve
 
 d_pos_z = 246.5- mouthpiece_active_length;
 
-mouthpiece_size = 47;
 non_mouthpiece_acoustic_length = acoustic_length - mouthpiece_active_length;
 p1 = 120; // height of part1
-p2 = d_pos_z-p1+ 11.5; // height of part 2
-p3 = non_mouthpiece_acoustic_length - p1 - p2; // height of part 3 (whatever's left)
-part_lengths = [p1,p2,p3];
-part_start = [0,p1,p1+p2];
+p2 = d_pos_z-p1+ 13; // height of part 2
+p3 = 100; // height of part 3
+p4 = non_mouthpiece_acoustic_length - p1 - p2 - p3; // height of part 3 (whatever's left)
+part_lengths = [p1,p2,p3,p4];
+part_start = [0,p1,p1+p2,p1+p2+p3];
 
 
 echo(p3);
@@ -61,14 +63,20 @@ module tube_negative() {
 
 
 module mouthpiece(){
-    echo(mouthpiece_size);
+    echo(mouthpiece_total_length);
+    mouthpiece_actual_length = mouthpiece_total_length;
+    %translate([od/2-2,0,0]) cylinder(h = 6, d = 2);
+    %translate([-od/2,0,0]) cylinder(h = mouthpiece_actual_length, d = 2);
     difference() {
-        cylinder(h=mouthpiece_size, d = od);
-        translate([0, 0, mouthpiece_size-accent_ring_z]) cylinder(h = total_height, d = od * 1.1);    // top cut
-        translate([0,0,-e])cylinder(h=mouthpiece_size+1, d = id);
+        cylinder(h=mouthpiece_actual_length, d = od);
+        translate([0, 0, mouthpiece_actual_length-accent_ring_z]) cylinder(h = total_height, d = od * 1.1);    // top cut
+        translate([0,0,-e])cylinder(h=mouthpiece_actual_length+1, d = id); // inner cut
+        end_blown_cut_round();
     }
+
+    // connector
     difference() {
-        color("green") translate([0, 0, mouthpiece_size-accent_ring_z]) sleve_wide((mouthpiece_size) / total_height, friction_expand_default);
+        color("green") translate([0, 0, mouthpiece_actual_length-accent_ring_z]) sleve_wide((mouthpiece_actual_length) / total_height, friction_expand_default,insert_z_tolerance);
         translate([0,0,-1])
         tube_negative();
     }
@@ -92,13 +100,13 @@ module piece(pieceno){
     translate([0,-tube_spacing_factor * od * pieceno,0]){
         difference() {
             translate([0, 0, -part_start[pieceno]]) tube();
-            if(pieceno<2)
+            if(pieceno<3)
                 translate([0, 0, part_lengths[pieceno]-accent_ring_z]) cylinder(h = total_height, d = od * 1.1);    // top cut
-            if(pieceno==2)
+            if(pieceno==3)
                 translate([0, 0, part_lengths[pieceno]]) cylinder(h = total_height, d = od * 1.1);    // top cut
             translate([0,0,-e]) sleve_wide(part_start[pieceno] / total_height, 0); // bottom insert
         }
-        if(pieceno < 2){ // top connector insert
+        if(pieceno < 3){ // top connector insert
             difference() {
                 color("green") translate([0, 0, part_lengths[pieceno]-accent_ring_z]) sleve_wide((part_lengths[pieceno]) / total_height, friction_expand_default, insert_z_tolerance);
                 tube_negative();
@@ -109,50 +117,41 @@ module piece(pieceno){
 }
 
 height_to_cut = 0;
+cube_cut = 500;
 module piecewise(){
-    difference(){
-        for (i = [0,1,2]){
-            piece(i);
-        }
-        cube_cut = 400;
-        translate([0,0,-cube_cut/2]) cube([cube_cut,cube_cut,cube_cut], center=true);
-    }
-}
-
-module accent_ring(){
-    for (i = [0,1,2]){
-        // also create its accent ring
-        translate([od*1.1, -od*1.1*i, 0])
+    for (i = [0,1,2,3]){
         difference(){
-            cylinder(h=accent_ring_z, d = od);
-            translate([0,0,-e])
-            scale([1,1,1.1])
-            cylinder(h=accent_ring_z, d = (id+od)/2);
+            piece(i);
+            translate([0,0,-cube_cut/2]) cube([cube_cut,cube_cut,cube_cut], center=true);
         }
     }
 }
 
-module inner_curve_ring(){
-    for (i = [0,1,2]){
-        // also create its accent ring
-        translate([od*1.1*2, -od*1.1*i, 0]){
-                difference(){
-                    union(){
-            translate([0, 0, accent_ring_z])
-                cylinder(h=angled_transition_z, d1 = hd, d2=id);
-                    cylinder(h=accent_ring_z, d = hd);
+module accent_ring(i=0){
+    // also create its accent ring
+    translate([od*1.1, -od*1.1*i, 0])
+    difference(){
+        cylinder(h=accent_ring_z, d = od);
+        translate([0,0,-e])
+        scale([1,1,1.1])
+        cylinder(h=accent_ring_z, d = (id+od)/2);
+    }
+}
+
+module inner_curve_ring(i=0){
+    translate([od*1.1*2, -od*1.1*i, 0]){
+            difference(){
+                union(){
+        translate([0, 0, accent_ring_z])
+            cylinder(h=angled_transition_z, d1 = hd, d2=id);
+                cylinder(h=accent_ring_z, d = hd);
+        }
+                translate([0,0,-e])
+                scale([1,1,1.1])
+                cylinder(h=accent_ring_z+angled_transition_z+e, d=id);
             }
-                    translate([0,0,-e])
-                    scale([1,1,1.1])
-                    cylinder(h=accent_ring_z+angled_transition_z+e, d=id);
-                }
-        }
     }
 }
-
-accent_ring();
-translate([0,0,-e]) inner_curve_ring();
-piecewise();
 
 // i added a little width to make it fit more snugly
 // This is the inner piece on top
@@ -173,7 +172,7 @@ module sleve_wide(height_on_tube_normalized, friction_expand, ztolerence=0) {
     cylinder(h = ov - ztolerence, d1 = obot, d2=otop);
 
     // angled top part
-    if(ztolerence == 0)
+    if(accent_ring_z == 0)
     translate([0, 0, ov-e-ztolerence]) cylinder(h = angled_transition_z, d1 = otop, d2 = idltt);
 }
 
@@ -189,6 +188,7 @@ module end_blown_cut_square(){
 
 module tube() {
     
+    %translate([-od/2,0,0]) cylinder(h = acoustic_length-mouthpiece_active_length, d = 2);
     approx_last_hole = 57.5;
     %translate([od/2,0,non_mouthpiece_acoustic_length-approx_last_hole]) cylinder(h = approx_last_hole, d = 2);
     
@@ -219,3 +219,14 @@ module tube() {
 }
 
 // translate([-bw / 2, -bw / 2, 0]) cube([bw, bw, bl]);
+translate([0,25,0])
+mouthpiece();
+
+//translate([0,75,0])
+//tube();
+
+for (i = [0,1,2,3]){
+    if(accent_ring_z > 0) translate([0,0,-e]) inner_curve_ring(i);
+    accent_ring(i);
+}
+piecewise();
