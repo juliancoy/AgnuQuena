@@ -29,8 +29,10 @@ unacoustic_length = 6;
 mouthpiece_active_length = mouthpiece_total_length-unacoustic_length; // distance from mouthpiece start to active edge
 
 //acoustic_length = 404.5; // Acoustic length from tone edge
-acoustic_length = 404.5; // Acoustic length from tone edge
+acoustic_length = 400; // Acoustic length from tone edge
+zadj = -4.5;
 total_height = acoustic_length + unacoustic_length;   // total height
+
 
 angled_transition_z = 2;
 accent_ring_z = 0;
@@ -209,12 +211,12 @@ module tube() {
 
         // holes
         // translate([0, 0, bl + 147]) rotate([180, 90, 0]) cylinder(h = od, d = 5.3);  // removes thumb hole
-        translate([0, 0, 342- mouthpiece_active_length]) rotate([-5, 90, 0]) cylinder(h = od, d = 10);     // A
-        translate([0, 0, 307.25- mouthpiece_active_length]) rotate([5, 90, 0]) cylinder(h = od, d = 10);        // B
-        translate([0, 0, 281.75- mouthpiece_active_length]) rotate([0, 90, 0]) cylinder(h = od, d = 10 - 0.5);     // C
-        translate([0, 0, d_pos_z]) rotate([5, 90, 0]) cylinder(h = od, d = 12 - 1);   // D
-        translate([0, 0, 215- mouthpiece_active_length]) rotate([-5, 90, 0]) cylinder(h = od, d = 11);  // E
-        translate([0, 0, 188- mouthpiece_active_length]) rotate([0, 90, 0]) cylinder(h = od, d = 10.13 + 0.75);  // F#
+        translate([0, 0, 342- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 10);     // A
+        translate([0, 0, 307.25- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 10);        // B
+        translate([0, 0, 281.75- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 10 - 0.5);     // C
+        translate([0, 0, d_pos_z+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 12 - 1);   // D
+        translate([0, 0, 215- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 11);  // E
+        translate([0, 0, 188- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 10.13 + 0.75);  // F#
     }
 }
 
