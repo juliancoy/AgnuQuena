@@ -36,7 +36,7 @@ total_height = acoustic_length + unacoustic_length;   // total height
 angled_transition_z = 2;
 accent_ring_z = 0;
 
-ov = 15;    // part overlap sleeve
+ov = 5;    // part overlap sleeve
 
 non_mouthpiece_acoustic_length = acoustic_length - mouthpiece_active_length;
 p1 = 120; // height of part1
@@ -211,14 +211,14 @@ module tube() {
 
         // Measured frequency for 100% infill PLA
         // Note  Expected  Actual (Hz)
-        // G     392       386
-        // A     440       434
-        // B     493.88    478
-        // C     523       514
-        // D     587.33    580
-        // E     659.25    654
-        // F#    740       731
-        // G     784       778
+        // G     392       383
+        // A     440       428
+        // B     493.88    470
+        // C     523       505
+        // D     587.33    564
+        // E     659.25    630
+        // F#    740       714
+        // G     784       766
 
         // holes
         // translate([0, 0, bl + 147]) rotate([180, 90, 0]) cylinder(h = od, d = 5.3);  // removes thumb hole
