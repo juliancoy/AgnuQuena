@@ -16,6 +16,7 @@
 
 $fn = 100; 
 shell_width = 2.25;
+shell_width = 1.5;
 id = 17.5;  // internal diameter at mouthpiece
 od = id + shell_width*2;  // outer diameter at mouthpiece
 hd = (id+od)/2; // half diameter
@@ -33,25 +34,33 @@ acoustic_length = 396; // Acoustic length from tone edge
 zadj = -8;
 total_height = acoustic_length + unacoustic_length;   // total height
 
-angled_transition_z = 2;
+angled_transition_z = 3;
 accent_ring_z = 0;
 
-ov = 5;    // part overlap sleeve
+ov = 7;    // part overlap sleeve
 
 non_mouthpiece_acoustic_length = acoustic_length - mouthpiece_active_length;
+
+// 5-part
 p1 = 120; // height of part1
 p2 = 210-p1+ 13; // height of part 2
 p3 = 100; // height of part 3
 p4 = non_mouthpiece_acoustic_length - p1 - p2 - p3; // height of part 3 (whatever's left)
 part_lengths = [p1,p2,p3,p4];
 part_start = [0,p1,p1+p2,p1+p2+p3];
+tube_spacing_factor = 1.1;
 
+// 3-part
+p1 = 230; // height of part 2
+p2 = non_mouthpiece_acoustic_length - p1; // height of part 3 (whatever's left)
+part_lengths = [p1,p2];
+part_start = [0,p1];
+tube_spacing_factor = 0.6;
 
 echo(p3);
 e = 0.004;
 friction_expand_default = 0.35;
-tube_spacing_factor = 1.1;
-insert_z_tolerance = 0.8;
+insert_z_tolerance = 0.4;
 
 //translate([20,0,0]) tube();
 
@@ -73,7 +82,7 @@ module mouthpiece(){
 
     // connector
     difference() {
-        color("green") translate([0, 0, mouthpiece_actual_length-accent_ring_z]) sleve_wide((mouthpiece_actual_length) / total_height, friction_expand_default,insert_z_tolerance);
+        color("green") translate([0, 0, mouthpiece_actual_length-accent_ring_z]) sleve_wide_outer((mouthpiece_actual_length) / total_height, friction_expand_default,insert_z_tolerance);
         translate([0,0,-1])
         tube_negative();
     }
@@ -94,18 +103,19 @@ module end_blown_cut_round(rotz = 0){
 
 module piece(pieceno, yfactor, z=0){
     echo(part_lengths[pieceno]);
-    translate([0,-yfactor * od * pieceno,z]){
+    rotate([0,0,360*((pieceno+3.5)/len(part_lengths) - 1)])
+    translate([0,-yfactor * od,z]){
         difference() {
             translate([0, 0, -part_start[pieceno]]) tube();
-            if(pieceno<3)
+            if(pieceno<len(part_lengths) - 1)
                 translate([0, 0, part_lengths[pieceno]-accent_ring_z]) cylinder(h = total_height, d = od * 1.1);    // top cut
-            if(pieceno==3)
+            if(pieceno==len(part_lengths) - 1)
                 translate([0, 0, part_lengths[pieceno]]) cylinder(h = total_height, d = od * 1.1);    // top cut
-            translate([0,0,-e]) sleve_wide(part_start[pieceno] / total_height, 0); // bottom insert
+            translate([0,0,-e]) sleve_wide_outer(part_start[pieceno] / total_height, 0); // bottom insert
         }
-        if(pieceno < 3){ // top connector insert
+        if(pieceno < len(part_lengths) - 1){ // top connector insert
             difference() {
-                color("green") translate([0, 0, part_lengths[pieceno]-accent_ring_z]) sleve_wide((part_lengths[pieceno]) / total_height, friction_expand_default, insert_z_tolerance);
+                color("green") translate([0, 0, part_lengths[pieceno]-accent_ring_z]) sleve_wide_outer((part_lengths[pieceno]) / total_height, friction_expand_default, insert_z_tolerance);
                 tube_negative();
             }
         }
@@ -135,14 +145,16 @@ module piecewise_vert(){
         }
     }
 }
+
 module piecewise(){
-    for (i = [0,1,2,3]){
+    for (i = [0 : len(part_lengths) - 1]) {
         difference(){
             piece(i, tube_spacing_factor);
             translate([0,0,-cube_cut/2]) cube([cube_cut,cube_cut,cube_cut], center=true);
         }
     }
 }
+
 
 module accent_ring(i=0){
     // also create its accent ring
@@ -192,6 +204,38 @@ module sleve_wide(height_on_tube_normalized, friction_expand, ztolerence=0) {
     if(accent_ring_z == 0)
     translate([0, 0, ov-e-ztolerence]) cylinder(h = angled_transition_z, d1 = otop, d2 = idltt);
 }
+
+
+// to keep a constant diameter across the part, this comes out
+module sleve_wide_outer(height_on_tube_normalized, friction_expand, ztolerence=0) {
+    odlb = od * (1 - height_on_tube_normalized) + odo * height_on_tube_normalized; // outer diameter linear interpolate bottom
+    odlt = od * (1 - (height_on_tube_normalized + ov/total_height)) + odo * (height_on_tube_normalized + ov/total_height); // outer diameter linear interpolate top
+    odltt = od * (1 - (height_on_tube_normalized + (ov+angled_transition_z)/total_height)) + odo * (height_on_tube_normalized + (ov+angled_transition_z)/total_height); // outer diameter linear interpolate top
+
+    obot = odlb - shell_width + friction_expand;
+    otop = odlt - shell_width + friction_expand;
+
+    odlttt = (ov+angled_transition_z)/total_height;
+    idltt_id  = id  * (1 - (height_on_tube_normalized + odlttt));
+    idltt_ido = ido * (height_on_tube_normalized + odlttt);
+    idltt = idltt_id + idltt_ido ; // outer diameter linear interpolate top
+
+    translate([0,0,-2])
+    difference(){
+        union(){
+            cylinder(h = ov - ztolerence, d1 = odlb+shell_width*2, d2=odlt+shell_width*2);
+            translate([0,0,-angled_transition_z])
+            cylinder(h = angled_transition_z, d1 = odlb, d2=odlt+shell_width*2);
+            translate([0,0,ov - ztolerence])
+            cylinder(h = angled_transition_z, d1 = odlt+shell_width*2, d2=odlb);
+        }            
+        cylinder(h = angled_transition_z+ov - ztolerence, d1 = odlb, d2=odlt);
+
+        
+    }
+
+}
+
 
 
 
