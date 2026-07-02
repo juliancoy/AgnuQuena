@@ -14,8 +14,8 @@
 // Z-seam random
 // Brim adhesion
 
-$fn = 100; 
-shell_width = 2.25;
+$fn = 100;
+// shell_width = 2.25;
 shell_width = 1.5;
 id = 17.5;  // internal diameter at mouthpiece
 od = id + shell_width*2;  // outer diameter at mouthpiece
@@ -29,8 +29,12 @@ mouthpiece_total_length = 30;
 unacoustic_length = 6; 
 mouthpiece_active_length = mouthpiece_total_length-unacoustic_length; // distance from mouthpiece start to active edge
 
+pitch_raise_cents = 12; // measured tuning is flat by this amount
+length_tuning_scale = pow(2, -pitch_raise_cents / 1200);
+function tuned_length(length) = length * length_tuning_scale;
+
 //acoustic_length = 404.5; // Acoustic length from tone edge
-acoustic_length = 396; // Acoustic length from tone edge
+acoustic_length = tuned_length(396); // Acoustic length from tone edge
 zadj = -8;
 total_height = acoustic_length + unacoustic_length;   // total height
 
@@ -41,23 +45,13 @@ ov = 7;    // part overlap sleeve
 
 non_mouthpiece_acoustic_length = acoustic_length - mouthpiece_active_length;
 
-// 5-part
-p1 = 120; // height of part1
-p2 = 210-p1+ 13; // height of part 2
-p3 = 100; // height of part 3
-p4 = non_mouthpiece_acoustic_length - p1 - p2 - p3; // height of part 3 (whatever's left)
-part_lengths = [p1,p2,p3,p4];
-part_start = [0,p1,p1+p2,p1+p2+p3];
-tube_spacing_factor = 1.1;
-
 // 3-part
-p1 = 230; // height of part 2
-p2 = non_mouthpiece_acoustic_length - p1; // height of part 3 (whatever's left)
-part_lengths = [p1,p2];
-part_start = [0,p1];
+tube_part_1_length = 230; // height of part 1
+tube_part_2_length = non_mouthpiece_acoustic_length - tube_part_1_length; // height of part 2 (whatever's left)
+part_lengths = [tube_part_1_length, tube_part_2_length];
+part_start = [0, tube_part_1_length];
 tube_spacing_factor = 0.6;
 
-echo(p3);
 e = 0.004;
 friction_expand_default = 0.35;
 insert_z_tolerance = 0.4;
@@ -137,7 +131,7 @@ module piecewise_vert(){
     %color([0,0,1,0.3])translate([od/2,0,unacoustic_length]) cylinder(h = acoustic_length/2, d = 2);
     
     
-    for (i = [0,1,2,3]){
+    for (i = [0 : len(part_lengths) - 1]) {
         translate([0,0,part_start[i]+mouthpiece_total_length])
         difference(){
             piece(i, 0);
@@ -266,12 +260,12 @@ module tube() {
 
         // holes
         // translate([0, 0, bl + 147]) rotate([180, 90, 0]) cylinder(h = od, d = 5.3);  // removes thumb hole
-        translate([0, 0, 342- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 10);     // A
-        translate([0, 0, 307.25- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 10);        // B
-        translate([0, 0, 281.75- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 10 - 0.5);     // C
-        translate([0, 0, 246.5- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 12 - 1);   // D
-        translate([0, 0, 215- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 11);  // E
-        translate([0, 0, 188- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 10.13 + 0.75);  // F#
+        translate([0, 0, tuned_length(342)- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 10);     // A
+        translate([0, 0, tuned_length(307.25)- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 10);        // B
+        translate([0, 0, tuned_length(281.75)- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 10 - 0.5);     // C
+        translate([0, 0, tuned_length(246.5)- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 12 - 1);   // D
+        translate([0, 0, tuned_length(215)- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 11);  // E
+        translate([0, 0, tuned_length(188)- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 10.13 + 0.75);  // F#
     }
 }
 
@@ -282,7 +276,7 @@ mouthpiece();
 //translate([0,75,0])
 //tube();
 
-for (i = [0,1,2,3]){
+for (i = [0 : len(part_lengths) - 1]) {
     if(accent_ring_z > 0) translate([0,0,-e]) inner_curve_ring(i);
     accent_ring(i);
 }

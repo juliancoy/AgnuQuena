@@ -1,0 +1,79 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 4) in;
+
+layout(push_constant) uniform Params {
+    uint nx;
+    uint ny;
+    uint nz;
+    float courant2;
+    float damping;
+    uint source_index;
+    float source_value;
+} params;
+
+layout(set = 0, binding = 0) readonly buffer PreviousPressure {
+    float previous_pressure[];
+};
+
+layout(set = 0, binding = 1) readonly buffer CurrentPressure {
+    float current_pressure[];
+};
+
+layout(set = 0, binding = 2) writeonly buffer NextPressure {
+    float next_pressure[];
+};
+
+layout(set = 0, binding = 3) readonly buffer SolidMask {
+    uint solid_mask[];
+};
+
+uint index3(uint x, uint y, uint z) {
+    return x + params.nx * (y + params.ny * z);
+}
+
+float sample_pressure(uint x, uint y, uint z, uint center) {
+    uint idx = index3(x, y, z);
+    return solid_mask[idx] != 0 ? current_pressure[center] : current_pressure[idx];
+}
+
+void main() {
+    uint x = gl_GlobalInvocationID.x;
+    uint y = gl_GlobalInvocationID.y;
+    uint z = gl_GlobalInvocationID.z;
+    if (x >= params.nx || y >= params.ny || z >= params.nz) {
+        return;
+    }
+
+    uint center = index3(x, y, z);
+    if (solid_mask[center] != 0) {
+        next_pressure[center] = 0.0;
+        return;
+    }
+
+    uint xm = x == 0 ? x : x - 1;
+    uint xp = x + 1 >= params.nx ? x : x + 1;
+    uint ym = y == 0 ? y : y - 1;
+    uint yp = y + 1 >= params.ny ? y : y + 1;
+    uint zm = z == 0 ? z : z - 1;
+    uint zp = z + 1 >= params.nz ? z : z + 1;
+
+    float laplacian =
+        sample_pressure(xm, y, z, center) +
+        sample_pressure(xp, y, z, center) +
+        sample_pressure(x, ym, z, center) +
+        sample_pressure(x, yp, z, center) +
+        sample_pressure(x, y, zm, center) +
+        sample_pressure(x, y, zp, center) -
+        6.0 * current_pressure[center];
+
+    float next_value =
+        (2.0 * current_pressure[center] - previous_pressure[center] +
+         params.courant2 * laplacian) * params.damping;
+
+    if (center == params.source_index) {
+        next_value += params.source_value;
+    }
+
+    next_pressure[center] = next_value;
+}

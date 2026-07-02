@@ -1,2 +1,5 @@
 .gcode
 Quena_bottom_and_rings.stl
+__pycache__/
+*.pyc
+acoustics/out/

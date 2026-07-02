@@ -1,0 +1,455 @@
+commit,date,subject,dataset,note,expected_hz,actual_hz,cents
+WORKTREE,,current working tree,Quena.scad comment,G,392.0,383.0,-40.21
+WORKTREE,,current working tree,Quena.scad comment,A,440.0,428.0,-47.87
+WORKTREE,,current working tree,Quena.scad comment,B,493.88,470.0,-85.80
+WORKTREE,,current working tree,Quena.scad comment,C,523.0,505.0,-60.63
+WORKTREE,,current working tree,Quena.scad comment,D,587.33,564.0,-70.17
+WORKTREE,,current working tree,Quena.scad comment,E,659.25,630.0,-78.57
+WORKTREE,,current working tree,Quena.scad comment,F#,740.0,714.0,-61.92
+WORKTREE,,current working tree,Quena.scad comment,G,784.0,766.0,-40.21
+WORKTREE,,current working tree,Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+WORKTREE,,current working tree,Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+WORKTREE,,current working tree,Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+WORKTREE,,current working tree,Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+WORKTREE,,current working tree,Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+WORKTREE,,current working tree,Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+WORKTREE,,current working tree,Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+WORKTREE,,current working tree,Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+WORKTREE,,current working tree,Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+WORKTREE,,current working tree,Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+WORKTREE,,current working tree,Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+WORKTREE,,current working tree,Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+WORKTREE,,current working tree,Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+WORKTREE,,current working tree,Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+WORKTREE,,current working tree,Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+WORKTREE,,current working tree,Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+WORKTREE,,current working tree,Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+WORKTREE,,current working tree,Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+WORKTREE,,current working tree,Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+WORKTREE,,current working tree,Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+WORKTREE,,current working tree,Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+WORKTREE,,current working tree,Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+WORKTREE,,current working tree,Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+WORKTREE,,current working tree,Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+bd0c2fdb3795,2026-03-27,this could be it,Quena.scad comment,G,392.0,383.0,-40.21
+bd0c2fdb3795,2026-03-27,this could be it,Quena.scad comment,A,440.0,428.0,-47.87
+bd0c2fdb3795,2026-03-27,this could be it,Quena.scad comment,B,493.88,470.0,-85.80
+bd0c2fdb3795,2026-03-27,this could be it,Quena.scad comment,C,523.0,505.0,-60.63
+bd0c2fdb3795,2026-03-27,this could be it,Quena.scad comment,D,587.33,564.0,-70.17
+bd0c2fdb3795,2026-03-27,this could be it,Quena.scad comment,E,659.25,630.0,-78.57
+bd0c2fdb3795,2026-03-27,this could be it,Quena.scad comment,F#,740.0,714.0,-61.92
+bd0c2fdb3795,2026-03-27,this could be it,Quena.scad comment,G,784.0,766.0,-40.21
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+bd0c2fdb3795,2026-03-27,this could be it,Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Quena.scad comment,G,392.0,383.0,-40.21
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Quena.scad comment,A,440.0,428.0,-47.87
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Quena.scad comment,B,493.88,470.0,-85.80
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Quena.scad comment,C,523.0,505.0,-60.63
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Quena.scad comment,D,587.33,564.0,-70.17
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Quena.scad comment,E,659.25,630.0,-78.57
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Quena.scad comment,F#,740.0,714.0,-61.92
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Quena.scad comment,G,784.0,766.0,-40.21
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+758b31e8172c,2025-11-24,as printed,Quena.scad comment,G,392.0,386.0,-26.70
+758b31e8172c,2025-11-24,as printed,Quena.scad comment,A,440.0,434.0,-23.77
+758b31e8172c,2025-11-24,as printed,Quena.scad comment,B,493.88,478.0,-56.58
+758b31e8172c,2025-11-24,as printed,Quena.scad comment,C,523.0,514.0,-30.05
+758b31e8172c,2025-11-24,as printed,Quena.scad comment,D,587.33,580.0,-21.74
+758b31e8172c,2025-11-24,as printed,Quena.scad comment,E,659.25,654.0,-13.84
+758b31e8172c,2025-11-24,as printed,Quena.scad comment,F#,740.0,731.0,-21.18
+758b31e8172c,2025-11-24,as printed,Quena.scad comment,G,784.0,778.0,-13.30
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+758b31e8172c,2025-11-24,as printed,Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+f21b7683feca,2025-11-23,latest,Quena.scad comment,G,392.0,386.0,-26.70
+f21b7683feca,2025-11-23,latest,Quena.scad comment,A,440.0,434.0,-23.77
+f21b7683feca,2025-11-23,latest,Quena.scad comment,B,493.88,478.0,-56.58
+f21b7683feca,2025-11-23,latest,Quena.scad comment,C,523.0,514.0,-30.05
+f21b7683feca,2025-11-23,latest,Quena.scad comment,D,587.33,580.0,-21.74
+f21b7683feca,2025-11-23,latest,Quena.scad comment,E,659.25,654.0,-13.84
+f21b7683feca,2025-11-23,latest,Quena.scad comment,F#,740.0,731.0,-21.18
+f21b7683feca,2025-11-23,latest,Quena.scad comment,G,784.0,778.0,-13.30
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+f21b7683feca,2025-11-23,latest,Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Quena.scad comment,G,392.0,386.0,-26.70
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Quena.scad comment,A,440.0,434.0,-23.77
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Quena.scad comment,B,493.88,478.0,-56.58
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Quena.scad comment,C,523.0,514.0,-30.05
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Quena.scad comment,D,587.33,580.0,-21.74
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Quena.scad comment,E,659.25,654.0,-13.84
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Quena.scad comment,F#,740.0,731.0,-21.18
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Quena.scad comment,G,784.0,778.0,-13.30
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+f81aa0ac8148,2025-10-19,"4-parter, as printed",Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+d5c29dc21272,2025-05-08,"another fipple, as printed",Quena.scad comment,G,392.0,386.0,-26.70
+d5c29dc21272,2025-05-08,"another fipple, as printed",Quena.scad comment,A,440.0,434.0,-23.77
+d5c29dc21272,2025-05-08,"another fipple, as printed",Quena.scad comment,B,493.88,478.0,-56.58
+d5c29dc21272,2025-05-08,"another fipple, as printed",Quena.scad comment,C,523.0,514.0,-30.05
+d5c29dc21272,2025-05-08,"another fipple, as printed",Quena.scad comment,D,587.33,580.0,-21.74
+d5c29dc21272,2025-05-08,"another fipple, as printed",Quena.scad comment,E,659.25,654.0,-13.84
+d5c29dc21272,2025-05-08,"another fipple, as printed",Quena.scad comment,F#,740.0,731.0,-21.18
+d5c29dc21272,2025-05-08,"another fipple, as printed",Quena.scad comment,G,784.0,778.0,-13.30
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+d5c29dc21272,2025-05-08,"another fipple, as printed",Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Quena.scad comment,G,392.0,386.0,-26.70
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Quena.scad comment,A,440.0,434.0,-23.77
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Quena.scad comment,B,493.88,478.0,-56.58
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Quena.scad comment,C,523.0,514.0,-30.05
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Quena.scad comment,D,587.33,580.0,-21.74
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Quena.scad comment,E,659.25,654.0,-13.84
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Quena.scad comment,F#,740.0,731.0,-21.18
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Quena.scad comment,G,784.0,778.0,-13.30
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+857dfc407a50,2025-05-05,"first fipple ""eurasian synergy"" edition, as printed",Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Quena.scad comment,G,392.0,391.0,-4.42
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Quena.scad comment,A,440.0,443.0,11.76
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Quena.scad comment,C,523.0,528.0,16.47
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Quena.scad comment,D,587.33,595.0,22.46
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Quena.scad comment,E,659.25,660.0,1.97
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Quena.scad comment,F#,740.0,745.0,11.66
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Quena.scad comment,G,784.0,785.0,2.21
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+0a7c3d21657f,2025-04-10,8C as printed at the Node,Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Quena.scad comment,G,392.0,391.0,-4.42
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Quena.scad comment,A,440.0,443.0,11.76
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Quena.scad comment,C,523.0,528.0,16.47
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Quena.scad comment,D,587.33,595.0,22.46
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Quena.scad comment,E,659.25,660.0,1.97
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Quena.scad comment,F#,740.0,745.0,11.66
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Quena.scad comment,G,784.0,785.0,2.21
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+85a2af4a2b9c,2025-04-10,major fixes. battery might die?,Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+dd2c7fc5a4d2,2025-04-10,still broke :),Quena.scad comment,G,392.0,391.0,-4.42
+dd2c7fc5a4d2,2025-04-10,still broke :),Quena.scad comment,A,440.0,443.0,11.76
+dd2c7fc5a4d2,2025-04-10,still broke :),Quena.scad comment,B,493.88,488.0,-20.74
+dd2c7fc5a4d2,2025-04-10,still broke :),Quena.scad comment,C,523.0,528.0,16.47
+dd2c7fc5a4d2,2025-04-10,still broke :),Quena.scad comment,D,587.33,595.0,22.46
+dd2c7fc5a4d2,2025-04-10,still broke :),Quena.scad comment,E,659.25,660.0,1.97
+dd2c7fc5a4d2,2025-04-10,still broke :),Quena.scad comment,F#,740.0,745.0,11.66
+dd2c7fc5a4d2,2025-04-10,still broke :),Quena.scad comment,G,784.0,785.0,2.21
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+dd2c7fc5a4d2,2025-04-10,still broke :),Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Quena.scad comment,G,392.0,391.0,-4.42
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Quena.scad comment,A,440.0,443.0,11.76
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Quena.scad comment,B,493.88,488.0,-20.74
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Quena.scad comment,C,523.0,528.0,16.47
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Quena.scad comment,D,587.33,595.0,22.46
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Quena.scad comment,E,659.25,660.0,1.97
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Quena.scad comment,F#,740.0,745.0,11.66
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Quena.scad comment,G,784.0,785.0,2.21
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+5957fbcd9ff8,2025-04-10,tried to fix it. broke it instead,Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Quena.scad comment,G,392.0,387.0,-22.22
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Quena.scad comment,A,440.0,433.0,-27.76
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Quena.scad comment,B,493.88,488.0,-20.74
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Quena.scad comment,C,523.0,517.0,-19.98
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Quena.scad comment,D,587.33,577.0,-30.72
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Quena.scad comment,E,659.25,649.0,-27.13
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Quena.scad comment,F#,740.0,740.0,0.00
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Quena.scad comment,G,784.0,778.0,-13.30
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+48b2fec16775,2025-04-06,attempted revert and F# correction of Print #8,Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+6ffa3e2bb7c2,2025-04-06,adds tuning plot with extension,Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+a3509579bad8,2025-03-31,i started making parts that can modify the fife in post,Actual_Frequency_StockOut,A5,880.0,910.0,58.04
