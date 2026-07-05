@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AgnuQuena Case Hinge Simulation</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <main class="app">
+    <section class="viewport">
+      <canvas id="scene"></canvas>
+      <div class="hud" aria-live="polite">
+        <div>
+          <span class="label">Angle</span>
+          <span id="angle">0.0 deg</span>
+        </div>
+        <div>
+          <span class="label">Contacts</span>
+          <span id="contacts">0</span>
+        </div>
+        <div>
+          <span class="label">Sweep</span>
+          <span id="sweep">idle</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <h1>Case Hinge Simulation</h1>
+      <div class="controls">
+        <button id="play" type="button">Run Sweep</button>
+        <button id="pause" type="button">Pause</button>
+        <button id="reset" type="button">Reset</button>
+      </div>
+
+      <label class="slider">
+        <span>Manual angle</span>
+        <input id="angleSlider" type="range" min="0" max="135" value="0" step="1">
+      </label>
+
+      <div class="metrics">
+        <div>
+          <span>First collision</span>
+          <strong id="firstCollision">none</strong>
+        </div>
+        <div>
+          <span>Closure</span>
+          <strong id="closure">printed snap clip</strong>
+        </div>
+        <div>
+          <span>Hinge axis</span>
+          <strong>X @ y=-36.0, z=18.0 mm</strong>
+        </div>
+        <div>
+          <span>Physics</span>
+          <strong>Ammo.js / Bullet hinge</strong>
+        </div>
+      </div>
+
+      <p class="note">
+        The simulation displays the generated STL meshes and drives the lid
+        around the removable pin axis with Bullet hinge constraints. The
+        removable front clip is shown in the closed position and hidden during
+        the opening sweep.
+      </p>
+    </aside>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/ammo.js@0.0.10/ammo.js"></script>
+  <script type="module" src="./sim.js?v=9"></script>
+</body>
+</html>

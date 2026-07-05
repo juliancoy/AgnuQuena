@@ -9,24 +9,46 @@ from __future__ import annotations
 
 import math
 import struct
+import tempfile
 from collections import defaultdict, deque
 from pathlib import Path
+from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED = {
     "QuenaCaseBottom.stl": {
-        "size": (250.0, 97.0, 19.3),
-        "min_triangles": 700,
+        "size": (257.6, 74.0, 21.05),
+        "min_triangles": 2500,
         "max_components": 2,
     },
     "QuenaCaseLid.stl": {
-        "size": (250.0, 97.0, 17.7),
+        "size": (257.6, 74.0, 19.45),
         "min_triangles": 1200,
         "max_components": 4,
     },
+    "QuenaCasePin.stl": {
+        "size": (235.6, 1.75, 1.75),
+        "min_triangles": 200,
+        "max_components": 1,
+    },
+    "QuenaCaseLatch.stl": {
+        "size": (56.0, 7.5, 11.55),
+        "min_triangles": 400,
+        "max_components": 1,
+    },
+    "QuenaCaseAssembly.stl": {
+        "size": (257.6, 76.35, 34.3),
+        "min_triangles": 5000,
+        "max_components": 6,
+    },
 }
+
+HINGE_OUTER_D = 6.2
+LID_CLOSED_Z = 16.75
+LID_SWEEP_MAX_DEG = 140
+CONTACT_TOLERANCE_MM = 0.05
 
 
 def read_stl_triangles(path: Path) -> list[tuple[tuple[float, float, float], ...]]:
@@ -122,7 +144,40 @@ def assert_close(actual: float, expected: float, label: str, tolerance: float = 
         raise AssertionError(f"{label}: expected {expected:.2f}, got {actual:.2f}")
 
 
-def main() -> None:
+def rotate_x(point: tuple[float, float, float], radians: float) -> tuple[float, float, float]:
+    x, y, z = point
+    c = math.cos(radians)
+    s = math.sin(radians)
+    return (x, y * c - z * s, y * s + z * c)
+
+
+def add_points(
+    left: tuple[float, float, float], right: tuple[float, float, float]
+) -> tuple[float, float, float]:
+    return tuple(left[i] + right[i] for i in range(3))
+
+
+def subtract_points(
+    left: tuple[float, float, float], right: tuple[float, float, float]
+) -> tuple[float, float, float]:
+    return tuple(left[i] - right[i] for i in range(3))
+
+
+def write_obj(
+    path: Path, triangles: list[tuple[tuple[float, float, float], ...]]
+) -> None:
+    with path.open("w") as file:
+        for triangle in triangles:
+            for x, y, z in triangle:
+                file.write(f"v {x:.6f} {y:.6f} {z:.6f}\n")
+        for index in range(len(triangles)):
+            first_vertex = index * 3 + 1
+            file.write(
+                f"f {first_vertex} {first_vertex + 1} {first_vertex + 2}\n"
+            )
+
+
+def run_mesh_checks() -> None:
     for name, expected in EXPECTED.items():
         path = ROOT / name
         if not path.exists():
@@ -154,6 +209,104 @@ def main() -> None:
             f"{size[0]:.1f} x {size[1]:.1f} x {size[2]:.1f} mm, "
             f"{components} components"
         )
+
+
+def run_hinge_sweep_check() -> None:
+    try:
+        import pybullet as p
+    except ImportError:
+        print("QuenaCase hinge sweep: skipped, install pybullet to enable")
+        return
+
+    bottom_path = ROOT / "QuenaCaseBottom.stl"
+    lid_path = ROOT / "QuenaCaseLid.stl"
+    for path in (bottom_path, lid_path):
+        if not path.exists():
+            raise AssertionError(f"{path.name}: missing; render it with openscad first")
+
+    bottom_triangles = read_stl_triangles(bottom_path)
+    lid_triangles = read_stl_triangles(lid_path)
+    bottom_mins, bottom_maxs = bounds(bottom_triangles)
+
+    hinge_axis = (
+        0.0,
+        bottom_mins[1] + HINGE_OUTER_D / 2,
+        bottom_maxs[2] - HINGE_OUTER_D / 2,
+    )
+    closed_lid_position = (0.0, 0.0, LID_CLOSED_Z)
+
+    physics_client = p.connect(p.DIRECT)
+    try:
+        p.setGravity(0, 0, -9.81)
+        p.setPhysicsEngineParameter(
+            contactBreakingThreshold=CONTACT_TOLERANCE_MM,
+            deterministicOverlappingPairs=1,
+        )
+
+        with tempfile.TemporaryDirectory(prefix="quena_case_mesh_") as temp_dir:
+            temp_path = Path(temp_dir)
+            bottom_obj = temp_path / "bottom.obj"
+            lid_obj = temp_path / "lid.obj"
+            write_obj(bottom_obj, bottom_triangles)
+            write_obj(lid_obj, lid_triangles)
+
+            mesh_flags = p.GEOM_FORCE_CONCAVE_TRIMESH
+            bottom_collision = p.createCollisionShape(
+                p.GEOM_MESH,
+                fileName=str(bottom_obj),
+                flags=mesh_flags,
+            )
+            lid_collision = p.createCollisionShape(
+                p.GEOM_MESH,
+                fileName=str(lid_obj),
+                flags=mesh_flags,
+            )
+
+            bottom_body = p.createMultiBody(
+                baseMass=0,
+                baseCollisionShapeIndex=bottom_collision,
+                basePosition=[0, 0, 0],
+            )
+            lid_body = p.createMultiBody(
+                baseMass=0,
+                baseCollisionShapeIndex=lid_collision,
+                basePosition=closed_lid_position,
+            )
+
+            for deg in range(LID_SWEEP_MAX_DEG + 1):
+                radians = math.radians(deg)
+                hinge_to_lid = subtract_points(closed_lid_position, hinge_axis)
+                lid_position = add_points(hinge_axis, rotate_x(hinge_to_lid, radians))
+                lid_orientation = p.getQuaternionFromEuler([radians, 0, 0])
+
+                p.resetBasePositionAndOrientation(lid_body, lid_position, lid_orientation)
+                p.performCollisionDetection()
+
+                penetrating_contacts: list[Any] = [
+                    contact
+                    for contact in p.getContactPoints(bottom_body, lid_body)
+                    if contact[8] <= -CONTACT_TOLERANCE_MM
+                ]
+                if penetrating_contacts:
+                    deepest = min(contact[8] for contact in penetrating_contacts)
+                    raise AssertionError(
+                        "QuenaCase hinge sweep: collision at "
+                        f"{deg} deg, {len(penetrating_contacts)} contacts, "
+                        f"deepest penetration {-deepest:.3f} mm"
+                    )
+
+        print(
+            "QuenaCase hinge sweep: ok, "
+            f"0-{LID_SWEEP_MAX_DEG} deg around "
+            f"({hinge_axis[0]:.2f}, {hinge_axis[1]:.2f}, {hinge_axis[2]:.2f})"
+        )
+    finally:
+        p.disconnect(physics_client)
+
+
+def main() -> None:
+    run_mesh_checks()
+    run_hinge_sweep_check()
 
 
 if __name__ == "__main__":
