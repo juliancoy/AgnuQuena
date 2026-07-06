@@ -260,12 +260,12 @@ module tube() {
 
         // holes
         // translate([0, 0, bl + 147]) rotate([180, 90, 0]) cylinder(h = od, d = 5.3);  // removes thumb hole
-        translate([0, 0, tuned_length(342)- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 10);     // A
-        translate([0, 0, tuned_length(307.25)- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 10);        // B
-        translate([0, 0, tuned_length(281.75)- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 10 - 0.5);     // C
-        translate([0, 0, tuned_length(246.5)- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 12 - 1);   // D
-        translate([0, 0, tuned_length(215)- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 11);  // E
-        translate([0, 0, tuned_length(188)- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 10.13 + 0.75);  // F#
+        translate([0, 0, tuned_length(341)- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 10.1);     // A
+        translate([0, 0, tuned_length(302.75)- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 10.35);        // B
+        translate([0, 0, tuned_length(279.25)- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 9.75);     // C
+        translate([0, 0, tuned_length(245.5)- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 11.1);   // D
+        translate([0, 0, tuned_length(214.15)- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 11.1);  // E
+        translate([0, 0, tuned_length(186.2)- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 11.13);  // F#
     }
 }
 
