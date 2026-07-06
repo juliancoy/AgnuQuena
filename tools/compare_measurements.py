@@ -212,7 +212,7 @@ def write_rows(path: Path, rows: list[dict[str, object]]) -> None:
         return
     keys = list(rows[0].keys())
     with path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=keys)
+        writer = csv.DictWriter(handle, fieldnames=keys, lineterminator="\n")
         writer.writeheader()
         writer.writerows(rows)
 

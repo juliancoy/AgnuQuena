@@ -1,7 +1,171 @@
 # Vulkan Acoustic Simulation
 
-This folder contains the start of a 3D acoustic FDTD simulation path for the
-quena geometry.
+This folder contains acoustic simulation tools for the quena geometry.
+
+## Calibrated 1D Model
+
+`quena_1d.py` reads the OpenSCAD tone-hole geometry or generated measurement
+history, applies a simple end-corrected bore model, and writes pitch estimates
+that can be compared with tune-check measurements.
+
+Run the current worktree model:
+
+```sh
+python3 acoustics/quena_1d.py
+```
+
+Run a measured historical geometry and fit its correction from the saved
+tune-check note:
+
+```sh
+python3 acoustics/quena_1d.py --commit a36f6253471d --fit-correction
+```
+
+Outputs:
+
+- `acoustics/out/quena_1d_simulation_worktree.csv`
+- `acoustics/out/quena_1d_simulation_worktree.json`
+
+Use `--label current` or another label to choose a different output suffix.
+
+This is the practical pitch estimator. It is calibrated and one-dimensional, so
+it should be treated as an engineering model rather than a full fluid/acoustic
+solver.
+
+## Printable Materials
+
+All acoustic runners accept `--material`. Available defaults:
+
+```sh
+python3 acoustics/quena_3d.py --list-materials
+```
+
+Supported built-in profiles include `pla`, `abs`, `petg`, `tpu`, `cf-pla`,
+`cf-petg`, and `nylon`; `carbon-fiber` aliases to `cf-pla`. The material model
+changes the simulated print result:
+length scale, bore and tone-hole dimensional bias, end/tone-hole corrections,
+and FDTD damping. It does not pretend the air column is made of plastic; for
+stiff printed flutes the plastic mainly matters through geometry, edge finish,
+wall loss, and compliance.
+
+Example:
+
+```sh
+python3 acoustics/quena_3d.py --material petg --label petg_current
+```
+
+## Assembled Printed Shape
+
+Export the fitted-together print shape and the matching internal air volume:
+
+```sh
+python3 acoustics/export_assembled.py
+```
+
+This writes ignored generated artifacts:
+
+- `acoustics/out/assembled_quena.stl`
+- `acoustics/out/assembled_air.stl`
+- `acoustics/out/assembled_validation.json`
+
+Use the air STL for the closest current simulation of the fitted print:
+
+```sh
+python3 acoustics/quena_3d.py --material abs --air-stl acoustics/out/assembled_air.stl --steps 4096 --label abs_air_stl_generated
+```
+
+The air STL is the acoustic domain. The plastic STL is useful for inspection and
+validation, but simulating the plastic shell as the fluid domain would be wrong.
+
+Current ABS assembled-air validation:
+
+| note | predicted hz | predicted cents | measured cents |
+| --- | ---: | ---: | ---: |
+| G4 | 418.0214 | +111.27 | -1.3 |
+| A4 | 422.4296 | -70.55 | -1.3 |
+| B4 | 477.7188 | -57.6 | -41.3 |
+| C5 | 513.1936 | -33.6 | -21.3 |
+| D5 | 592.3994 | +14.88 | -11.3 |
+| E5 | 675.0935 | +41.09 | -1.3 |
+| F#5 | 771.279 | +71.7 | -21.3 |
+| G5 | 751.0543 | -74.3 | -1.3 |
+
+The assembled-air run currently has median absolute prediction error of
+`55.8 cents` and RMS error of `65.5 cents` against the saved tune-check
+measurements. Treat it as the current 3D fluid baseline for ABS in the exact
+printed air shape, not yet as a final tuning oracle.
+
+## 2D FDTD Cross-Section
+
+`quena_2d.py` runs a scalar-pressure finite-difference simulation on a
+longitudinal bore cross-section. The distal end and the active tone-hole opening
+are pressure-release boundaries; the bore walls are reflective.
+
+Run all notes:
+
+```sh
+python3 acoustics/quena_2d.py --label current
+```
+
+Run a single note while tuning model parameters:
+
+```sh
+python3 acoustics/quena_2d.py --note B4 --steps 32768
+```
+
+Outputs:
+
+- `acoustics/out/quena_2d_simulation_current.csv`
+- `acoustics/out/quena_2d_simulation_current.json`
+
+This is a real time-domain simulation, but still a 2D approximation. It ignores
+azimuthal tone-hole shape and external radiation impedance, so use it for
+directional checks before treating it as a final tuning authority.
+
+## 3D FDTD Bore Model
+
+`quena_3d.py` is the CPU reference 3D fluid/acoustic simulation. It creates a
+cylindrical bore air mask from the SCAD dimensions, uses reflective bore walls,
+applies pressure-release openings for the distal end or active fingering hole,
+injects an impulse, records receiver pressure, and reports FFT peaks.
+
+Run all notes with the default coarse grid:
+
+```sh
+python3 acoustics/quena_3d.py --label current
+```
+
+Run a single note for faster iteration:
+
+```sh
+python3 acoustics/quena_3d.py --note B4 --steps 8192 --label b4_smoke
+```
+
+Outputs:
+
+- `acoustics/out/quena_3d_simulation_current.csv`
+- `acoustics/out/quena_3d_simulation_current.json`
+
+The default grid is intentionally coarse enough to run on CPU. Reduce
+`--cell-mm` only after validating runtime and memory use; 3D FDTD must keep
+`--courant` below `1/sqrt(3)`.
+
+Current coarse-grid validation:
+
+```sh
+python3 acoustics/quena_3d.py --steps 8192 --label current_coarse
+```
+
+This run completes on CPU and writes per-note pitch estimates. At the current
+coarse resolution it is useful as a real 3D reference simulation, not a final
+tuning oracle: the July 2026 comparison run had median absolute error around
+`45 cents` and RMS error around `63 cents` for the idealized cylinder. The
+assembled-air STL run above is the better baseline when checking the fitted
+printed shape.
+
+## Vulkan FDTD Setup
+
+The Vulkan path is still a setup path for a future 3D FDTD simulation.
 
 The compute kernel is `shaders/fdtd.comp`. It updates a scalar pressure field on
 a 3D grid with a solid mask for printed material boundaries. Boundary neighbors

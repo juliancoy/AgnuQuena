@@ -1,5 +1,6 @@
 commit,date,subject,id_mm,od_mm,taper_mm,total_height_mm,acoustic_length_mm,zadj_mm,hole_shift_mm,pitch_raise_cents
 WORKTREE,,current working tree,17.5,20.5,0.0,399.26462819306624,393.26462819306624,-8.0,,12.0
+168b381fe8ff,2026-07-05,Tune quena hole geometry,17.5,20.5,0.0,399.26462819306624,393.26462819306624,-8.0,,12.0
 a36f6253471d,2026-07-02,idk latest,17.5,20.5,0.0,399.26462819306624,393.26462819306624,-8.0,,12.0
 bd0c2fdb3795,2026-03-27,this could be it,17.5,20.5,0.0,402.0,396.0,-8.0,,
 16cba21cebad,2025-11-25,"characterizes the frequencies; evidently PETG runs much flatter, or expends sightly less on the bambu",17.5,22.0,0.0,402.0,396.0,-8.0,,

@@ -31,6 +31,38 @@ WORKTREE,,current working tree,Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30
 WORKTREE,,current working tree,Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
 WORKTREE,,current working tree,Actual_Frequency_StockOut,A5,880.0,910.0,58.04
 WORKTREE,,current working tree,Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Quena.scad comment,G,392.0,383.0,-40.21
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Quena.scad comment,A,440.0,428.0,-47.87
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Quena.scad comment,B,493.88,470.0,-85.80
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Quena.scad comment,C,523.0,505.0,-60.63
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Quena.scad comment,D,587.33,564.0,-70.17
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Quena.scad comment,E,659.25,630.0,-78.57
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Quena.scad comment,F#,740.0,714.0,-61.92
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Quena.scad comment,G,784.0,766.0,-40.21
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_1_5cm,A4,440.0,460.0,76.96
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockOut,A4,440.0,464.0,91.95
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_Ext,A4,440.0,442.0,7.85
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_1_5cm,B4,493.88,497.0,10.90
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockOut,B4,493.88,505.0,38.55
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_Ext,B4,493.88,497.0,10.90
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_1_5cm,C#4,554.37,538.0,-51.89
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockOut,C#4,554.37,543.0,-35.88
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_Ext,C#4,554.37,539.0,-48.68
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_1_5cm,D4,587.33,582.0,-15.78
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockOut,D4,587.33,588.0,1.97
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_Ext,D4,587.33,587.0,-0.97
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_1_5cm,E4,659.25,644.0,-40.52
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockOut,E4,659.25,652.0,-19.14
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_Ext,E4,659.25,650.0,-24.46
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_1_5cm,F#4,739.99,714.0,-61.90
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockOut,F#4,739.99,721.0,-45.01
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_Ext,F#4,739.99,726.0,-33.04
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_1_5cm,G#4,830.61,798.0,-69.34
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockOut,G#4,830.61,796.0,-73.68
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_Ext,G#4,830.61,816.0,-30.72
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_1_5cm,A5,880.0,915.0,67.52
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockOut,A5,880.0,910.0,58.04
+168b381fe8ff,2026-07-05,Tune quena hole geometry,Actual_Frequency_StockIn_Ext,A5,880.0,870.0,-19.79
 a36f6253471d,2026-07-02,idk latest,Quena.scad comment,G,392.0,383.0,-40.21
 a36f6253471d,2026-07-02,idk latest,Quena.scad comment,A,440.0,428.0,-47.87
 a36f6253471d,2026-07-02,idk latest,Quena.scad comment,B,493.88,470.0,-85.80

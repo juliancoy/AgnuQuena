@@ -63,6 +63,27 @@ module tube_negative() {
     cylinder(h = total_height + 2, d1 = id, d2 = ido);
 }
 
+module tone_hole_air() {
+    translate([0, 0, tuned_length(341)- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 10.1);     // A
+    translate([0, 0, tuned_length(302.75)- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 10.35);        // B
+    translate([0, 0, tuned_length(279.25)- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 9.75);     // C
+    translate([0, 0, tuned_length(245.5)- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 11.1);   // D
+    translate([0, 0, tuned_length(214.15)- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 11.1);  // E
+    translate([0, 0, tuned_length(186.2)- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 11.13);  // F#
+}
+
+module assembled_air_volume() {
+    intersection() {
+        union() {
+            tube_negative();
+            tone_hole_air();
+            end_blown_cut_round();
+        }
+        translate([0,0,0])
+        cylinder(h = total_height, d = od * 1.2);
+    }
+}
+
 
 module mouthpiece(){
     echo(mouthpiece_total_length);
@@ -260,12 +281,7 @@ module tube() {
 
         // holes
         // translate([0, 0, bl + 147]) rotate([180, 90, 0]) cylinder(h = od, d = 5.3);  // removes thumb hole
-        translate([0, 0, tuned_length(341)- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 10.1);     // A
-        translate([0, 0, tuned_length(302.75)- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 10.35);        // B
-        translate([0, 0, tuned_length(279.25)- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 9.75);     // C
-        translate([0, 0, tuned_length(245.5)- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 11.1);   // D
-        translate([0, 0, tuned_length(214.15)- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 11.1);  // E
-        translate([0, 0, tuned_length(186.2)- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 11.13);  // F#
+        tone_hole_air();
     }
 }
 
