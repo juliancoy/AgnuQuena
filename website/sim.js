@@ -6,10 +6,10 @@ const MM_TO_M = 0.001;
 const DEG = Math.PI / 180;
 
 const dims = {
-  bottom: { x: 257.6, bodyY: 63.4, overallY: 74.0, bodyZ: 19.15 },
-  lid: { x: 257.6, bodyY: 63.4, overallY: 74.0, bodyZ: 17.55 },
-  hingeAxis: { x: 0, y: -36.0, z: 17.95 },
-  lidClosedZ: 16.75,
+  bottom: { x: 257.6, bodyY: 63.4, overallY: 68.0, bodyZ: 19.15 },
+  lid: { x: 257.6, bodyY: 63.4, overallY: 69.49, bodyZ: 17.55 },
+  hingeAxis: { x: 0, y: -31.7, z: 22.25 },
+  lidClosedZ: 19.45,
   hingeOuterD: 6.2,
   hingeSpan: 227.6,
   pull: { x: 48, y: 3.6, z: 2.2, cy: 33.1 },
@@ -61,7 +61,6 @@ scene.add(sun);
 
 const materialBottom = new THREE.MeshStandardMaterial({ color: 0x2f6f99, roughness: 0.64 });
 const materialLid = new THREE.MeshStandardMaterial({ color: 0x7fa7b8, roughness: 0.58 });
-const materialPin = new THREE.MeshStandardMaterial({ color: 0xc9ced0, metalness: 0.45, roughness: 0.34 });
 const materialLatch = new THREE.MeshStandardMaterial({ color: 0x263b45, roughness: 0.7 });
 
 const bottomMesh = new THREE.Group();
@@ -158,10 +157,6 @@ async function buildVisuals() {
   lidStl.position.copy(lidLocalHinge().multiplyScalar(-1));
   lidMesh.position.copy(hingeWorld());
   lidMesh.add(lidStl);
-
-  const pinStl = await loadStl("./assets/QuenaCasePin.stl", materialPin);
-  pinStl.position.set(0, meters(dims.hingeAxis.y), meters(dims.hingeAxis.z - 0.875));
-  scene.add(pinStl);
 
   latchMesh = await loadStl("./assets/QuenaCaseLatch.stl", materialLatch);
   latchMesh.position.set(0, meters(dims.latchClip.bridgeY), meters(dims.latchClip.bottomZ));

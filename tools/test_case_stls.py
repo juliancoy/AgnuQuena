@@ -9,46 +9,62 @@ from __future__ import annotations
 
 import math
 import struct
+import subprocess
 import tempfile
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
+
+import trimesh
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED = {
     "QuenaCaseBottom.stl": {
-        "size": (257.6, 74.0, 21.05),
-        "min_triangles": 2500,
-        "max_components": 2,
+        "size": (257.6, 68.0, 23.65),
+        "min_triangles": 2200,
+        "max_components": 4,
     },
     "QuenaCaseLid.stl": {
-        "size": (257.6, 74.0, 19.45),
+        "size": (257.6, 69.07, 17.85),
         "min_triangles": 1200,
         "max_components": 4,
     },
-    "QuenaCasePin.stl": {
-        "size": (235.6, 1.75, 1.75),
-        "min_triangles": 200,
-        "max_components": 1,
+    "QuenaCaseHingeCoupon.stl": {
+        "size": (58.0, 54.0, 14.2),
+        "min_triangles": 3000,
+        "max_components": 6,
+    },
+    "QuenaCaseFullHingeCoupon.stl": {
+        "size": (239.6, 56.0, 13.2),
+        "min_triangles": 5000,
+        "max_components": 12,
     },
     "QuenaCaseLatch.stl": {
-        "size": (56.0, 7.5, 11.55),
-        "min_triangles": 400,
+        "size": (56.0, 8.3, 11.55),
+        "min_triangles": 1200,
+        "max_components": 1,
+    },
+    "QuenaCaseLatchCoupon.stl": {
+        "size": (74.0, 9.55, 12.2),
+        "min_triangles": 1600,
         "max_components": 1,
     },
     "QuenaCaseAssembly.stl": {
-        "size": (257.6, 76.35, 34.3),
-        "min_triangles": 5000,
+        "size": (257.6, 72.22, 37.0),
+        "min_triangles": 4500,
         "max_components": 6,
     },
 }
 
 HINGE_OUTER_D = 6.2
-LID_CLOSED_Z = 16.75
+HINGE_AXIS_Y = -31.7
+HINGE_AXIS_Z = 22.25
+LID_CLOSED_Z = 19.45
 LID_SWEEP_MAX_DEG = 140
 CONTACT_TOLERANCE_MM = 0.05
+CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
 
 
 def read_stl_triangles(path: Path) -> list[tuple[tuple[float, float, float], ...]]:
@@ -177,6 +193,57 @@ def write_obj(
             )
 
 
+def run_closed_overlap_check() -> None:
+    with tempfile.TemporaryDirectory(prefix="quena_case_overlap_") as temp_dir:
+        temp_path = Path(temp_dir)
+        scad_path = temp_path / "closed_overlap.scad"
+        overlap_stl = temp_path / "closed_overlap.stl"
+        scad_path.write_text(
+            f"""
+include <{ROOT / "QuenaCase.scad"}>;
+intersection() {{
+  bottom_assembly();
+  translate([0, 0, lid_closed_z]) lid_assembly();
+}}
+""".lstrip(),
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            [
+                "openscad",
+                "-D",
+                'part="none"',
+                "-o",
+                str(overlap_stl),
+                str(scad_path),
+            ],
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        if "Current top level object is empty" in result.stdout:
+            print("QuenaCase closed overlap: ok, OpenSCAD intersection is empty")
+            return
+        if result.returncode:
+            raise AssertionError(
+                "QuenaCase closed overlap: OpenSCAD failed\n" + result.stdout
+            )
+        if not overlap_stl.exists() or overlap_stl.stat().st_size <= 84:
+            print("QuenaCase closed overlap: ok, OpenSCAD intersection is empty")
+            return
+
+        overlap = trimesh.load(overlap_stl, force="mesh")
+        volume = abs(float(overlap.volume))
+        if volume > CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3:
+            raise AssertionError(
+                "QuenaCase closed overlap: "
+                f"{volume:.3f} mm^3 intersection, bounds={overlap.bounds.tolist()}"
+            )
+
+        print(f"QuenaCase closed overlap: ok, {volume:.3f} mm^3")
+
+
 def run_mesh_checks() -> None:
     for name, expected in EXPECTED.items():
         path = ROOT / name
@@ -226,13 +293,7 @@ def run_hinge_sweep_check() -> None:
 
     bottom_triangles = read_stl_triangles(bottom_path)
     lid_triangles = read_stl_triangles(lid_path)
-    bottom_mins, bottom_maxs = bounds(bottom_triangles)
-
-    hinge_axis = (
-        0.0,
-        bottom_mins[1] + HINGE_OUTER_D / 2,
-        bottom_maxs[2] - HINGE_OUTER_D / 2,
-    )
+    hinge_axis = (0.0, HINGE_AXIS_Y, HINGE_AXIS_Z)
     closed_lid_position = (0.0, 0.0, LID_CLOSED_Z)
 
     physics_client = p.connect(p.DIRECT)
@@ -306,6 +367,7 @@ def run_hinge_sweep_check() -> None:
 
 def main() -> None:
     run_mesh_checks()
+    run_closed_overlap_check()
     run_hinge_sweep_check()
 
 

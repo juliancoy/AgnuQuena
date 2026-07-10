@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+"""Render AgnuQuena case STLs and nine-view review sheets."""
+
+from __future__ import annotations
+
+import argparse
+import shutil
+import subprocess
+import tempfile
+from pathlib import Path
+
+from PIL import Image
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SCAD = ROOT / "QuenaCase.scad"
+
+STL_PARTS = [
+    ("bottom", ROOT / "QuenaCaseBottom.stl", True),
+    ("lid", ROOT / "QuenaCaseLid.stl", True),
+    ("hinge_coupon", ROOT / "QuenaCaseHingeCoupon.stl", False),
+    ("full_hinge_coupon", ROOT / "QuenaCaseFullHingeCoupon.stl", False),
+    ("latch", ROOT / "QuenaCaseLatch.stl", True),
+    ("latch_coupon", ROOT / "QuenaCaseLatchCoupon.stl", False),
+    ("assembly", ROOT / "QuenaCaseAssembly.stl", True),
+]
+
+VIEW_SHEETS = [
+    ("assembly", ROOT / "QuenaCaseAssembly_9views.png"),
+    ("hinge_coupon", ROOT / "QuenaCaseHingeCoupon_9views.png"),
+    ("full_hinge_coupon", ROOT / "QuenaCaseFullHingeCoupon_9views.png"),
+    ("latch_coupon", ROOT / "QuenaCaseLatchCoupon_9views.png"),
+]
+
+CAMERAS = [
+    "0,0,0,65,0,25,360",
+    "0,0,0,90,0,0,360",
+    "0,0,0,90,0,90,360",
+    "0,0,0,90,0,180,360",
+    "0,0,0,90,0,270,360",
+    "0,0,0,0,0,0,360",
+    "0,0,0,55,0,135,360",
+    "0,0,0,55,0,225,360",
+    "0,0,0,55,0,315,360",
+]
+
+
+def run(command: list[str]) -> None:
+    print(" ".join(command))
+    subprocess.run(command, cwd=ROOT, check=True)
+
+
+def render_stl(part: str, output: Path) -> None:
+    run([
+        "openscad",
+        "--export-format",
+        "asciistl",
+        "-D",
+        f'part="{part}"',
+        "-o",
+        str(output),
+        str(SCAD),
+    ])
+
+
+def render_png(part: str, output: Path, camera: str) -> None:
+    run([
+        "openscad",
+        "-D",
+        f'part="{part}"',
+        "--colorscheme",
+        "Cornfield",
+        "--projection",
+        "o",
+        "--viewall",
+        "--autocenter",
+        "--imgsize",
+        "500,367",
+        "--camera",
+        camera,
+        "-o",
+        str(output),
+        str(SCAD),
+    ])
+
+
+def render_view_sheet(part: str, output: Path) -> None:
+    with tempfile.TemporaryDirectory(prefix=f"quena_{part}_views_") as temp_dir:
+        temp_path = Path(temp_dir)
+        frames = []
+        for index, camera in enumerate(CAMERAS):
+            frame = temp_path / f"{index:02d}.png"
+            render_png(part, frame, camera)
+            frames.append(Image.open(frame).convert("RGB"))
+
+        sheet = Image.new("RGB", (1500, 1101), (243, 243, 239))
+        for index, frame in enumerate(frames):
+            x = (index % 3) * 500
+            y = (index // 3) * 367
+            sheet.paste(frame, (x, y))
+        sheet.save(output)
+        print(output.relative_to(ROOT))
+
+
+def copy_website_assets() -> None:
+    asset_dir = ROOT / "website" / "assets"
+    asset_dir.mkdir(parents=True, exist_ok=True)
+    for _, output, copy_to_site in STL_PARTS:
+        if copy_to_site:
+            target = asset_dir / output.name
+            shutil.copy2(output, target)
+            print(target.relative_to(ROOT))
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--stls", action="store_true", help="render STL files")
+    parser.add_argument("--views", action="store_true", help="render nine-view PNG sheets")
+    args = parser.parse_args()
+
+    render_stls = args.stls or not args.views
+    render_views = args.views or not args.stls
+
+    if render_stls:
+        for part, output, _ in STL_PARTS:
+            render_stl(part, output)
+        copy_website_assets()
+
+    if render_views:
+        for part, output in VIEW_SHEETS:
+            render_view_sheet(part, output)
+
+
+if __name__ == "__main__":
+    main()
