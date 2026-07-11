@@ -8,6 +8,7 @@ source, so they catch render regressions before slicing.
 from __future__ import annotations
 
 import math
+import re
 import struct
 import subprocess
 import tempfile
@@ -22,49 +23,209 @@ ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED = {
     "QuenaCaseBottom.stl": {
-        "size": (257.6, 68.0, 23.65),
+        "size": (260.6, 76.8, 26.05),
         "min_triangles": 2200,
-        "max_components": 4,
+        "components": 1,
     },
     "QuenaCaseLid.stl": {
-        "size": (257.6, 69.07, 17.85),
+        "size": (260.6, 76.8, 20.2),
         "min_triangles": 1200,
-        "max_components": 4,
+        "components": 1,
     },
     "QuenaCaseHingeCoupon.stl": {
-        "size": (58.0, 54.0, 14.2),
+        "size": (116.0, 55.2, 13.8),
         "min_triangles": 3000,
-        "max_components": 6,
+        "components": 2,
     },
     "QuenaCaseFullHingeCoupon.stl": {
-        "size": (239.6, 56.0, 13.2),
-        "min_triangles": 5000,
-        "max_components": 12,
-    },
-    "QuenaCaseLatch.stl": {
-        "size": (56.0, 8.3, 11.55),
-        "min_triangles": 1200,
-        "max_components": 1,
+        "size": (242.6, 57.2, 13.8),
+        "min_triangles": 2000,
+        "components": 2,
     },
     "QuenaCaseLatchCoupon.stl": {
-        "size": (74.0, 9.55, 12.2),
+        "size": (200.0, 34.0, 12.0),
         "min_triangles": 1600,
-        "max_components": 1,
+        "components": 2,
     },
     "QuenaCaseAssembly.stl": {
-        "size": (257.6, 72.22, 37.0),
+        "size": (260.6, 76.8, 37.0),
         "min_triangles": 4500,
-        "max_components": 6,
+        "components": 2,
     },
 }
 
-HINGE_OUTER_D = 6.2
-HINGE_AXIS_Y = -31.7
-HINGE_AXIS_Z = 22.25
-LID_CLOSED_Z = 19.45
 LID_SWEEP_MAX_DEG = 140
 CONTACT_TOLERANCE_MM = 0.05
 CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
+
+
+def scad_scalar(name: str) -> float:
+    source = (ROOT / "QuenaCase.scad").read_text(encoding="utf-8")
+    match = re.search(
+        rf"^\s*{re.escape(name)}\s*=\s*([-+]?\d+(?:\.\d+)?)\s*;",
+        source,
+        flags=re.MULTILINE,
+    )
+    if not match:
+        raise AssertionError(f"QuenaCase.scad: missing numeric parameter {name}")
+    return float(match.group(1))
+
+
+def evaluated_hinge_pose() -> tuple[float, float, float]:
+    with tempfile.TemporaryDirectory(prefix="quena_case_values_") as temp_dir:
+        temp_path = Path(temp_dir)
+        probe_scad = temp_path / "values.scad"
+        probe_stl = temp_path / "values.stl"
+        probe_scad.write_text(
+            f'include <{ROOT / "QuenaCase.scad"}>;\n'
+            'echo("HINGE_POSE", hinge_axis_y, hinge_axis_z, lid_closed_z);\n'
+            "cube(1);\n",
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            ["openscad", '-D', 'part="none"', "-o", str(probe_stl), str(probe_scad)],
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+    match = re.search(
+        r'ECHO:\s*"HINGE_POSE",\s*([-+\d.eE]+),\s*([-+\d.eE]+),\s*([-+\d.eE]+)',
+        result.stdout,
+    )
+    if not match:
+        raise AssertionError("OpenSCAD did not report the evaluated hinge pose")
+    return tuple(float(match.group(i)) for i in range(1, 4))
+
+
+def run_hinge_design_checks() -> None:
+    axle_d = scad_scalar("hinge_axle_d")
+    socket_clearance = scad_scalar("hinge_socket_clearance")
+    outer_d = scad_scalar("hinge_outer_d")
+    nub_l = scad_scalar("hinge_nub_l")
+    tip_l = scad_scalar("hinge_pin_tip_l")
+    tip_r = scad_scalar("hinge_pin_tip_r")
+    socket_depth = scad_scalar("hinge_socket_depth")
+    knuckle_gap = scad_scalar("hinge_gap")
+    stator_closed = scad_scalar("hinge_stator_closed")
+    backer_extension = scad_scalar("hinge_backer_extension")
+    nub_support_y = scad_scalar("hinge_nub_support_y")
+    nub_support_gap = scad_scalar("hinge_nub_support_gap")
+    nub_support_overlap = scad_scalar("hinge_nub_support_base_overlap")
+
+    socket_d = axle_d + socket_clearance
+    socket_wall = (outer_d - socket_d) / 2
+    pin_engagement = nub_l - knuckle_gap
+    full_diameter_engagement = pin_engagement - tip_l
+    axial_reserve = socket_depth - pin_engagement
+
+    if not 0.25 <= socket_clearance <= 0.55:
+        raise AssertionError(
+            f"hinge diametral clearance {socket_clearance:.2f} mm is outside 0.25-0.55 mm"
+        )
+    if socket_wall < 1.5:
+        raise AssertionError(f"hinge socket wall is only {socket_wall:.2f} mm")
+    if axial_reserve < 1.0:
+        raise AssertionError(f"hinge axial reserve is only {axial_reserve:.2f} mm")
+    if pin_engagement < 1.8:
+        raise AssertionError(f"hinge pin engagement is only {pin_engagement:.2f} mm")
+    if full_diameter_engagement + 1e-9 < 1.2:
+        raise AssertionError(
+            "hinge full-diameter bearing engagement is only "
+            f"{full_diameter_engagement:.2f} mm"
+        )
+    if not 0 < tip_l < nub_l:
+        raise AssertionError("hinge pin taper length must be shorter than the pin")
+    if not 0 < tip_r <= tip_l / 2:
+        raise AssertionError("hinge pin nose radius must fit within the lead-in length")
+    if stator_closed != 1:
+        raise AssertionError("hinge outer stator must remain closed")
+    if not 0.8 <= backer_extension <= 1.5:
+        raise AssertionError("hinge rectangular backer extension is out of range")
+    if not 0.8 <= nub_support_y <= 1.2:
+        raise AssertionError("hinge nub support blade width is out of range")
+    if not 0.15 <= nub_support_gap <= 0.3:
+        raise AssertionError("hinge nub support gap must be about one layer")
+    if nub_support_overlap < 0.1:
+        raise AssertionError("hinge nub support blades lack base overlap")
+
+    print(
+        "QuenaCase hinge design: ok, "
+        f"{socket_clearance:.2f} mm diametral clearance, "
+        f"{socket_wall:.2f} mm socket wall, "
+        f"{pin_engagement:.2f} mm pin engagement, "
+        f"{full_diameter_engagement:.2f} mm full-diameter bearing, "
+        f"{axial_reserve:.2f} mm axial reserve, closed stator, "
+        f"{backer_extension:.1f} mm backer extension, nub breakaway blades"
+    )
+
+
+def run_latch_design_checks() -> None:
+    protrusion = scad_scalar("latch_nub_protrusion")
+    indent = scad_scalar("latch_indent_depth")
+    tongue_t = scad_scalar("latch_tongue_t")
+    flex_l = scad_scalar("latch_tongue_flex_l")
+    travel = protrusion - indent
+    if not 0.15 <= travel <= 0.40:
+        raise AssertionError(f"latch release travel {travel:.2f} mm is unsuitable")
+    if tongue_t < 1.2 or flex_l < 7.0:
+        raise AssertionError("latch tongue is too thin or too short")
+    print(f"QuenaCase latch design: ok, {protrusion:.2f} mm nub projection, "
+          f"{indent:.2f} mm recess, {travel:.2f} mm release travel, "
+          f"{tongue_t:.2f} x {flex_l:.2f} mm flex section")
+
+
+def run_channel_layout_checks() -> None:
+    horizontal_land = scad_scalar("short_row_min_gap")
+    vertical_land = scad_scalar("row_gap")
+    edge_land = scad_scalar("channel_edge_land")
+    deck_h = scad_scalar("channel_deck_h")
+    tube_d = scad_scalar("id") + 2 * scad_scalar("shell_width")
+    channel_d = tube_d + 2 * scad_scalar("part_clearance")
+    connector_d = tube_d + 2 * scad_scalar("shell_width")
+    max_channel_d = connector_d + 2 * scad_scalar("part_clearance")
+    deck_below_center = max_channel_d / 2 - deck_h
+    deck_opening = 2 * math.sqrt(
+        max((channel_d / 2) ** 2 - deck_below_center**2, 0)
+    )
+
+    source = (ROOT / "QuenaCase.scad").read_text(encoding="utf-8")
+    if "module cantilever_retainer(i, x_center, clip_w)" not in source:
+        raise AssertionError("channels lack localized cantilever retainers")
+    clip_t = scad_scalar("retainer_clip_t")
+    clip_l = scad_scalar("retainer_clip_flex_l")
+    clip_interference = scad_scalar("retainer_clip_interference")
+    clip_strain = 1.5 * clip_t * clip_interference / clip_l**2
+    if clip_strain > 0.015:
+        raise AssertionError(
+            f"ABS retainer clip strain is too high: {100*clip_strain:.2f}%"
+        )
+
+    if horizontal_land < 8.0:
+        raise AssertionError(
+            f"horizontal channel land is only {horizontal_land:.2f} mm"
+        )
+    if vertical_land < 6.0:
+        raise AssertionError(f"vertical channel land is only {vertical_land:.2f} mm")
+    if edge_land < 4.0:
+        raise AssertionError(f"channel perimeter land is only {edge_land:.2f} mm")
+    if deck_h < 0.8:
+        raise AssertionError(f"channel filler deck is only {deck_h:.2f} mm thick")
+    if deck_below_center <= 0 or deck_opening < tube_d + 0.3:
+        raise AssertionError(
+            f"raised bed obstructs insertion: {deck_opening:.2f} mm opening for "
+            f"{tube_d:.2f} mm tube"
+        )
+
+    print(
+        "QuenaCase channel layout: ok, "
+        f"{horizontal_land:.1f} mm minimum horizontal distribution gap, "
+        f"{vertical_land:.1f} mm vertical land, "
+        f"{edge_land:.1f} mm perimeter land, "
+        f"{deck_h:.1f} mm raised bed, "
+        f"{deck_opening:.2f} mm opening at bed edge, "
+        f"ABS cantilever clip strain {100*clip_strain:.2f}%"
+    )
 
 
 def read_stl_triangles(path: Path) -> list[tuple[tuple[float, float, float], ...]]:
@@ -265,10 +426,10 @@ def run_mesh_checks() -> None:
             assert_close(actual, target, f"{name} {axis} size")
 
         components = component_count(triangles)
-        if components > expected["max_components"]:
+        if components != expected["components"]:
             raise AssertionError(
-                f"{name}: expected no more than {expected['max_components']} "
-                f"connected mesh components, got {components}"
+                f"{name}: expected {expected['components']} connected mesh components, "
+                f"got {components}"
             )
 
         print(
@@ -292,9 +453,9 @@ def run_hinge_sweep_check() -> None:
             raise AssertionError(f"{path.name}: missing; render it with openscad first")
 
     bottom_triangles = read_stl_triangles(bottom_path)
-    lid_triangles = read_stl_triangles(lid_path)
-    hinge_axis = (0.0, HINGE_AXIS_Y, HINGE_AXIS_Z)
-    closed_lid_position = (0.0, 0.0, LID_CLOSED_Z)
+    hinge_axis_y, hinge_axis_z, lid_closed_z = evaluated_hinge_pose()
+    hinge_axis = (0.0, hinge_axis_y, hinge_axis_z)
+    closed_lid_position = (0.0, 0.0, lid_closed_z)
 
     physics_client = p.connect(p.DIRECT)
     try:
@@ -306,6 +467,27 @@ def run_hinge_sweep_check() -> None:
 
         with tempfile.TemporaryDirectory(prefix="quena_case_mesh_") as temp_dir:
             temp_path = Path(temp_dir)
+            support_free_scad = temp_path / "support_free_lid.scad"
+            support_free_lid = temp_path / "support_free_lid.stl"
+            support_free_scad.write_text(
+                f'include <{ROOT / "QuenaCase.scad"}>;\nlid_assembly();\n',
+                encoding="utf-8",
+            )
+            subprocess.run(
+                [
+                    "openscad",
+                    "-D",
+                    'part="none"',
+                    "-o",
+                    str(support_free_lid),
+                    str(support_free_scad),
+                ],
+                check=True,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            lid_triangles = read_stl_triangles(support_free_lid)
             bottom_obj = temp_path / "bottom.obj"
             lid_obj = temp_path / "lid.obj"
             write_obj(bottom_obj, bottom_triangles)
@@ -366,6 +548,9 @@ def run_hinge_sweep_check() -> None:
 
 
 def main() -> None:
+    run_hinge_design_checks()
+    run_latch_design_checks()
+    run_channel_layout_checks()
     run_mesh_checks()
     run_closed_overlap_check()
     run_hinge_sweep_check()

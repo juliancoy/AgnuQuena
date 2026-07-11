@@ -14,19 +14,23 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 SCAD = ROOT / "QuenaCase.scad"
+RENDERER = Path(__file__).resolve()
 
 STL_PARTS = [
     ("bottom", ROOT / "QuenaCaseBottom.stl", True),
     ("lid", ROOT / "QuenaCaseLid.stl", True),
+    ("bottom_p1s", ROOT / "QuenaCaseBottom_P1S.stl", False),
+    ("lid_p1s", ROOT / "QuenaCaseLid_P1S.stl", False),
     ("hinge_coupon", ROOT / "QuenaCaseHingeCoupon.stl", False),
     ("full_hinge_coupon", ROOT / "QuenaCaseFullHingeCoupon.stl", False),
-    ("latch", ROOT / "QuenaCaseLatch.stl", True),
     ("latch_coupon", ROOT / "QuenaCaseLatchCoupon.stl", False),
     ("assembly", ROOT / "QuenaCaseAssembly.stl", True),
 ]
 
 VIEW_SHEETS = [
     ("assembly", ROOT / "QuenaCaseAssembly_9views.png"),
+    ("bottom", ROOT / "QuenaCaseBottom_9views.png"),
+    ("lid_hinge_closeup", ROOT / "QuenaCaseLidHingeCloseup_9views.png"),
     ("hinge_coupon", ROOT / "QuenaCaseHingeCoupon_9views.png"),
     ("full_hinge_coupon", ROOT / "QuenaCaseFullHingeCoupon_9views.png"),
     ("latch_coupon", ROOT / "QuenaCaseLatchCoupon_9views.png"),
@@ -44,13 +48,37 @@ CAMERAS = [
     "0,0,0,55,0,315,360",
 ]
 
+LID_HINGE_CLOSEUP_CAMERAS = [
+    "-40,-36.7,3.1,65,0,25,95",
+    "-40,-36.7,3.1,90,0,0,95",
+    "-40,-36.7,3.1,90,0,90,95",
+    "0,-36.7,3.1,65,0,25,210",
+    "0,-36.7,3.1,90,0,0,210",
+    "0,-36.7,3.1,0,0,0,210",
+    "40,-36.7,3.1,65,0,335,95",
+    "40,-36.7,3.1,90,0,180,95",
+    "40,-36.7,3.1,90,0,270,95",
+]
+
+
+def is_current(output: Path, dependencies: tuple[Path, ...]) -> bool:
+    """Return whether output is at least as new as all of its inputs."""
+    if not output.exists():
+        return False
+    output_mtime = output.stat().st_mtime_ns
+    return all(output_mtime >= dependency.stat().st_mtime_ns
+               for dependency in dependencies)
+
 
 def run(command: list[str]) -> None:
     print(" ".join(command))
     subprocess.run(command, cwd=ROOT, check=True)
 
 
-def render_stl(part: str, output: Path) -> None:
+def render_stl(part: str, output: Path, *, force: bool = False) -> None:
+    if not force and is_current(output, (SCAD, RENDERER)):
+        print(f"Skipping current STL: {output.relative_to(ROOT)}")
+        return
     run([
         "openscad",
         "--export-format",
@@ -84,13 +112,41 @@ def render_png(part: str, output: Path, camera: str) -> None:
     ])
 
 
-def render_view_sheet(part: str, output: Path) -> None:
+def render_closeup_png(part: str, output: Path, camera: str) -> None:
+    run([
+        "openscad",
+        "-D",
+        f'part="{part}"',
+        "--colorscheme",
+        "Cornfield",
+        "--projection",
+        "o",
+        "--imgsize",
+        "500,367",
+        "--camera",
+        camera,
+        "-o",
+        str(output),
+        str(SCAD),
+    ])
+
+
+def render_view_sheet(part: str, output: Path, *, force: bool = False) -> None:
+    if not force and is_current(output, (SCAD, RENDERER)):
+        print(f"Skipping current view sheet: {output.relative_to(ROOT)}")
+        return
     with tempfile.TemporaryDirectory(prefix=f"quena_{part}_views_") as temp_dir:
         temp_path = Path(temp_dir)
         frames = []
-        for index, camera in enumerate(CAMERAS):
+        closeup = part == "lid_hinge_closeup"
+        cameras = LID_HINGE_CLOSEUP_CAMERAS if closeup else CAMERAS
+        render_part = "lid" if closeup else part
+        for index, camera in enumerate(cameras):
             frame = temp_path / f"{index:02d}.png"
-            render_png(part, frame, camera)
+            if closeup:
+                render_closeup_png(render_part, frame, camera)
+            else:
+                render_png(render_part, frame, camera)
             frames.append(Image.open(frame).convert("RGB"))
 
         sheet = Image.new("RGB", (1500, 1101), (243, 243, 239))
@@ -108,14 +164,18 @@ def copy_website_assets() -> None:
     for _, output, copy_to_site in STL_PARTS:
         if copy_to_site:
             target = asset_dir / output.name
-            shutil.copy2(output, target)
-            print(target.relative_to(ROOT))
+            if not is_current(target, (output,)):
+                shutil.copy2(output, target)
+                print(target.relative_to(ROOT))
+            else:
+                print(f"Skipping current website asset: {target.relative_to(ROOT)}")
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--stls", action="store_true", help="render STL files")
     parser.add_argument("--views", action="store_true", help="render nine-view PNG sheets")
+    parser.add_argument("--force", action="store_true", help="regenerate current outputs")
     args = parser.parse_args()
 
     render_stls = args.stls or not args.views
@@ -123,12 +183,12 @@ def main() -> None:
 
     if render_stls:
         for part, output, _ in STL_PARTS:
-            render_stl(part, output)
+            render_stl(part, output, force=args.force)
         copy_website_assets()
 
     if render_views:
         for part, output in VIEW_SHEETS:
-            render_view_sheet(part, output)
+            render_view_sheet(part, output, force=args.force)
 
 
 if __name__ == "__main__":

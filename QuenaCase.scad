@@ -4,7 +4,8 @@
 
 $fn = 64;
 
-// Select "bottom", "lid", "hinge_coupon", "full_hinge_coupon", "latch", "latch_coupon", "assembly", "preview", or "none".
+// Select "bottom", "lid", "bottom_p1s", "lid_p1s", "hinge_coupon",
+// "full_hinge_coupon", "latch", "latch_coupon", "assembly", "preview", or "none".
 // Override from the CLI with:
 // openscad -D 'part="bottom"' -o QuenaCaseBottom.stl QuenaCase.scad
 part = is_undef(part) ? "preview" : part;
@@ -41,7 +42,11 @@ corner_r = 7;
 
 row_gap = 8;
 row_pitch = max_channel_d + row_gap;
-inline_gap = 6;
+short_row_min_gap = 18;
+channel_edge_land = 5;
+// Continuous raised interior bed beneath the fitted channels. Matching the
+// lid roof thickness gives both halves the same deliberate, solid appearance.
+channel_deck_h = 9.5;
 connector_backset = angled_transition_z + 2;
 connector_expand_start = 2;
 connector_expand_end = ov - insert_z_tolerance - 2;
@@ -55,10 +60,21 @@ profile_lengths = [
     mouthpiece_total_length + connector_extra_l
 ];
 profile_max_ds = [connector_channel_d, channel_d, connector_channel_d];
-short_row_length = profile_lengths[1] + inline_gap + profile_lengths[2];
-longest_slot = max(profile_lengths[0], short_row_length) + end_clearance * 2;
-case_inner_l = longest_slot;
-case_inner_w = row_pitch + max_channel_d;
+// Actual recess spans include end clearance. Connector profiles already include
+// their expanded connector end, so they need clearance on only the opposite end.
+profile_cut_spans = [
+    profile_lengths[0] + end_clearance,
+    profile_lengths[1] + end_clearance * 2,
+    profile_lengths[2] + end_clearance
+];
+profile_cut_center_offsets = [-end_clearance / 2, 0, -end_clearance / 2];
+short_row_min_length = profile_cut_spans[1] + profile_cut_spans[2]
+    + short_row_min_gap * 3;
+case_inner_l = max(
+    profile_cut_spans[0] + channel_edge_land * 2,
+    short_row_min_length
+);
+case_inner_w = row_pitch + max_channel_d + channel_edge_land * 2;
 case_outer_l = case_inner_l + wall * 2;
 case_outer_w = case_inner_w + wall * 2;
 case_outer_h = max_channel_d / 2 + floor_thickness + 4;
@@ -71,12 +87,20 @@ lid_z_clearance = 0.3;
 
 lid_closed_z = case_outer_h + lid_z_clearance;
 
-hinge_outer_d = 6.2;
-hinge_axle_d = 2.8;
+hinge_outer_d = 6.8;
+hinge_axle_d = 3.2;
 hinge_socket_clearance = 0.35;
 hinge_socket_d = hinge_axle_d + hinge_socket_clearance;
-hinge_snap_slot_h = 2.25;
-hinge_snap_lead_in_h = 1.1;
+hinge_stator_closed = 1;
+hinge_nub_l = 3.0;
+hinge_pin_tip_l = 0.8;
+hinge_pin_tip_r = 0.4;
+hinge_socket_depth = 4.2;
+hinge_install_flex_span = 80;
+hinge_backer_extension = 1.2;
+hinge_nub_support_y = 0.9;
+hinge_nub_support_gap = 0.2;
+hinge_nub_support_base_overlap = 0.15;
 hinge_axis_y = -case_outer_w / 2;
 hinge_axis_z = case_outer_h + hinge_outer_d / 2;
 hinge_span = case_outer_l - 30;
@@ -108,17 +132,134 @@ latch_clip_bottom_z = bottom_pull_z - latch_clip_wall - latch_clip_clearance;
 latch_clip_top_jaw_z = lid_closed_z + lid_pull_z + front_pull_h + latch_clip_clearance;
 latch_clip_top_offset = latch_clip_top_jaw_z - latch_clip_bottom_z;
 latch_clip_total_h = latch_clip_top_offset + latch_clip_wall;
+latch_nub_d = 3.0;
+latch_nub_l = 2.6;
+latch_nub_tip_l = 0.7;
+latch_nub_tip_r = 0.35;
+latch_socket_clearance = 0.4;
+latch_socket_d = latch_nub_d + latch_socket_clearance;
+latch_socket_depth = 3.8;
+latch_knuckle_outer_d = 6.6;
+latch_knuckle_gap = 1.6;
+latch_install_flex_span = latch_clip_w;
+latch_carrier_t = 1.6;
+latch_carrier_h = 5.6;
+latch_axis_z = latch_clip_bottom_z + latch_clip_total_h / 2;
+latch_mount_x = latch_clip_w / 2 + latch_knuckle_gap;
 
+// Integral radial snap latch. Two lid axles press into open C-knuckles on the
+// bottom; the knuckle lips, not a long lid carrier, provide the compliance.
+latch_snap_nub_d = 3.2;
+latch_snap_socket_clearance = 0.30;
+latch_snap_socket_d = latch_snap_nub_d + latch_snap_socket_clearance;
+latch_snap_outer_d = 7.0;
+latch_snap_throat = 2.7;
+latch_snap_knuckle_w = 8.0;
+latch_snap_lip_t = 1.4;
+latch_snap_lip_l = 7.0;
+latch_snap_lead = 1.2;
+latch_snap_pair_x = 19;
+latch_snap_axis_y = case_outer_w / 2 + 6.5;
+latch_snap_axis_z = lid_closed_z + 2.0;
+
+// Compact harmonica-case style ball snaps.
+latch_ball_d = 3.4;
+latch_ball_neck_d = 2.6;
+latch_cup_bore_d = 3.15;
+latch_cup_cavity_d = 3.75;
+latch_cup_outer_d = 7.0;
+latch_cup_h = 5.2;
+latch_cup_slot_w = 1.2;
+latch_cup_lip_t = 1.4;
+latch_cup_flex_l = 5.2;
+latch_pair_x = 19;
+latch_center_y = case_outer_w / 2 + 4.5;
+latch_center_z = lid_closed_z + 1.0;
+
+// Final simple harmonica-case latch: one lid tongue, one shallow nub, and one
+// shallow recess in the bottom front wall.
+latch_tongue_w = 16.0;
+latch_tongue_t = 1.6;
+latch_tongue_flex_l = 9.0;
+latch_tongue_y = case_outer_w / 2 - latch_tongue_t / 2;
+latch_nub_r = 1.0;
+latch_nub_protrusion = 0.80;
+latch_indent_depth = 0.55;
+latch_release_deflection = latch_nub_protrusion - latch_indent_depth;
+latch_nub_z = case_outer_h - 1.35;
+latch_point_xs = [-82, 0, 82];
+latch_point_count = 3;
+latch_tongue_tip_w = 13.5;
+latch_tongue_root_w = 22.0;
+latch_tongue_root_blend_h = 2.4;
+
+module smooth_latch_tongue(xc, local_y, bottom_z) {
+    slice_h = 1.4;
+    hull() {
+        translate([xc, local_y, bottom_z])
+            rounded_box([
+                latch_tongue_tip_w,
+                latch_tongue_t,
+                slice_h
+            ], 0.7);
+        translate([xc, local_y,
+            bottom_z + latch_tongue_flex_l - slice_h])
+            rounded_box([
+                latch_tongue_root_w,
+                latch_tongue_t,
+                slice_h
+            ], 0.7);
+    }
+    // A shallow, wider shoulder overlaps the case wall and removes the hard
+    // visual/mechanical corner at the tongue root.
+    hull() {
+        translate([xc, local_y,
+            bottom_z + latch_tongue_flex_l - latch_tongue_root_blend_h])
+            rounded_box([
+                latch_tongue_root_w,
+                latch_tongue_t,
+                latch_tongue_root_blend_h
+            ], 0.8);
+        translate([xc, local_y - 0.35,
+            bottom_z + latch_tongue_flex_l - 0.5])
+            rounded_box([
+                latch_tongue_root_w + 4,
+                latch_tongue_t + 0.7,
+                1.8
+            ], 0.9);
+    }
+}
+
+short_row_gap = (
+    case_inner_l - profile_cut_spans[1] - profile_cut_spans[2]
+) / 3;
+short_tube_cut_center = -case_inner_l / 2
+    + short_row_gap
+    + profile_cut_spans[1] / 2;
+mouth_cut_center = case_inner_l / 2
+    - short_row_gap
+    - profile_cut_spans[2] / 2;
 slot_xs = [
+    // Keep the longest tube body centered axially.  Its connector and free-end
+    // clearances remain intentionally asymmetric inside the channel profile.
     0,
-    -case_inner_l / 2 + end_clearance + profile_lengths[1] / 2,
-    case_inner_l / 2 - end_clearance - profile_lengths[2] / 2
+    short_tube_cut_center - profile_cut_center_offsets[1],
+    mouth_cut_center + profile_cut_center_offsets[2]
 ];
 slot_ys = [-row_pitch / 2, row_pitch / 2, row_pitch / 2];
 slot_rot_zs = [0, 0, 180];
 
-retainer_overcenter = 0.75;
-retainer_wall = 2.0;
+// Localized ABS cantilever clips.  Each finger is isolated from the raised
+// deck by a relief pocket, bends radially away from the tube during insertion,
+// and carries a shallow inward hook above the tube meridian.
+retainer_clip_t = 1.2;
+retainer_clip_w = 10;
+retainer_clip_flex_l = 15;
+retainer_clip_interference = 0.35;
+retainer_clip_hook_h = 1.4;
+retainer_clip_hook_rise = 1.5;
+retainer_clip_relief = 0.8;
+retainer_clip_root_r = 1.2;
 retainer_end_margin = 8;
 retainer_connector_margin = 4;
 
@@ -135,7 +276,17 @@ function retainer_x1(i) = slot_has_connector[i]
     ? body_x1(i) - connector_backset - retainer_connector_margin
     : body_x1(i) - retainer_end_margin;
 function retainer_l(i) = max(0, retainer_x1(i) - retainer_x0(i));
-function retainer_count(i) = retainer_l(i) > 160 ? 4 : (retainer_l(i) > 80 ? 3 : 2);
+// Choose only as many independent bands as the safe, normal-diameter span can
+// support.  The previous minimum of two made the two mouthpiece bands overlap
+// and fuse into one misleading block because that span is only about 13 mm.
+function retainer_count(i) = retainer_l(i) > 160 ? 4
+    : (retainer_l(i) > 80 ? 3
+    : (retainer_l(i) > 36 ? 2
+    : (retainer_l(i) > 8 ? 1 : 0)));
+function retainer_pitch(i) = retainer_count(i) > 0
+    ? retainer_l(i) / retainer_count(i) : 0;
+function retainer_band_l(i) = min(retainer_clip_w,
+    max(8, retainer_pitch(i) * 0.45));
 
 module rounded_box(size, r) {
     hull() {
@@ -152,7 +303,7 @@ module profiled_segment(x1, x2, d1, d2) {
             cylinder(h = x2 - x1, d1 = d1, d2 = d2, center = true);
 }
 
-module profiled_channel_cut(i, extra_depth = 0) {
+module profiled_channel_cut(i, extra_depth = 0, flat_relief = true) {
     x0 = body_x0(i);
     x1 = body_x1(i);
     x2 = connector_x1(i);
@@ -186,21 +337,24 @@ module profiled_channel_cut(i, extra_depth = 0) {
             profiled_segment(x1, x1 + end_clearance, channel_d, channel_d);
         }
 
-        // Flat relief above the half-round keeps the part easy to remove.
-        translate([0, 0, profile_d(i) / 4])
-            cube([
-                profile_l(i) + end_clearance * 2,
-                profile_d(i),
-                profile_d(i) / 2 + extra_depth
-            ], center = true);
+        // The bottom uses an open relief so parts remain easy to lift out.
+        // The lid omits it, leaving a cylindrical indentation that follows
+        // the flute instead of a flat-sided pocket.
+        if (flat_relief)
+            translate([0, 0, profile_d(i) / 4])
+                cube([
+                    profile_l(i) + end_clearance * 2,
+                    profile_d(i),
+                    profile_d(i) / 2 + extra_depth
+                ], center = true);
     }
 }
 
-module all_channel_cuts(extra_depth = 0) {
+module all_channel_cuts(extra_depth = 0, flat_relief = true) {
     for (i = [0 : 2])
         translate([slot_x(i), slot_y(i), slot_z])
             rotate([0, 0, slot_rot_z(i)])
-                profiled_channel_cut(i, extra_depth);
+                profiled_channel_cut(i, extra_depth, flat_relief);
 }
 
 module bottom_channel_cradle(i) {
@@ -216,35 +370,86 @@ module bottom_channel_cradle(i) {
     }
 }
 
-module curved_retainer_band(i, x_center, band_l) {
+module cantilever_retainer(i, x_center, clip_w) {
+    tube_r = od / 2;
     channel_r = channel_d / 2;
-    cradle_overlap = 2;
-    band_h = channel_r + cradle_overlap + retainer_overcenter;
+    tip_z = slot_z + retainer_clip_hook_rise;
+    root_z = tip_z - retainer_clip_flex_l;
+    finger_y = channel_r + retainer_clip_t / 2;
+    hook_reach = part_clearance + retainer_clip_interference;
 
-    difference() {
-        translate([
-            x_center,
-            0,
-            floor_thickness - cradle_overlap / 2 + band_h / 2
-        ])
-            cube([band_l, channel_d + retainer_wall * 2, band_h], center = true);
-        translate([0, 0, slot_z])
-            profiled_channel_cut(i, 2);
+    // Rounded root transition reduces the peak strain at the fixed end.
+    hull() {
+        translate([x_center, finger_y, root_z])
+            rounded_box([clip_w, retainer_clip_t,
+                retainer_clip_root_r], min(retainer_clip_root_r / 2, clip_w / 4));
+        translate([x_center, finger_y,
+            tip_z - retainer_clip_hook_h])
+            rounded_box([clip_w, retainer_clip_t,
+                retainer_clip_hook_h], min(retainer_clip_t / 2, clip_w / 4));
+    }
+    // A shallow ramped hook gives 0.35 mm radial interference on the tube.
+    hull() {
+        translate([x_center, finger_y,
+            tip_z - retainer_clip_hook_h])
+            rounded_box([clip_w, retainer_clip_t,
+                retainer_clip_hook_h], min(retainer_clip_t / 2, clip_w / 4));
+        translate([x_center,
+            tube_r - retainer_clip_interference + 0.15,
+            tip_z - retainer_clip_hook_h / 2])
+            rounded_box([clip_w, 0.3,
+                retainer_clip_hook_h / 2], 0.15);
     }
 }
 
-module curved_retainers(i) {
+module cantilever_retainers(i) {
     count = retainer_count(i);
     usable_l = retainer_l(i);
-    band_l = min(24, max(12, usable_l / (count * 2)));
+    band_l = retainer_band_l(i);
 
-    if (usable_l > 8)
+    if (count > 0)
         for (n = [0 : count - 1])
-            curved_retainer_band(
+            cantilever_retainer(
                 i,
                 retainer_x0(i) + usable_l * (n + 0.5) / count,
                 band_l
             );
+}
+
+module cantilever_retainer_clearances(i) {
+    count = retainer_count(i);
+    usable_l = retainer_l(i);
+    clip_w = retainer_band_l(i);
+    channel_r = channel_d / 2;
+    tip_z = slot_z + retainer_clip_hook_rise;
+    relief_bottom_z = floor_thickness + 0.3;
+
+    if (count > 0)
+        for (n = [0 : count - 1])
+            translate([
+                retainer_x0(i) + usable_l * (n + 0.5) / count,
+                channel_r + retainer_clip_t / 2,
+                (relief_bottom_z + tip_z + 0.3) / 2
+            ])
+                cube([
+                    clip_w + retainer_clip_relief * 2,
+                    retainer_clip_t + retainer_clip_relief * 2,
+                    tip_z + 0.3 - relief_bottom_z
+                ], center = true);
+}
+
+module all_cantilever_retainer_clearances() {
+    for (i = [0 : 2])
+        translate([slot_x(i), slot_y(i), 0])
+            rotate([0, 0, slot_rot_z(i)])
+                cantilever_retainer_clearances(i);
+}
+
+module all_cantilever_retainers() {
+    for (i = [0 : 2])
+        translate([slot_x(i), slot_y(i), 0])
+            rotate([0, 0, slot_rot_z(i)])
+                cantilever_retainers(i);
 }
 
 module bottom_fitted_channels() {
@@ -252,15 +457,95 @@ module bottom_fitted_channels() {
         translate([slot_x(i), slot_y(i), 0]) {
             rotate([0, 0, slot_rot_z(i)]) {
                 bottom_channel_cradle(i);
-                curved_retainers(i);
             }
         }
+}
+
+module bottom_channel_deck() {
+    // A continuous false floor produces a uniform interior surface. The slight
+    // perimeter overlap bonds it into the shell instead of leaving a seam.
+    difference() {
+        translate([0, 0, floor_thickness])
+            rounded_box(
+                [case_inner_l + 0.4, case_inner_w + 0.4, channel_deck_h],
+                max(corner_r - wall + 0.2, 1)
+            );
+        all_channel_cuts(channel_deck_h + 1);
+    }
 }
 
 module x_cylinder_between(x1, x2, d) {
     translate([(x1 + x2) / 2, 0, 0])
         rotate([0, 90, 0])
             cylinder(h = x2 - x1, d = d, center = true);
+}
+
+module hinge_pin_pair(left_root, right_root, local_y, local_z) {
+    left_tip = left_root - hinge_nub_l;
+    right_tip = right_root + hinge_nub_l;
+
+    translate([0, local_y, local_z]) {
+        // Rounded ogive noses self-center in the sealed sockets. Each hull
+        // blends a spherical cap into the full-diameter bearing without a
+        // sharp annular edge.
+        hull() {
+            translate([left_tip + hinge_pin_tip_r, 0, 0])
+                sphere(r = hinge_pin_tip_r);
+            x_cylinder_between(
+                left_tip + hinge_pin_tip_l - 0.05,
+                left_tip + hinge_pin_tip_l + 0.01,
+                hinge_axle_d
+            );
+        }
+        x_cylinder_between(
+            left_tip + hinge_pin_tip_l - 0.02,
+            left_root + 0.1,
+            hinge_axle_d
+        );
+
+        x_cylinder_between(
+            right_root - 0.1,
+            right_tip - hinge_pin_tip_l + 0.02,
+            hinge_axle_d
+        );
+        hull() {
+            x_cylinder_between(
+                right_tip - hinge_pin_tip_l - 0.01,
+                right_tip - hinge_pin_tip_l + 0.05,
+                hinge_axle_d
+            );
+            translate([right_tip - hinge_pin_tip_r, 0, 0])
+                sphere(r = hinge_pin_tip_r);
+        }
+    }
+}
+
+module hinge_pin_breakaway_supports(
+    left_root, right_root, local_y, local_z, base_z
+) {
+    post_top = local_z - hinge_axle_d / 2 - hinge_nub_support_gap;
+    post_bottom = base_z - hinge_nub_support_base_overlap;
+    post_h = post_top - post_bottom;
+    left_tip = left_root - hinge_nub_l;
+    right_tip = right_root + hinge_nub_l;
+    left_x1 = left_tip + hinge_pin_tip_l - 0.1;
+    left_x2 = left_root + 0.1;
+    right_x1 = right_root - 0.1;
+    right_x2 = right_tip - hinge_pin_tip_l + 0.1;
+
+    if (post_h > 0) {
+        for (span = [[left_x1, left_x2], [right_x1, right_x2]])
+            translate([
+                (span[0] + span[1]) / 2,
+                local_y,
+                post_bottom + post_h / 2
+            ])
+                cube([
+                    span[1] - span[0],
+                    hinge_nub_support_y,
+                    post_h
+                ], center = true);
+    }
 }
 
 module hinge_tab(x1, x2, local_z) {
@@ -279,22 +564,25 @@ module hinge_barrel(x1, x2, local_z) {
         x_cylinder_between(x1, x2, hinge_outer_d);
 }
 
-module hinge_socket_slot(x1, x2, local_z) {
-    translate([(x1 + x2) / 2, hinge_axis_y - hinge_outer_d / 2 - 0.5, local_z])
-        cube([x2 - x1 + 0.2, hinge_outer_d + 1, hinge_snap_slot_h], center = true);
+module hinge_barrel_rect_support(x1, x2, local_y, local_z, base_z) {
+    support_h = local_z - hinge_outer_d / 2 - base_z + 0.35;
+    if (support_h > 0)
+        translate([
+            (x1 + x2) / 2,
+            local_y,
+            base_z + support_h / 2
+        ])
+            cube([
+                x2 - x1,
+                hinge_backer_extension,
+                support_h
+            ], center = true);
 }
 
-module hinge_socket_lead_ins(x1, x2, local_z) {
-    translate([0, hinge_axis_y - hinge_outer_d / 2 + 0.4, local_z + hinge_snap_slot_h / 2 + hinge_snap_lead_in_h / 2])
-        rotate([45, 0, 0])
-            cube([x2 - x1 + 0.2, hinge_snap_lead_in_h * 3, hinge_snap_lead_in_h], center = true);
-    translate([0, hinge_axis_y - hinge_outer_d / 2 + 0.4, local_z - hinge_snap_slot_h / 2 - hinge_snap_lead_in_h / 2])
-        rotate([-45, 0, 0])
-            cube([x2 - x1 + 0.2, hinge_snap_lead_in_h * 3, hinge_snap_lead_in_h], center = true);
-}
-
-module hinge_socket_bore(x1, x2, local_z) {
-    translate([0, hinge_axis_y, local_z])
+module hinge_socket_channel_cut(x1, x2, local_y, local_z) {
+    // The bottom stator remains a continuous blind cylinder. Assembly relies
+    // on axial ABS flex in the lid/hinge carrier, not a split socket mouth.
+    translate([0, local_y, local_z])
         x_cylinder_between(x1 - 0.1, x2 + 0.1, hinge_socket_d);
 }
 
@@ -311,7 +599,7 @@ module hinge_snap_axle(x1, x2, local_z) {
 }
 
 module bottom_hinge_web(x1, x2, local_z) {
-    web_h = local_z - case_outer_h + hinge_axle_d / 2 + 0.35;
+    web_h = local_z - case_outer_h + hinge_outer_d / 2 + 0.35;
     web_y = 3.6;
 
     translate([
@@ -322,25 +610,46 @@ module bottom_hinge_web(x1, x2, local_z) {
         cube([x2 - x1, web_y, web_h], center = true);
 }
 
+module bottom_hinge_socket_cuts() {
+    L2 = -hinge_span / 6 - hinge_gap / 2;
+    R1 = hinge_span / 6 + hinge_gap / 2;
+
+    hinge_socket_channel_cut(
+        L2 - hinge_socket_depth,
+        L2 + 0.1,
+        hinge_axis_y,
+        hinge_axis_z
+    );
+    hinge_socket_channel_cut(
+        R1 - 0.1,
+        R1 + hinge_socket_depth,
+        hinge_axis_y,
+        hinge_axis_z
+    );
+}
+
 module bottom_hinge() {
-    for (segment = hinge_bottom_knuckles)
+    for (segment = hinge_bottom_knuckles) {
         bottom_hinge_web(segment[0], segment[1], hinge_axis_z);
-    hinge_snap_axle(-hinge_span / 2, hinge_span / 2, hinge_axis_z);
+        hinge_support(segment[0], segment[1], hinge_axis_z);
+    }
 }
 
 module lid_hinge() {
     local_axis_z = hinge_axis_z - lid_closed_z;
+    M1 = -hinge_span / 6 + hinge_gap / 2;
+    M2 = hinge_span / 6 - hinge_gap / 2;
 
-    for (segment = hinge_lid_knuckles)
+    for (segment = hinge_lid_knuckles) {
         hinge_support(segment[0], segment[1], local_axis_z);
-}
+    }
 
-module lid_hinge_socket_cuts() {
-    local_axis_z = hinge_axis_z - lid_closed_z;
-
-    hinge_socket_bore(-hinge_span / 2, hinge_span / 2, local_axis_z);
-    hinge_socket_slot(-hinge_span / 2, hinge_span / 2, local_axis_z);
-    hinge_socket_lead_ins(-hinge_span / 2, hinge_span / 2, local_axis_z);
+    // Short, tapered nubs snap into the outer hinge sockets.
+    hinge_pin_pair(M1, M2, hinge_axis_y, local_axis_z);
+    if (part == "lid")
+        hinge_pin_breakaway_supports(
+            M1, M2, hinge_axis_y, local_axis_z, 0
+        );
 }
 
 module lid_bottom_hinge_relief() {
@@ -398,7 +707,7 @@ module latch_grip_ribs() {
     rib_h = latch_clip_total_h - latch_clip_wall * 2 - 2.0;
 
     for (x = [-latch_clip_w / 2 + 10, 0, latch_clip_w / 2 - 10])
-        translate([x, latch_clip_wall / 2 + latch_clip_r / 2, rib_z0])
+        translate([x, latch_carrier_t / 2 + latch_clip_r / 2 - 0.2, rib_z0])
             rounded_box([latch_clip_grip_rib_w, latch_clip_r, rib_h], latch_clip_r / 2);
 }
 
@@ -409,7 +718,7 @@ module latch_clip_core() {
                 rounded_box([latch_clip_w, latch_clip_depth, latch_clip_wall], latch_clip_r);
             translate([0, latch_clip_jaw_y, latch_clip_top_offset])
                 rounded_box([latch_clip_w, latch_clip_depth, latch_clip_wall], latch_clip_r);
-            rounded_box([latch_clip_w, latch_clip_wall, latch_clip_total_h], latch_clip_r);
+            rounded_box([latch_clip_w, latch_carrier_t, latch_clip_total_h], latch_clip_r);
             latch_grip_ribs();
         }
         latch_entry_bevels();
@@ -418,7 +727,281 @@ module latch_clip_core() {
 
 module latch_clip() {
     translate([0, latch_clip_bridge_y, latch_clip_bottom_z])
-        latch_clip_core();
+        union() {
+            latch_clip_core();
+            latch_nub_pair();
+        }
+}
+
+module latch_nub_pair(local_y = latch_carrier_t / 2,
+                      local_z = latch_clip_total_h / 2) {
+    left_root = -latch_clip_w / 2;
+    right_root = latch_clip_w / 2;
+    left_tip = left_root - latch_nub_l;
+    right_tip = right_root + latch_nub_l;
+    translate([0, local_y - 0.2, local_z]) {
+        hull() {
+            translate([left_tip + latch_nub_tip_r, 0, 0]) sphere(r = latch_nub_tip_r);
+            x_cylinder_between(left_tip + latch_nub_tip_l - 0.15,
+                left_tip + latch_nub_tip_l + 0.15, latch_nub_d);
+        }
+        x_cylinder_between(left_tip + latch_nub_tip_l - 0.25, left_root + 3.0, latch_nub_d);
+        x_cylinder_between(right_root - 3.0, right_tip - latch_nub_tip_l + 0.25, latch_nub_d);
+        hull() {
+            x_cylinder_between(right_tip - latch_nub_tip_l - 0.15,
+                right_tip - latch_nub_tip_l + 0.15, latch_nub_d);
+            translate([right_tip - latch_nub_tip_r, 0, 0]) sphere(r = latch_nub_tip_r);
+        }
+    }
+}
+
+module lid_integral_latch() {
+    local_axis_z = latch_axis_z - lid_closed_z;
+    carrier_h = latch_carrier_h;
+
+    // The lid-side bridge is the spring. Pulling its center outward bows it
+    // across X, shortening the nub span so both nubs clear the bottom sockets.
+    union() {
+        translate([0, latch_clip_bridge_y, local_axis_z])
+            rounded_box([latch_clip_w, latch_carrier_t, carrier_h], latch_clip_r);
+        translate([0, latch_clip_bridge_y, 0])
+            latch_nub_pair(latch_carrier_t / 2, local_axis_z);
+        for (x = [-latch_clip_w / 2 + 5, latch_clip_w / 2 - 5])
+            hull() {
+                translate([x, front_pull_y, lid_pull_z + front_pull_h / 2])
+                    sphere(r = 1.4);
+                translate([x, latch_clip_bridge_y, local_axis_z + carrier_h / 2 - 0.7])
+                    sphere(r = 1.4);
+            }
+    }
+}
+
+module latch_snap_axle(xc, local_z) {
+    translate([0, latch_snap_axis_y, local_z])
+        x_cylinder_between(
+            xc - latch_snap_knuckle_w / 2,
+            xc + latch_snap_knuckle_w / 2,
+            latch_snap_nub_d
+        );
+}
+
+module bottom_latch_knuckle(xc) {
+    socket_r = latch_snap_socket_d / 2;
+    lip_y = socket_r + latch_snap_lip_t / 2;
+    top_z = latch_snap_axis_z + latch_snap_lip_l;
+
+    difference() {
+        union() {
+            translate([0, latch_snap_axis_y, latch_snap_axis_z])
+                x_cylinder_between(
+                    xc - latch_snap_knuckle_w / 2,
+                    xc + latch_snap_knuckle_w / 2,
+                    latch_snap_outer_d
+                );
+            for (side = [-1, 1])
+                hull() {
+                    translate([
+                        xc,
+                        latch_snap_axis_y + side * lip_y,
+                        latch_snap_axis_z + latch_snap_outer_d / 4
+                    ]) cube([
+                        latch_snap_knuckle_w,
+                        latch_snap_lip_t,
+                        latch_snap_outer_d / 2
+                    ], center = true);
+                    translate([
+                        xc,
+                        latch_snap_axis_y + side * (lip_y + latch_snap_lead),
+                        top_z
+                    ]) cube([
+                        latch_snap_knuckle_w,
+                        latch_snap_lip_t,
+                        0.8
+                    ], center = true);
+                }
+        }
+        translate([0, latch_snap_axis_y, latch_snap_axis_z])
+            x_cylinder_between(
+                xc - latch_snap_knuckle_w / 2 - 0.1,
+                xc + latch_snap_knuckle_w / 2 + 0.1,
+                latch_snap_socket_d
+            );
+        translate([
+            xc,
+            latch_snap_axis_y,
+            latch_snap_axis_z + latch_snap_lip_l / 2 + 0.1
+        ]) cube([
+            latch_snap_knuckle_w + 0.4,
+            latch_snap_throat,
+            latch_snap_lip_l + latch_snap_outer_d
+        ], center = true);
+    }
+
+    // Low web transfers pull load into the bottom front rail.
+    hull() {
+        translate([xc, front_pull_y, bottom_pull_z]) sphere(r = 1.5);
+        translate([
+            xc,
+            latch_snap_axis_y,
+            latch_snap_axis_z - latch_snap_outer_d / 2 + 0.8
+        ]) sphere(r = 1.5);
+    }
+}
+
+module bottom_radial_latch() {
+    for (xc = [-latch_snap_pair_x, latch_snap_pair_x])
+        bottom_latch_knuckle(xc);
+}
+
+module lid_radial_latch() {
+    local_axis_z = latch_snap_axis_z - lid_closed_z;
+    for (xc = [-latch_snap_pair_x, latch_snap_pair_x]) {
+        support_x = xc - sign(xc) * (latch_snap_knuckle_w / 2 + 3.0);
+        translate([0, latch_snap_axis_y, local_axis_z])
+            x_cylinder_between(
+                xc < 0 ? xc - latch_snap_knuckle_w / 2 : support_x,
+                xc < 0 ? support_x : xc + latch_snap_knuckle_w / 2,
+                latch_snap_nub_d
+            );
+        hull() {
+            translate([support_x, front_pull_y, lid_pull_z + front_pull_h / 2])
+                sphere(r = 1.5);
+            translate([support_x, latch_snap_axis_y, local_axis_z])
+                sphere(r = latch_snap_nub_d / 2);
+        }
+    }
+}
+
+module bottom_harmonica_latch() {
+    for (xc = [-latch_pair_x, latch_pair_x]) {
+        difference() {
+            union() {
+                translate([xc, latch_center_y,
+                    latch_center_z - latch_cup_h / 2])
+                    cylinder(h = latch_cup_h, d = latch_cup_outer_d);
+                hull() {
+                    translate([xc, front_pull_y, bottom_pull_z]) sphere(r = 1.5);
+                    translate([xc, latch_center_y,
+                        latch_center_z - latch_cup_h / 2 + 0.8]) sphere(r = 1.5);
+                }
+            }
+            translate([xc, latch_center_y, latch_center_z])
+                sphere(d = latch_cup_cavity_d);
+            translate([xc, latch_center_y, latch_center_z])
+                cylinder(h = latch_cup_h / 2 + 0.1, d = latch_cup_bore_d);
+            // One outward split lets the cup expand without weakening both
+            // attachment roots.
+            translate([xc, latch_center_y + latch_cup_outer_d / 2,
+                latch_center_z])
+                cube([latch_cup_slot_w, latch_cup_outer_d,
+                    latch_cup_h + 0.4], center = true);
+        }
+    }
+}
+
+module lid_harmonica_latch() {
+    local_z = latch_center_z - lid_closed_z;
+    for (xc = [-latch_pair_x, latch_pair_x]) {
+        translate([xc, latch_center_y, local_z])
+            sphere(d = latch_ball_d);
+        translate([xc, latch_center_y, local_z + latch_ball_d / 2 - 0.1])
+            cylinder(h = 2.2, d = latch_ball_neck_d);
+        hull() {
+            translate([xc, front_pull_y, lid_pull_z + front_pull_h / 2])
+                sphere(r = 1.4);
+            translate([xc, latch_center_y, local_z + latch_ball_d / 2 + 1.2])
+                sphere(r = 1.3);
+        }
+    }
+}
+
+module lid_simple_latch() {
+    local_nub_z = latch_nub_z - lid_closed_z;
+    tongue_bottom_z = local_nub_z - 0.6;
+    inner_y = latch_tongue_y - latch_tongue_t / 2;
+
+    for (xc = latch_point_xs)
+        union() {
+            smooth_latch_tongue(xc, latch_tongue_y, tongue_bottom_z);
+            translate([
+                xc,
+                inner_y + latch_nub_r - latch_nub_protrusion,
+                local_nub_z
+            ]) sphere(r = latch_nub_r);
+        }
+}
+
+module bottom_simple_latch_indent_cut() {
+    pocket_depth = latch_tongue_t + 0.25;
+    pocket_base_y = case_outer_w / 2 - pocket_depth;
+    for (xc = latch_point_xs) {
+        // Receive the complete tongue thickness so its outside face is flush
+        // with the uninterrupted front edge of the closed case.
+        translate([
+            xc,
+            case_outer_w / 2 - pocket_depth / 2 + 0.1,
+            latch_nub_z - 1.0
+        ]) rounded_box([
+            latch_tongue_root_w + 1.0,
+            pocket_depth + 0.2,
+            latch_tongue_flex_l - 1.0
+        ], 0.8);
+        translate([
+            xc,
+            pocket_base_y + latch_nub_r - latch_indent_depth,
+            latch_nub_z
+        ]) sphere(r = latch_nub_r + 0.05);
+    }
+}
+
+module lid_simple_latch_relief_cuts() {
+    local_nub_z = latch_nub_z - lid_closed_z;
+    relief_bottom = local_nub_z - 0.9;
+    relief_h = latch_tongue_flex_l - latch_tongue_root_blend_h;
+    for (xc = latch_point_xs) {
+        // Side slots define the cantilever; the wider upper shoulder remains
+        // joined to the lid and carries the bending load into the shell.
+        for (side = [-1, 1])
+            translate([
+                xc + side * (latch_tongue_root_w / 2 + 0.35),
+                case_outer_w / 2 - wall / 2,
+                relief_bottom
+            ]) cube([0.7, wall + 1.0, relief_h]);
+        // Hidden pocket behind the tongue provides outward release travel.
+        translate([
+            xc - latch_tongue_root_w / 2 - 0.4,
+            case_outer_w / 2 - wall - 0.2,
+            relief_bottom
+        ]) cube([
+            latch_tongue_root_w + 0.8,
+            wall - latch_tongue_t + 0.25,
+            relief_h
+        ]);
+    }
+}
+
+module latch_socket_knuckles() {
+    socket_y = latch_clip_bridge_y + latch_carrier_t / 2;
+    for (side = [-1, 1]) {
+        inner_x = side * latch_mount_x;
+        outer_x = side * (latch_mount_x + latch_socket_depth);
+        x1 = min(inner_x, outer_x);
+        x2 = max(inner_x, outer_x);
+        union() {
+          difference() {
+            translate([0, socket_y, latch_axis_z])
+                x_cylinder_between(x1, x2, latch_knuckle_outer_d);
+            translate([0, socket_y, latch_axis_z])
+                x_cylinder_between(x1 - 0.1, x2 + 0.1, latch_socket_d);
+          }
+          hull() {
+            translate([side * (front_pull_w / 2 - 3.0),
+                front_pull_y, bottom_pull_z]) sphere(r = 1.3);
+            translate([side * (latch_mount_x + latch_socket_depth / 2),
+                socket_y, latch_axis_z - 3.0]) sphere(r = 1.2);
+          }
+        }
+    }
 }
 
 module bottom_rim() {
@@ -451,7 +1034,7 @@ module lid_rim_socket() {
     }
 }
 
-module bottom_case() {
+module bottom_case_core() {
     union() {
         difference() {
             union() {
@@ -463,15 +1046,29 @@ module bottom_case() {
             all_channel_cuts(4);
             lid_hinge_relief();
         }
+        bottom_channel_deck();
         bottom_fitted_channels();
     }
 }
 
-module bottom_assembly() {
+module bottom_case() {
     union() {
-        bottom_case();
-        bottom_hinge();
-        front_pull(bottom_pull_z);
+        difference() {
+            bottom_case_core();
+            all_cantilever_retainer_clearances();
+        }
+        all_cantilever_retainers();
+    }
+}
+
+module bottom_assembly() {
+    difference() {
+        union() {
+            bottom_case();
+            bottom_hinge();
+        }
+        bottom_hinge_socket_cuts();
+        bottom_simple_latch_indent_cut();
     }
 }
 
@@ -483,7 +1080,7 @@ module lid_case() {
         translate([0, 0, -0.01])
             lid_rim_socket();
         translate([0, 0, -lid_closed_z])
-            all_channel_cuts(4);
+            all_channel_cuts(4, false);
     }
 }
 
@@ -492,10 +1089,10 @@ module lid_assembly() {
         union() {
             lid_case();
             lid_hinge();
-            front_pull(lid_pull_z);
+            lid_simple_latch();
         }
-        lid_hinge_socket_cuts();
         lid_bottom_hinge_relief();
+        lid_simple_latch_relief_cuts();
     }
 }
 
@@ -518,72 +1115,102 @@ module closed_assembly_case() {
     bottom_assembly();
     translate([0, 0, lid_closed_z])
         lid_assembly();
-    latch_clip();
 }
 
 module hinge_coupon() {
-    coupon_span = 46;
+    coupon_span = hinge_install_flex_span + 24;
     coupon_base_l = coupon_span + 12;
     coupon_base_w = 18;
     coupon_base_h = 3;
-    coupon_wall_t = 3;
-    coupon_wall_h = hinge_outer_d + 5;
+    coupon_wall_t = hinge_tab_t;
+    coupon_wall_h = hinge_outer_d + 4;
     coupon_axis_z = coupon_base_h + hinge_outer_d / 2 + 2;
-    coupon_socket_l = 24;
     coupon_gap_y = 18;
     coupon_socket_y = coupon_base_w + coupon_gap_y;
-    lead_in_h = 1.1;
+    middle_x1 = -hinge_install_flex_span / 2;
+    middle_x2 = hinge_install_flex_span / 2;
+    left_socket_x1 = -coupon_span / 2;
+    left_socket_x2 = middle_x1 - hinge_gap;
+    right_socket_x1 = middle_x2 + hinge_gap;
+    right_socket_x2 = coupon_span / 2;
 
     module coupon_label(label_text, y) {
-        translate([-coupon_base_l / 2 + 4, y - coupon_base_w / 2 + 2.8, coupon_base_h + 0.05])
-            linear_extrude(height = 0.35)
+        translate([-coupon_base_l / 2 + 4, y - coupon_base_w / 2 + 2.8, coupon_base_h - 0.15])
+            linear_extrude(height = 0.5)
                 text(label_text, size = 4, halign = "left", valign = "bottom");
     }
 
-    module axle_coupon_half() {
+    module pin_coupon_half() {
         union() {
             translate([-coupon_base_l / 2, -coupon_base_w / 2, 0])
                 cube([coupon_base_l, coupon_base_w, coupon_base_h]);
-            translate([-coupon_base_l / 2, -coupon_base_w / 2, coupon_base_h])
-                cube([coupon_base_l, coupon_wall_t, coupon_wall_h]);
+            translate([0, -coupon_base_w / 2 + coupon_wall_t / 2, coupon_base_h + hinge_outer_d / 2 + 2])
+                cube([middle_x2 - middle_x1, coupon_wall_t, hinge_outer_d + 4], center = true);
             translate([0, -coupon_base_w / 2 + coupon_wall_t, coupon_axis_z])
-                x_cylinder_between(-coupon_span / 2, coupon_span / 2, hinge_axle_d);
-            translate([0, -coupon_base_w / 2 + coupon_wall_t / 2, (coupon_base_h + coupon_axis_z) / 2])
-                cube([coupon_span, coupon_wall_t, coupon_axis_z - coupon_base_h], center = true);
-            coupon_label("AXLE", 0);
+                x_cylinder_between(middle_x1, middle_x2, hinge_outer_d);
+            hinge_barrel_rect_support(
+                middle_x1,
+                middle_x2,
+                -coupon_base_w / 2 + coupon_wall_t,
+                coupon_axis_z,
+                coupon_base_h
+            );
+            hinge_pin_pair(
+                middle_x1,
+                middle_x2,
+                -coupon_base_w / 2 + coupon_wall_t,
+                coupon_axis_z
+            );
+            hinge_pin_breakaway_supports(
+                middle_x1,
+                middle_x2,
+                -coupon_base_w / 2 + coupon_wall_t,
+                coupon_axis_z,
+                coupon_base_h
+            );
         }
     }
 
     module socket_coupon_half() {
         translate([0, coupon_socket_y, 0])
-        union() {
-            translate([-coupon_base_l / 2, -coupon_base_w / 2, 0])
-                cube([coupon_base_l, coupon_base_w, coupon_base_h]);
-            difference() {
-                union() {
-                    translate([0, -coupon_base_w / 2 + coupon_wall_t / 2, coupon_base_h + coupon_wall_h / 2])
-                        cube([coupon_socket_l, coupon_wall_t, coupon_wall_h], center = true);
+        difference() {
+            union() {
+                translate([-coupon_base_l / 2, -coupon_base_w / 2, 0])
+                    cube([coupon_base_l, coupon_base_w, coupon_base_h]);
+                for (segment = [
+                    [left_socket_x1, left_socket_x2],
+                    [right_socket_x1, right_socket_x2]
+                ]) {
+                    translate([(segment[0] + segment[1]) / 2, -coupon_base_w / 2 + coupon_wall_t / 2, coupon_base_h + coupon_wall_h / 2])
+                        cube([segment[1] - segment[0], coupon_wall_t, coupon_wall_h], center = true);
                     translate([0, -coupon_base_w / 2 + coupon_wall_t, coupon_axis_z])
-                        x_cylinder_between(-coupon_socket_l / 2, coupon_socket_l / 2, hinge_outer_d);
-                    translate([0, -coupon_base_w / 2 + coupon_wall_t + hinge_outer_d / 4, coupon_axis_z - hinge_outer_d / 4])
-                        cube([coupon_socket_l, hinge_outer_d / 2, hinge_outer_d / 2], center = true);
+                        x_cylinder_between(segment[0], segment[1], hinge_outer_d);
+                    hinge_barrel_rect_support(
+                        segment[0],
+                        segment[1],
+                        -coupon_base_w / 2 + coupon_wall_t,
+                        coupon_axis_z,
+                        coupon_base_h
+                    );
                 }
-                translate([0, -coupon_base_w / 2 + coupon_wall_t, coupon_axis_z])
-                    x_cylinder_between(-coupon_socket_l / 2 - 0.1, coupon_socket_l / 2 + 0.1, hinge_socket_d);
-                translate([0, -coupon_base_w / 2 - hinge_outer_d / 2, coupon_axis_z])
-                    cube([coupon_socket_l + 0.2, hinge_outer_d + 1, hinge_snap_slot_h], center = true);
-                translate([0, -coupon_base_w / 2 + 0.4, coupon_axis_z + hinge_snap_slot_h / 2 + lead_in_h / 2])
-                    rotate([45, 0, 0])
-                        cube([coupon_socket_l + 0.2, lead_in_h * 3, lead_in_h], center = true);
-                translate([0, -coupon_base_w / 2 + 0.4, coupon_axis_z - hinge_snap_slot_h / 2 - lead_in_h / 2])
-                    rotate([-45, 0, 0])
-                        cube([coupon_socket_l + 0.2, lead_in_h * 3, lead_in_h], center = true);
+                coupon_label("SOCKETS", 0);
             }
-            coupon_label("SOCKET", 0);
+            hinge_socket_channel_cut(
+                middle_x1 - hinge_gap - hinge_socket_depth,
+                middle_x1 - hinge_gap + 0.1,
+                -coupon_base_w / 2 + coupon_wall_t,
+                coupon_axis_z
+            );
+            hinge_socket_channel_cut(
+                middle_x2 + hinge_gap - 0.1,
+                middle_x2 + hinge_gap + hinge_socket_depth,
+                -coupon_base_w / 2 + coupon_wall_t,
+                coupon_axis_z
+            );
         }
     }
 
-    axle_coupon_half();
+    pin_coupon_half();
     socket_coupon_half();
 }
 
@@ -599,51 +1226,84 @@ module full_hinge_coupon() {
     module full_hinge_base(y, label_text) {
         translate([-coupon_span / 2 - 6, y - coupon_base_w / 2, 0])
             cube([coupon_span + 12, coupon_base_w, coupon_base_h]);
-        translate([-coupon_span / 2 - 2, y - coupon_base_w / 2 + 2.8, coupon_base_h + 0.05])
-            linear_extrude(height = 0.35)
-                text(label_text, size = 4, halign = "left", valign = "bottom");
     }
 
     module full_axle_half() {
+        L2 = -hinge_span / 6 - hinge_gap / 2;
+        R1 = hinge_span / 6 + hinge_gap / 2;
         translate([0, coupon_bottom_y, 0])
-        union() {
-            full_hinge_base(0, "CASE AXLE");
-            for (segment = hinge_bottom_knuckles)
-                translate([(segment[0] + segment[1]) / 2, -coupon_base_w / 2 + 3.6 / 2, (coupon_base_h + coupon_axis_z) / 2])
-                    cube([segment[1] - segment[0], 3.6, coupon_axis_z - coupon_base_h], center = true);
-            translate([0, -coupon_base_w / 2 + 3.6, coupon_axis_z])
-                x_cylinder_between(-coupon_span / 2, coupon_span / 2, hinge_axle_d);
+        difference() {
+            union() {
+                full_hinge_base(0, "CASE SOCKETS");
+                for (segment = hinge_bottom_knuckles) {
+                    translate([(segment[0] + segment[1]) / 2, -coupon_base_w / 2 + hinge_tab_t / 2, coupon_base_h + hinge_outer_d / 2 + 2])
+                        cube([
+                            segment[1] - segment[0],
+                            hinge_tab_t,
+                            hinge_outer_d + 4
+                        ], center = true);
+                    translate([0, -coupon_base_w / 2 + hinge_tab_t, coupon_axis_z])
+                        x_cylinder_between(segment[0], segment[1], hinge_outer_d);
+                    hinge_barrel_rect_support(
+                        segment[0],
+                        segment[1],
+                        -coupon_base_w / 2 + hinge_tab_t,
+                        coupon_axis_z,
+                        coupon_base_h
+                    );
+                }
+            }
+            hinge_socket_channel_cut(
+                L2 - hinge_socket_depth,
+                L2 + 0.1,
+                -coupon_base_w / 2 + hinge_tab_t,
+                coupon_axis_z
+            );
+            hinge_socket_channel_cut(
+                R1 - 0.1,
+                R1 + hinge_socket_depth,
+                -coupon_base_w / 2 + hinge_tab_t,
+                coupon_axis_z
+            );
         }
     }
 
     module full_socket_half() {
+        M1 = -hinge_span / 6 + hinge_gap / 2;
+        M2 = hinge_span / 6 - hinge_gap / 2;
         translate([0, coupon_socket_y, 0])
         union() {
-            full_hinge_base(0, "LID SOCKET");
-            difference() {
-                union() {
-                    for (segment = hinge_lid_knuckles) {
-                        translate([(segment[0] + segment[1]) / 2, -coupon_base_w / 2 + hinge_tab_t / 2, coupon_base_h + hinge_outer_d / 2 + 2])
-                            cube([
-                                segment[1] - segment[0],
-                                hinge_tab_t,
-                                hinge_outer_d + 4
-                            ], center = true);
-                        translate([0, -coupon_base_w / 2 + hinge_tab_t, coupon_axis_z])
-                            x_cylinder_between(segment[0], segment[1], hinge_outer_d);
-                    }
-                }
+            full_hinge_base(0, "LID PINS");
+            for (segment = hinge_lid_knuckles) {
+                translate([(segment[0] + segment[1]) / 2, -coupon_base_w / 2 + hinge_tab_t / 2, coupon_base_h + hinge_outer_d / 2 + 2])
+                    cube([
+                        segment[1] - segment[0],
+                        hinge_tab_t,
+                        hinge_outer_d + 4
+                    ], center = true);
                 translate([0, -coupon_base_w / 2 + hinge_tab_t, coupon_axis_z])
-                    x_cylinder_between(-coupon_span / 2 - 0.1, coupon_span / 2 + 0.1, hinge_socket_d);
-                translate([0, -coupon_base_w / 2 - hinge_outer_d / 2, coupon_axis_z])
-                    cube([coupon_span + 0.2, hinge_outer_d + 1, hinge_snap_slot_h], center = true);
-                translate([0, -coupon_base_w / 2 - hinge_outer_d / 2 + 0.4, coupon_axis_z + hinge_snap_slot_h / 2 + hinge_snap_lead_in_h / 2])
-                    rotate([45, 0, 0])
-                        cube([coupon_span + 0.2, hinge_snap_lead_in_h * 3, hinge_snap_lead_in_h], center = true);
-                translate([0, -coupon_base_w / 2 - hinge_outer_d / 2 + 0.4, coupon_axis_z - hinge_snap_slot_h / 2 - hinge_snap_lead_in_h / 2])
-                    rotate([-45, 0, 0])
-                        cube([coupon_span + 0.2, hinge_snap_lead_in_h * 3, hinge_snap_lead_in_h], center = true);
+                    x_cylinder_between(segment[0], segment[1], hinge_outer_d);
+                hinge_barrel_rect_support(
+                    segment[0],
+                    segment[1],
+                    -coupon_base_w / 2 + hinge_tab_t,
+                    coupon_axis_z,
+                    coupon_base_h
+                );
             }
+            hinge_pin_pair(
+                M1,
+                M2,
+                -coupon_base_w / 2 + hinge_tab_t,
+                coupon_axis_z
+            );
+            hinge_pin_breakaway_supports(
+                M1,
+                M2,
+                -coupon_base_w / 2 + hinge_tab_t,
+                coupon_axis_z,
+                coupon_base_h
+            );
         }
     }
 
@@ -652,46 +1312,55 @@ module full_hinge_coupon() {
 }
 
 module latch_coupon() {
-    coupon_base_l = latch_clip_w + 18;
-    coupon_base_w = 18;
-    coupon_base_h = 3;
-    pull_y = front_pull_y - latch_clip_bridge_y;
-    bottom_pull_local_z = latch_clip_wall + latch_clip_clearance;
-    lid_pull_local_z = latch_clip_top_offset - front_pull_h - latch_clip_clearance;
+    coupon_w = latch_point_xs[2] - latch_point_xs[0] + latch_tongue_w + 20;
+    wall_h = latch_tongue_flex_l + 3;
+    lid_face_y = -12;
+    bottom_face_y = 12;
 
-    module coupon_pull(local_z) {
-        translate([0, pull_y, local_z])
-            rounded_box([front_pull_w, front_pull_depth, front_pull_h], 1.4);
-    }
-
-    module pull_backer(local_z) {
-        translate([-coupon_base_l / 2, pull_y - front_pull_depth / 2 - 2.8, local_z - coupon_base_h])
-            cube([coupon_base_l, 6, coupon_base_h]);
-    }
-
+    // Lid fragment: full production flex length, root thickness, and nub.
     union() {
-        pull_backer(bottom_pull_local_z);
-        coupon_pull(bottom_pull_local_z);
-        pull_backer(lid_pull_local_z);
-        coupon_pull(lid_pull_local_z);
-        latch_clip_core();
-        translate([-coupon_base_l / 2 + 3, pull_y - front_pull_depth / 2 - 2.2, 0.05])
-            linear_extrude(height = 0.35)
-                text("LATCH FIT", size = 4, halign = "left", valign = "bottom");
+        translate([0, lid_face_y - 3, wall_h - 3])
+            rounded_box([coupon_w, 6, 3], 1.0);
+        for (xc = latch_point_xs) {
+            smooth_latch_tongue(
+                xc,
+                lid_face_y - latch_tongue_t / 2,
+                0.8
+            );
+            translate([xc,
+                lid_face_y + latch_nub_r - latch_nub_protrusion,
+                latch_nub_r + 0.8]) sphere(r = latch_nub_r);
+        }
+    }
+
+    // Bottom fragment: a realistic wall section with only the shallow dimple.
+    difference() {
+        translate([0, bottom_face_y + 2, 0])
+            rounded_box([coupon_w, 4, wall_h], 1.0);
+        for (xc = latch_point_xs)
+            translate([xc,
+                bottom_face_y - latch_nub_r + latch_indent_depth,
+                latch_nub_r + 0.8]) sphere(r = latch_nub_r + 0.05);
     }
 }
-
+part="bottom";
 if (part == "none") {
 } else if (part == "bottom") {
     bottom_assembly();
 } else if (part == "lid") {
     lid_assembly();
+} else if (part == "bottom_p1s") {
+    rotate([0, 0, 45]) bottom_assembly();
+} else if (part == "lid_p1s") {
+    rotate([0, 0, 45])
+        translate([0, 0, max_channel_d / 2 + lid_roof_thickness + rim_h])
+            rotate([180, 0, 0]) lid_assembly();
 } else if (part == "hinge_coupon") {
     hinge_coupon();
 } else if (part == "full_hinge_coupon") {
     full_hinge_coupon();
 } else if (part == "latch") {
-    latch_clip_core();
+    lid_simple_latch();
 } else if (part == "latch_coupon") {
     latch_coupon();
 } else if (part == "assembly" || part == "print_in_place") {
@@ -701,6 +1370,5 @@ if (part == "none") {
     labels();
     translate([0, 0, lid_closed_z])
         color("lightgray") lid_assembly();
-    color("darkslategray") latch_clip();
     preview_ghosts();
 }
