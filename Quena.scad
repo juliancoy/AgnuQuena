@@ -56,11 +56,12 @@ e = 0.004;
 friction_expand_default = 0.35;
 insert_z_tolerance = 0.4;
 
-// Equal-area ovals leave more tube material around the highly loaded sides of
-// each opening without adding raised pads under the fingers.  Their long axis
-// follows the flute; the narrower circumferential span improves bending strength.
+// Rounded-square openings provide broad, comfortable corners without adding
+// raised pads under the fingers. Their long axis follows the flute and their
+// narrower circumferential span preserves material at the bending-critical sides.
 tone_hole_axial_scale = 1.25;
 tone_hole_circumferential_scale = 1 / tone_hole_axial_scale;
+tone_hole_corner_ratio = 0.28;
 
 //translate([20,0,0]) tube();
 
@@ -79,10 +80,21 @@ module tone_hole_air() {
 }
 
 module tone_hole(z, angle, hole_d) {
+    // Match the nominal circular area before applying reciprocal X/Y scaling.
+    // A rounded square made by offsetting a smaller square has area
+    // side^2 - (4-PI)*radius^2.
+    profile_side = hole_d * sqrt(
+        (PI / 4) /
+        (1 - (4 - PI) * tone_hole_corner_ratio * tone_hole_corner_ratio)
+    );
+    corner_r = profile_side * tone_hole_corner_ratio;
+
     translate([0, 0, z])
     rotate([angle, 90, 0])
     scale([tone_hole_axial_scale, tone_hole_circumferential_scale, 1])
-    cylinder(h = od + 3, d = hole_d);
+    linear_extrude(height = od + 3)
+    offset(r = corner_r)
+    square(profile_side - 2 * corner_r, center = true);
 }
 
 module assembled_air_volume() {

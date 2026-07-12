@@ -12,6 +12,8 @@ import librosa
 NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 GUIDED_NOTES = ["G4", "A4", "B4", "C5", "D5", "E5", "F#5",
                 "G5", "A5", "B5", "C6", "D6", "E6", "F#6", "G6"]
+GUIDED_SEARCH_SEMITONES = 3
+GUIDED_ACCEPTANCE_CENTS = 100
 
 def hz_to_midi(f):
     return 69 + 12 * math.log2(f / 440.0)
@@ -32,6 +34,17 @@ def cents_off(freq, midi_nearest):
 def name_to_midi(note):
     split = 2 if len(note) > 2 and note[1] == "#" else 1
     return (int(note[split:]) + 1) * 12 + NOTE_NAMES.index(note[:split])
+
+
+def guided_notes_for_octaves(octaves):
+    """Build a G-to-G guided scale for the requested number of octaves."""
+    start = name_to_midi("G4")
+    scale_steps = (0, 2, 4, 5, 7, 9, 11, 12)
+    notes = []
+    for octave in range(octaves):
+        steps = scale_steps if octave == 0 else scale_steps[1:]
+        notes.extend(midi_to_name(start + 12 * octave + step) for step in steps)
+    return notes
 
 def require_sounddevice():
     try:
@@ -90,9 +103,9 @@ def estimate_pitch(audio, sample_rate, fmin, fmax, tuner, tracker=None):
     return float(np.median(pitches))
 
 
-def summarize_guided_rows(rows):
+def summarize_guided_rows(rows, notes=None):
     summary = []
-    for note in GUIDED_NOTES:
+    for note in notes or GUIDED_NOTES:
         target = midi_to_hz(name_to_midi(note))
         for algorithm in ("loiacono", "librosa"):
             values = [row for row in rows
@@ -123,8 +136,8 @@ def summarize_guided_rows(rows):
     return summary
 
 
-def write_guided_report(path, rows, sample_rate, seconds_per_note):
-    summary = summarize_guided_rows(rows)
+def write_guided_report(path, rows, sample_rate, seconds_per_note, notes=None):
+    summary = summarize_guided_rows(rows, notes)
     lines = [
         "# Guided tuning measurement",
         "",
@@ -176,26 +189,38 @@ def render_guided_display(note, target, gesture, readings, boundaries, rms):
         return (f"│ {label:<8} {tuning_bar(cents)} {current}  "
                 f"{extent:<24} │")
 
-    loudness = min(20, int(round(rms * 80)))
-    meter = "█" * loudness + "░" * (20 - loudness)
+    dbfs = 20 * math.log10(max(rms, np.finfo(float).tiny))
+    meter_width = 30
+    loudness = int(round(np.clip((dbfs + 60) / 60, 0, 1) * meter_width))
+    meter = "█" * loudness + "░" * (meter_width - loudness)
     return "\n".join([
         f"╭─ {note}  target {target:.2f} Hz " + "─" * 49 + "╮",
         f"│ Motion   {gesture:<65} │",
-        f"│ Level    {meter}  RMS {rms:0.4f}"
-        + " " * 37 + "│",
+        f"│ Level    {meter} {dbfs:6.1f} dBFS"
+        + " " * 23 + "│",
         reading_line("Loiacono", "loiacono"),
         reading_line("librosa", "librosa"),
         "╰──────── flat ←─────── [ ±5 cents ] ───────→ sharp ─────────╯",
     ])
 
 
-def guided_test(sample_rate, hold_seconds, timeout):
+def guided_sample_is_ready(rms, frequencies, target_midi):
+    """Return true when both tuners detect the requested note clearly."""
+    return (rms >= 0.003
+            and all(np.isfinite(frequencies.get(name, np.nan))
+                    and abs(cents_off(frequencies[name], target_midi))
+                    <= GUIDED_ACCEPTANCE_CENTS
+                    for name in ("loiacono", "librosa")))
+
+
+def guided_test(sample_rate, hold_seconds, timeout, octaves):
     sd = require_sounddevice()
     block_seconds = 0.25
     block_frames = int(sample_rate * block_seconds)
     seconds_per_note = min(hold_seconds, timeout)
     blocks_per_note = max(1, math.ceil(seconds_per_note / block_seconds))
     rows = []
+    guided_notes = guided_notes_for_octaves(octaves)
     measurements = Path(__file__).resolve().parent / "measurements"
     measurements.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().astimezone().strftime("%Y-%m-%d-%H%M%S%z")
@@ -204,7 +229,7 @@ def guided_test(sample_rate, hold_seconds, timeout):
     fields = ["note", "target_hz", "block", "elapsed_s", "gesture",
               "rms", "algorithm", "frequency_hz", "cents"]
 
-    print("Guided two-octave tuning test")
+    print(f"Guided {octaves}-octave tuning test")
     print("For every note, grade loud to soft and tilt back to forth.")
     print("Repeat or reverse that motion as many times as you want during the recording.")
     print("The test records the flattest and sharpest tuning boundaries; it does not count cycles.")
@@ -215,21 +240,19 @@ def guided_test(sample_rate, hold_seconds, timeout):
         with csv_path.open("w", newline="", encoding="utf-8") as output:
             writer = csv.DictWriter(output, fieldnames=fields)
             writer.writeheader()
-            for index, note in enumerate(GUIDED_NOTES, 1):
-                target = midi_to_hz(name_to_midi(note))
-                fmin = target / (2 ** (1 / 12))
-                fmax = target * (2 ** (1 / 12))
+            for index, note in enumerate(guided_notes, 1):
+                target_midi = name_to_midi(note)
+                target = midi_to_hz(target_midi)
+                fmin = target / (2 ** (GUIDED_SEARCH_SEMITONES / 12))
+                fmax = target * (2 ** (GUIDED_SEARCH_SEMITONES / 12))
                 tracker = make_loiacono_tracker(sample_rate, fmin, fmax)
                 print(
-                    f"[{index}/{len(GUIDED_NOTES)}] {note} ({target:.2f} Hz): "
-                    "explore loud/soft and back/forth boundaries"
+                    f"[{index}/{len(guided_notes)}] {note} ({target:.2f} Hz): "
+                    "play and hold this note; measurement starts when detected"
                 )
                 boundaries = {"loiacono": [None, None], "librosa": [None, None]}
                 dashboard_drawn = False
-                for block in range(blocks_per_note):
-                    progress = (block + 0.5) / blocks_per_note
-                    gesture = f"free sweep ({progress:3.0%} of recording)"
-                    started = time.monotonic()
+                while True:
                     try:
                         audio = sd.rec(
                             block_frames, samplerate=sample_rate, channels=1,
@@ -238,23 +261,65 @@ def guided_test(sample_rate, hold_seconds, timeout):
                     except Exception as exc:
                         raise SystemExit(f"Could not record audio: {exc}") from exc
                     rms = float(np.sqrt(np.mean(audio ** 2)))
-                    readings = {}
-                    for algorithm in ("loiacono", "librosa"):
-                        frequency = estimate_pitch(
+                    frequencies = {
+                        algorithm: estimate_pitch(
                             audio, sample_rate, fmin, fmax, algorithm,
                             tracker if algorithm == "loiacono" else None,
                         )
-                        valid = (rms >= 0.003 and np.isfinite(frequency))
-                        cents = (cents_off(frequency, name_to_midi(note))
-                                 if valid else None)
+                        for algorithm in ("loiacono", "librosa")
+                    }
+                    if guided_sample_is_ready(rms, frequencies, target_midi):
+                        print("  Pitch detected — begin loud/soft and back/forth sweep.")
+                        break
+                    print(f"  Waiting for a clear, steady {note}...",
+                          end="\r", flush=True)
+                block = 0
+                measurement_started = time.monotonic()
+                while block < blocks_per_note:
+                    progress = (block + 0.5) / blocks_per_note
+                    gesture = f"free sweep ({progress:3.0%} of recording)"
+                    try:
+                        audio = sd.rec(
+                            block_frames, samplerate=sample_rate, channels=1,
+                            dtype="float32", blocking=True,
+                        )[:, 0]
+                    except Exception as exc:
+                        raise SystemExit(f"Could not record audio: {exc}") from exc
+                    rms = float(np.sqrt(np.mean(audio ** 2)))
+                    frequencies = {
+                        algorithm: estimate_pitch(
+                            audio, sample_rate, fmin, fmax, algorithm,
+                            tracker if algorithm == "loiacono" else None,
+                        )
+                        for algorithm in ("loiacono", "librosa")
+                    }
+                    if not guided_sample_is_ready(
+                            rms, frequencies, target_midi):
+                        if sys.stdout.isatty() and dashboard_drawn:
+                            print("\x1b[6A", end="")
+                            print(render_guided_display(
+                                note, target,
+                                f"wrong note/silence ignored — play {note}",
+                                {"loiacono": None, "librosa": None},
+                                boundaries, rms,
+                            ), flush=True)
+                        else:
+                            print(
+                                f"  Ignoring silence or wrong note; play {note}...",
+                                end="\r", flush=True,
+                            )
+                        continue
+                    block += 1
+                    readings = {}
+                    for algorithm, frequency in frequencies.items():
+                        cents = cents_off(frequency, target_midi)
                         row = {
                             "note": note, "target_hz": target,
-                            "block": block + 1,
-                            "elapsed_s": (block * block_seconds
-                                          + time.monotonic() - started),
+                            "block": block,
+                            "elapsed_s": time.monotonic() - measurement_started,
                             "gesture": gesture, "rms": rms,
                             "algorithm": algorithm,
-                            "frequency_hz": frequency if valid else None,
+                            "frequency_hz": frequency,
                             "cents": cents,
                         }
                         rows.append(row)
@@ -288,7 +353,7 @@ def guided_test(sample_rate, hold_seconds, timeout):
         print("\nStopped early; preserving all measurements collected so far.")
     finally:
         summary = write_guided_report(
-            report_path, rows, sample_rate, seconds_per_note
+            report_path, rows, sample_rate, seconds_per_note, guided_notes
         )
 
     print("\nGuided tuning summary:")
@@ -324,7 +389,7 @@ def main():
     inputs.add_argument(
         "--guided",
         action="store_true",
-        help="run a live, note-by-note two-octave tuning test",
+        help="run a live, note-by-note tuning test",
     )
     parser.add_argument(
         "--sample-rate",
@@ -345,12 +410,20 @@ def main():
                         help="gesture recording time per guided note (default: 6)")
     parser.add_argument("--timeout", type=float, default=20.0,
                         help="maximum recording time per guided note (default: 20)")
+    parser.add_argument(
+        "--octaves", type=int, default=1,
+        help="number of G-to-G octaves in guided mode (default: 1)",
+    )
     args = parser.parse_args()
 
     if args.guided:
-        if args.sample_rate <= 0 or args.hold <= 0 or args.timeout <= 0:
-            parser.error("--sample-rate, --hold, and --timeout must be greater than zero")
-        guided_test(args.sample_rate, args.hold, args.timeout)
+        if (args.sample_rate <= 0 or args.hold <= 0 or args.timeout <= 0
+                or args.octaves <= 0):
+            parser.error(
+                "--sample-rate, --hold, --timeout, and --octaves must be "
+                "greater than zero"
+            )
+        guided_test(args.sample_rate, args.hold, args.timeout, args.octaves)
         return
     elif args.record is not None:
         if args.record <= 0:

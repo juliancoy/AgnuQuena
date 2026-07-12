@@ -1,5 +1,5 @@
-// D/E/F# section for checking finger reach and sealing of the equal-area oval
-// openings before a full flute print. It preserves production curvature/spacing.
+// D/E/F# section for checking finger reach and sealing of the equal-area
+// rounded-square openings. It preserves production curvature and spacing.
 use <Quena.scad>
 
 coupon_start_z = 142;

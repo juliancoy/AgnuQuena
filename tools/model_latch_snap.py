@@ -66,7 +66,7 @@ def main() -> None:
     print(f"geometry: nub projection {g['protrusion']:.2f} mm, recess {g['indent']:.2f} mm, "
           f"tongue {g['width']:.2f} x {g['thickness']:.2f} x {g['length']:.2f} mm")
     print("actuation: pull the single lid tongue outward until its nub clears the recess")
-    print("material  allowable  travel  strain  force/point  worst all-three  margin")
+    print(f"material  allowable  travel  strain  force/point  worst all-{int(g['count'])}  margin")
     keys = MATERIALS if args.material == "all" else [args.material]
     for key in keys:
         m = MATERIALS[key]

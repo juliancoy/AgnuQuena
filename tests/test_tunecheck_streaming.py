@@ -41,8 +41,8 @@ def run_accuracy_report():
     results = {backend: [] for backend in BACKENDS}
     for note in tunecheck.GUIDED_NOTES:
         target = tunecheck.midi_to_hz(tunecheck.name_to_midi(note))
-        fmin = target / (2 ** (1 / 12))
-        fmax = target * (2 ** (1 / 12))
+        fmin = target / (2 ** (tunecheck.GUIDED_SEARCH_SEMITONES / 12))
+        fmax = target * (2 ** (tunecheck.GUIDED_SEARCH_SEMITONES / 12))
         trackers = {
             "loiacono": tunecheck.make_loiacono_tracker(
                 SAMPLE_RATE, fmin, fmax
@@ -133,6 +133,32 @@ class StreamingTunerAccuracyTest(unittest.TestCase):
         self.assertIn("boundary -3.0 .. +6.0c", display)
         self.assertIn("flat", display)
         self.assertIn("sharp", display)
+        self.assertIn("dBFS", display)
+        level_line = next(line for line in display.splitlines()
+                          if "Level" in line)
+        self.assertEqual(level_line.count("█") + level_line.count("░"), 30)
+
+    def test_guided_search_range_is_wider_than_boundary_sweep(self):
+        self.assertGreater(tunecheck.GUIDED_SEARCH_SEMITONES, 1)
+
+    def test_guided_octave_note_sequences(self):
+        self.assertEqual(
+            tunecheck.guided_notes_for_octaves(1),
+            ["G4", "A4", "B4", "C5", "D5", "E5", "F#5", "G5"],
+        )
+        self.assertEqual(tunecheck.guided_notes_for_octaves(2),
+                         tunecheck.GUIDED_NOTES)
+
+    def test_guided_sample_requires_level_and_both_pitch_readings(self):
+        readings = {"loiacono": 440.0, "librosa": 440.1}
+        self.assertTrue(tunecheck.guided_sample_is_ready(0.01, readings, 69))
+        self.assertFalse(tunecheck.guided_sample_is_ready(0.001, readings, 69))
+        self.assertFalse(tunecheck.guided_sample_is_ready(
+            0.01, {"loiacono": np.nan, "librosa": 440.1}, 69
+        ))
+        self.assertFalse(tunecheck.guided_sample_is_ready(
+            0.01, {"loiacono": 523.25, "librosa": 523.25}, 69
+        ))
 
 
 if __name__ == "__main__":

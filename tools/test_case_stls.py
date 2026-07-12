@@ -28,7 +28,7 @@ EXPECTED = {
         "components": 1,
     },
     "QuenaCaseLid.stl": {
-        "size": (249.2, 65.1, 19.8988),
+        "size": (249.2, 65.77, 20.0985),
         "min_triangles": 1200,
         "components": 1,
     },
@@ -43,14 +43,14 @@ EXPECTED = {
         "components": 2,
     },
     "QuenaCaseLatchCoupon.stl": {
-        "size": (200.0, 34.0, 12.0),
+        "size": (180.0, 34.0, 14.0),
         "min_triangles": 1600,
-        "components": 2,
+        "components": 7,
     },
     "QuenaCaseAssembly.stl": {
-        "size": (249.2, 65.1, 33.2),
+        "size": (249.2, 65.77, 33.2),
         "min_triangles": 4500,
-        "components": 2,
+        "components": 1,
     },
 }
 
@@ -460,6 +460,8 @@ def run_hinge_sweep_check() -> None:
             temp_path = Path(temp_dir)
             support_free_scad = temp_path / "support_free_lid.scad"
             support_free_lid = temp_path / "support_free_lid.stl"
+            stored_parts_scad = temp_path / "stored_parts.scad"
+            stored_parts_stl = temp_path / "stored_parts.stl"
             support_free_scad.write_text(
                 f'include <{ROOT / "QuenaCase.scad"}>;\nlid_assembly();\n',
                 encoding="utf-8",
@@ -478,11 +480,33 @@ def run_hinge_sweep_check() -> None:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
             )
+            stored_parts_scad.write_text(
+                f'include <{ROOT / "QuenaCase.scad"}>;\n'
+                "stored_parts_proxy();\n",
+                encoding="utf-8",
+            )
+            subprocess.run(
+                [
+                    "openscad",
+                    "-D",
+                    'part="none"',
+                    "-o",
+                    str(stored_parts_stl),
+                    str(stored_parts_scad),
+                ],
+                check=True,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
             lid_triangles = read_stl_triangles(support_free_lid)
+            stored_parts_triangles = read_stl_triangles(stored_parts_stl)
             bottom_obj = temp_path / "bottom.obj"
             lid_obj = temp_path / "lid.obj"
+            stored_parts_obj = temp_path / "stored_parts.obj"
             write_obj(bottom_obj, bottom_triangles)
             write_obj(lid_obj, lid_triangles)
+            write_obj(stored_parts_obj, stored_parts_triangles)
 
             mesh_flags = p.GEOM_FORCE_CONCAVE_TRIMESH
             bottom_collision = p.createCollisionShape(
@@ -493,6 +517,11 @@ def run_hinge_sweep_check() -> None:
             lid_collision = p.createCollisionShape(
                 p.GEOM_MESH,
                 fileName=str(lid_obj),
+                flags=mesh_flags,
+            )
+            stored_parts_collision = p.createCollisionShape(
+                p.GEOM_MESH,
+                fileName=str(stored_parts_obj),
                 flags=mesh_flags,
             )
 
@@ -506,7 +535,17 @@ def run_hinge_sweep_check() -> None:
                 baseCollisionShapeIndex=lid_collision,
                 basePosition=closed_lid_position,
             )
+            stored_parts_body = p.createMultiBody(
+                baseMass=0,
+                baseCollisionShapeIndex=stored_parts_collision,
+                basePosition=[0, 0, 0],
+            )
 
+            # First verify the case halves alone.  Then repeat the complete
+            # sweep with the stored parts at every extreme of their permitted
+            # axial, lateral, and lidward clearances.  Treating the parts as
+            # fixed rigid envelopes makes this deterministic and conservative
+            # for interference; inversion/drop behavior is tested separately.
             for deg in range(LID_SWEEP_MAX_DEG + 1):
                 radians = math.radians(deg)
                 hinge_to_lid = subtract_points(closed_lid_position, hinge_axis)
@@ -529,10 +568,52 @@ def run_hinge_sweep_check() -> None:
                         f"deepest penetration {-deepest:.3f} mm"
                     )
 
+            axial_limit = scad_scalar("axial_clearance") / 2
+            radial_limit = scad_scalar("part_clearance")
+            clearance_poses = [
+                (x, y, z)
+                for x in (-axial_limit, 0.0, axial_limit)
+                for y in (-radial_limit, 0.0, radial_limit)
+                for z in (0.0, radial_limit)
+            ]
+            for flute_position in clearance_poses:
+                p.resetBasePositionAndOrientation(
+                    stored_parts_body, flute_position, [0, 0, 0, 1]
+                )
+                for deg in range(LID_SWEEP_MAX_DEG + 1):
+                    radians = math.radians(deg)
+                    hinge_to_lid = subtract_points(closed_lid_position, hinge_axis)
+                    lid_position = add_points(
+                        hinge_axis, rotate_x(hinge_to_lid, radians)
+                    )
+                    lid_orientation = p.getQuaternionFromEuler([radians, 0, 0])
+                    p.resetBasePositionAndOrientation(
+                        lid_body, lid_position, lid_orientation
+                    )
+                    p.performCollisionDetection()
+                    contacts = [
+                        contact
+                        for contact in p.getContactPoints(lid_body, stored_parts_body)
+                        if contact[8] <= -CONTACT_TOLERANCE_MM
+                    ]
+                    if contacts:
+                        deepest = min(contact[8] for contact in contacts)
+                        raise AssertionError(
+                            "QuenaCase loaded hinge sweep: flute/lid collision at "
+                            f"{deg} deg with flute offset {flute_position}, "
+                            f"{len(contacts)} contacts, deepest penetration "
+                            f"{-deepest:.3f} mm"
+                        )
+
         print(
             "QuenaCase hinge sweep: ok, "
             f"0-{LID_SWEEP_MAX_DEG} deg around "
             f"({hinge_axis[0]:.2f}, {hinge_axis[1]:.2f}, {hinge_axis[2]:.2f})"
+        )
+        print(
+            "QuenaCase loaded hinge sweep: ok, 3 stored-part envelopes, "
+            f"{len(clearance_poses)} clearance-limit poses, "
+            f"0-{LID_SWEEP_MAX_DEG} deg"
         )
     finally:
         p.disconnect(physics_client)

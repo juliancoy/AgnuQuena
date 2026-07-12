@@ -189,18 +189,24 @@ latch_center_z = lid_closed_z + 1.0;
 // shallow recess in the bottom front wall.
 latch_tongue_w = 16.0;
 latch_tongue_t = 1.6;
-latch_tongue_flex_l = 9.0;
+latch_tongue_flex_l = 11.0;
 latch_tongue_y = case_outer_w / 2 - latch_tongue_t / 2;
-latch_nub_r = 1.0;
-latch_nub_protrusion = 0.80;
-latch_indent_depth = 0.55;
+latch_nub_r = 1.2;
+latch_nub_protrusion = 1.00;
+latch_indent_depth = 0.65;
 latch_release_deflection = latch_nub_protrusion - latch_indent_depth;
 latch_nub_z = case_outer_h - 1.35;
-latch_point_xs = [-82, 0, 82];
-latch_point_count = 3;
+latch_point_xs = [-72, 72];
+latch_point_count = 2;
 latch_tongue_tip_w = 13.5;
 latch_tongue_root_w = 22.0;
 latch_tongue_root_blend_h = 2.4;
+thumb_grip_w = 30;
+thumb_grip_rib_h = 0.75;
+thumb_grip_rib_depth = 0.45;
+thumb_grip_rib_count = 5;
+thumb_grip_z0 = 0.8;
+thumb_grip_pitch = 1.55;
 
 module smooth_latch_tongue(xc, local_y, bottom_z) {
     slice_h = 1.4;
@@ -237,6 +243,22 @@ module smooth_latch_tongue(xc, local_y, bottom_z) {
                 1.8
             ], 0.9);
     }
+}
+
+module lid_thumb_grip() {
+    // Five low rounded ribs centered between the two latches. Their shallow
+    // profile is printable without support but provides a clear tactile pull
+    // target for a thumb or fingertip.
+    for (i = [0 : thumb_grip_rib_count - 1])
+        translate([
+            0,
+            case_outer_w / 2 + thumb_grip_rib_depth / 2 - 0.08,
+            thumb_grip_z0 + i * thumb_grip_pitch
+        ]) rounded_box([
+            thumb_grip_w - i * 1.2,
+            thumb_grip_rib_depth,
+            thumb_grip_rib_h
+        ], thumb_grip_rib_h / 2);
 }
 
 short_row_gap = (
@@ -358,6 +380,48 @@ module all_channel_cuts(extra_depth = 0, flat_relief = true) {
         translate([slot_x(i), slot_y(i), slot_z])
             rotate([0, 0, slot_rot_z(i)])
                 profiled_channel_cut(i, extra_depth, flat_relief);
+}
+
+// Nominal solid envelopes for collision and fit validation.  These follow the
+// stored flute bodies and expanded connector regions, without channel
+// clearance, and are intentionally independent of preview-only geometry.
+module stored_part_proxy(i) {
+    x0 = body_x0(i);
+    x1 = body_x1(i);
+    x2 = connector_x1(i);
+
+    union() {
+        if (slot_has_connector[i]) {
+            profiled_segment(x0, x1 - connector_backset, od, od);
+            profiled_segment(
+                x1 - connector_backset,
+                x1 - connector_expand_start,
+                od,
+                connector_d
+            );
+            profiled_segment(
+                x1 - connector_expand_start,
+                x1 + connector_expand_end,
+                connector_d,
+                connector_d
+            );
+            profiled_segment(
+                x1 + connector_expand_end,
+                x2,
+                connector_d,
+                od
+            );
+        } else {
+            profiled_segment(x0, x1, od, od);
+        }
+    }
+}
+
+module stored_parts_proxy() {
+    for (i = [0 : 2])
+        translate([slot_x(i), slot_y(i), slot_z])
+            rotate([0, 0, slot_rot_z(i)])
+                stored_part_proxy(i);
 }
 
 module bottom_channel_deck() {
@@ -981,6 +1045,7 @@ module lid_assembly() {
             lid_case();
             lid_hinge();
             lid_simple_latch();
+            lid_thumb_grip();
         }
         lid_bottom_hinge_relief();
         lid_simple_latch_relief_cuts();
@@ -1203,7 +1268,8 @@ module full_hinge_coupon() {
 }
 
 module latch_coupon() {
-    coupon_w = latch_point_xs[2] - latch_point_xs[0] + latch_tongue_w + 20;
+    coupon_w = latch_point_xs[len(latch_point_xs) - 1] - latch_point_xs[0]
+        + latch_tongue_w + 20;
     wall_h = latch_tongue_flex_l + 3;
     lid_face_y = -12;
     bottom_face_y = 12;
@@ -1222,6 +1288,8 @@ module latch_coupon() {
                 lid_face_y + latch_nub_r - latch_nub_protrusion,
                 latch_nub_r + 0.8]) sphere(r = latch_nub_r);
         }
+        translate([0, lid_face_y - case_outer_w / 2, 0])
+            lid_thumb_grip();
     }
 
     // Bottom fragment: a realistic wall section with only the shallow dimple.

@@ -31,18 +31,18 @@ second pin. Do not attempt to force either pin radially through the stator.
 ## Nub-and-Knuckle Clasp
 
 The latch is integral to the two case halves; there is no separately printed
-latch. It follows the simplest molded harmonica-case pattern: three lid
-tongues carry shallow inward nubs, and the bottom front wall carries three
-matching shallow recesses. Pulling a tongue outward clears its recess; the
-three points normally release progressively as the lid is opened.
+latch. It follows the simplest molded harmonica-case pattern: two lid tongues
+carry pronounced inward nubs, and the bottom front wall carries two matching
+recesses. Pulling at the centered textured thumb zone releases the two points
+progressively as the lid is opened.
 Critical dimensions:
 
-- Three `16 x 1.6 x 9 mm` lid cantilever tongues at `x=-82, 0, +82 mm`,
+- Two `16 x 1.6 x 11 mm` lid cantilever tongues at `x=-72, +72 mm`,
   with widened tapered root shoulders blended into the lid wall.
-- `1.0 mm` nub/dimple radius and `0.80 mm` nub projection.
-- `0.55 mm` bottom-wall recess depth, centered `0.45 mm` lower than the
-  previous revision.
-- `0.25 mm` required release travel.
+- `1.2 mm` nub/dimple radius and `1.00 mm` nub projection.
+- `0.65 mm` bottom-wall recess depth.
+- `0.35 mm` required release travel.
+- Five low rounded grip ribs in a centered `30 mm` thumb zone.
 
 Print `QuenaCaseLatchCoupon.stl` before relying on the full case latch. Its two
 components are representative fragments of the production lid and bottom,
@@ -50,9 +50,9 @@ not a third latch part. It checks button entry, cup opening, seated fit,
 retention, and release force.
 
 Run `python3 tools/model_latch_snap.py --material all` to screen actuation. For
-ABS, each tongue moves `0.25 mm`; the cantilever model predicts `0.74%` root
-strain, `10.1-20.2 N` release force per point, and `4.05x` strain margin. The
-conservative simultaneous three-point bound is `30.3-60.7 N`, though normal
+ABS, each tongue moves `0.35 mm`; the cantilever model predicts `0.69%` root
+strain, `7.8-15.5 N` release force per point, and `4.32x` strain margin. The
+conservative simultaneous two-point bound is `15.5-31.0 N`, though normal
 opening should unzip the points progressively. All screened materials pass. The coupon
 remains useful because it includes the complete flex length and root, but the
 full case remains the final check for closing alignment and user access.
@@ -88,13 +88,10 @@ asymmetric.
 - The long tube recess is centered horizontally by its finished cut bounds.
 - The short tube and mouthpiece recesses use equal left, middle, and right
   distribution gaps. At the current case length, each gap is about `18.9 mm`.
-- Raised land between the two channel rows: `8 mm`.
-- Raised perimeter land around the channel field: `5 mm` minimum.
-- A continuous `9.5 mm` raised bed covers the exposed bottom around the
-  recesses. Its top remains about `2.85 mm` below the channel centerline, so
-  the normal channel is still wider than the `20.5 mm` tube at the bed edge.
-  This is the highest conservative solid-bed treatment that does not turn the
-  entire recess into an over-center snap or obstruct vertical insertion.
+- Raised land between the two channel rows: `2.5 mm`.
+- Raised perimeter land around the channel field: `2.5 mm` minimum.
+- A single continuous `12.85 mm` bed forms the recesses and terminates `0.8 mm`
+  beyond the tube equator. There are no separate cradles or cantilever clips.
 
 ## Validation
 
@@ -111,10 +108,16 @@ This checks:
 - Hinge clearance, socket wall, effective engagement, bearing length, and
   bottoming reserve directly from the OpenSCAD parameters.
 - Closed clamshell solid overlap using OpenSCAD CSG intersection.
-- Hinge sweep from `0` to `140` degrees around the actual hinge axis.
+- Empty-case hinge sweep from `0` to `140` degrees around the actual hinge axis.
+- Loaded hinge sweep over the same range using solid envelopes for all three
+  flute parts, including connector bulges and transitions. The test repeats at
+  18 combinations of the permitted axial, lateral, and lidward clearances.
 
 The OpenSCAD overlap test is required because Bullet/pybullet can miss static
 concave mesh penetration and does not detect coplanar Z-fighting.
+The loaded sweep is a deterministic rigid-envelope interference screen. It does
+not model flute bounce, elastic deformation, friction, wear, or latch failure;
+inverted and shock retention remain separate engineering checks.
 
 ### Snap Deformation Model
 
@@ -173,14 +176,16 @@ readings are:
 - `QuenaCaseFullHingeCoupon_9views.png`: `1500 x 1101 px`.
 - `QuenaCaseBottom.stl`: `8536` triangles, `249.2 x 65.1 x 22.6 mm`,
   `1` connected component.
-- `QuenaCaseLid.stl`: `7120` triangles, `249.2 x 65.1 x 19.9 mm`,
+- `QuenaCaseLid.stl`: `6780` triangles, `249.2 x 65.8 x 20.1 mm`,
   `1` connected component.
 - `QuenaCaseLatch.stl`: `56.0 x 8.3 x 11.6 mm`.
-- `QuenaCaseLatchCoupon.stl`: `200.0 x 34.0 x 12.0 mm`.
-- `QuenaCaseAssembly.stl`: `249.2 x 65.1 x 33.2 mm`.
-- Closed overlap check: empty OpenSCAD intersection.
+- `QuenaCaseLatchCoupon.stl`: `180.0 x 34.0 x 14.0 mm`.
+- `QuenaCaseAssembly.stl`: `249.2 x 65.8 x 33.2 mm`.
+- Closed overlap check: `0.003 mm^3`, below the `0.1 mm^3` tolerance.
 - Hinge sweep check: passes from `0` to `140` degrees around
   `(0.00, -30.85, 19.05)`.
+- Loaded hinge sweep: passes all `18` clearance-limit poses for all `3` stored
+  part envelopes from `0` to `140` degrees.
 
 Use the coupon to record:
 
