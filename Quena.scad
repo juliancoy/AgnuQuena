@@ -56,6 +56,12 @@ e = 0.004;
 friction_expand_default = 0.35;
 insert_z_tolerance = 0.4;
 
+// Equal-area ovals leave more tube material around the highly loaded sides of
+// each opening without adding raised pads under the fingers.  Their long axis
+// follows the flute; the narrower circumferential span improves bending strength.
+tone_hole_axial_scale = 1.25;
+tone_hole_circumferential_scale = 1 / tone_hole_axial_scale;
+
 //translate([20,0,0]) tube();
 
 module tube_negative() {
@@ -64,12 +70,19 @@ module tube_negative() {
 }
 
 module tone_hole_air() {
-    translate([0, 0, tuned_length(341)- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 10.1);     // A
-    translate([0, 0, tuned_length(302.75)- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 10.35);        // B
-    translate([0, 0, tuned_length(279.25)- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 9.75);     // C
-    translate([0, 0, tuned_length(245.5)- mouthpiece_active_length+zadj]) rotate([5, 90, 0]) cylinder(h = od, d = 11.1);   // D
-    translate([0, 0, tuned_length(214.15)- mouthpiece_active_length+zadj]) rotate([-5, 90, 0]) cylinder(h = od, d = 11.1);  // E
-    translate([0, 0, tuned_length(186.2)- mouthpiece_active_length+zadj]) rotate([0, 90, 0]) cylinder(h = od, d = 11.13);  // F#
+    tone_hole(tuned_length(341)- mouthpiece_active_length+zadj, -5, 10.1);     // A
+    tone_hole(tuned_length(302.75)- mouthpiece_active_length+zadj, 5, 10.35);  // B
+    tone_hole(tuned_length(279.25)- mouthpiece_active_length+zadj, 0, 9.75);   // C
+    tone_hole(tuned_length(245.5)- mouthpiece_active_length+zadj, 5, 11.1);    // D
+    tone_hole(tuned_length(214.15)- mouthpiece_active_length+zadj, -5, 11.1);  // E
+    tone_hole(tuned_length(186.2)- mouthpiece_active_length+zadj, 0, 11.13);   // F#
+}
+
+module tone_hole(z, angle, hole_d) {
+    translate([0, 0, z])
+    rotate([angle, 90, 0])
+    scale([tone_hole_axial_scale, tone_hole_circumferential_scale, 1])
+    cylinder(h = od + 3, d = hole_d);
 }
 
 module assembled_air_volume() {

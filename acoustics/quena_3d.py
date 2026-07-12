@@ -37,6 +37,7 @@ from acoustics.materials import (  # noqa: E402
     material_keys,
     material_profile,
 )
+from acoustics.breath import BreathProfile  # noqa: E402
 
 
 @dataclass(frozen=True)
@@ -169,8 +170,9 @@ def simulate_opening(
     tonehole_correction_mm: float,
     air_mask: np.ndarray | None = None,
     air_origin: tuple[float, float, float] = (0.0, 0.0, 0.0),
+    breath: BreathProfile = BreathProfile(),
 ) -> dict[str, object]:
-    sample_rate_hz = SPEED_OF_SOUND_MM_S * courant / cell_mm
+    sample_rate_hz = breath.sound_speed_m_s * 1000.0 * courant / cell_mm
     if air_mask is None:
         domain_length_mm = geometry.acoustic_length_mm + max(open_end_correction_mm, tonehole_correction_mm) + 8.0
         nz = int(math.ceil(domain_length_mm / cell_mm)) + 4
@@ -238,7 +240,7 @@ def simulate_opening(
             - 6.0 * current
         )
         next_field[:] = (2.0 * current - previous + courant2 * laplacian) * damping
-        next_field[source_z, source_y, source_x] += gaussian_source(step)
+        next_field[source_z, source_y, source_x] += gaussian_source(step) * breath.source_amplitude
         next_field[~air] = 0.0
         next_field[open_mask] = 0.0
         samples[step] = current[receiver_z, receiver_y, receiver_x]
@@ -258,6 +260,9 @@ def simulate_opening(
         "predicted_hz": round(peak_hz, 4),
         "predicted_cents": round(hz_to_cents(peak_hz, TARGET_HZ[opening.note]), 2) if peak_hz else "",
         "peak_amplitude": round(peak_amplitude, 8),
+        "breath_coupling": round(breath.directional_coupling, 6),
+        "jet_velocity_m_s": round(breath.jet_velocity_m_s, 4),
+        "dynamic_pressure_pa": round(breath.dynamic_pressure_pa, 4),
     }
 
 
@@ -289,6 +294,14 @@ def main() -> int:
     parser.add_argument("--out-dir", default="acoustics/out")
     parser.add_argument("--material", default="pla", choices=material_keys())
     parser.add_argument("--list-materials", action="store_true")
+    parser.add_argument("--flow-l-min", type=float, default=12.0)
+    parser.add_argument("--jet-width-mm", type=float, default=8.0)
+    parser.add_argument("--jet-thickness-mm", type=float, default=1.2)
+    parser.add_argument("--vertical-angle-deg", type=float, default=0.0)
+    parser.add_argument("--lateral-angle-deg", type=float, default=0.0)
+    parser.add_argument("--lip-distance-mm", type=float, default=8.0)
+    parser.add_argument("--temperature-c", type=float, default=22.0)
+    parser.add_argument("--relative-humidity-pct", type=float, default=50.0)
     args = parser.parse_args()
 
     if args.list_materials:
@@ -300,6 +313,14 @@ def main() -> int:
 
     if args.courant >= 1.0 / math.sqrt(3.0):
         raise SystemExit("3D FDTD is unstable: use --courant below 0.577")
+
+    breath = BreathProfile(
+        flow_l_min=args.flow_l_min, jet_width_mm=args.jet_width_mm,
+        jet_thickness_mm=args.jet_thickness_mm, vertical_angle_deg=args.vertical_angle_deg,
+        lateral_angle_deg=args.lateral_angle_deg, lip_distance_mm=args.lip_distance_mm,
+        temperature_c=args.temperature_c, relative_humidity_pct=args.relative_humidity_pct,
+    )
+    breath.validate()
 
     profile = material_profile(args.material)
     geometry = apply_material_to_geometry(geometry_from_scad(REPO_ROOT / args.scad), profile)
@@ -332,6 +353,7 @@ def main() -> int:
             tonehole_correction_mm=tonehole_correction_mm,
             air_mask=air_mask,
             air_origin=air_origin,
+            breath=breath,
         )
         measured = measurements.get(opening.note)
         row["measured_hz"] = round(measured["median_hz"], 4) if measured else ""
@@ -359,7 +381,8 @@ def main() -> int:
                 "cell_mm": args.cell_mm,
                 "steps": args.steps,
                 "courant": args.courant,
-                "sample_rate_hz": SPEED_OF_SOUND_MM_S * args.courant / args.cell_mm,
+                "sample_rate_hz": breath.sound_speed_m_s * 1000.0 * args.courant / args.cell_mm,
+                "breath": breath.to_json(),
                 "damping": args.damping * profile.fdtd_damping_multiplier,
                 "material": profile.to_json(),
                 "search_cents": args.search_cents,

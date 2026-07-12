@@ -29,24 +29,34 @@ angled_transition_z = 3;
 insert_z_tolerance = 0.4;
 
 // Case fit and print parameters.
-part_clearance = 0.6;
+// Close, printable fit around each part.  These are diametral/radial clearances;
+// the separate axial clearance below controls end play.
+part_clearance = 0.3;
 connector_d = od + shell_width * 2;
 channel_d = od + part_clearance * 2;
 connector_channel_d = connector_d + part_clearance * 2;
 max_channel_d = connector_channel_d;
-end_clearance = 7;
+axial_clearance = 0.6;
+end_clearance = axial_clearance / 2;
+// Keep the round cutter slightly proud of the nominal pocket ends.  This
+// removes a coplanar cut face that can leave the cylindrical bore visibly
+// stopping short of the terminal wall after tessellation/export.
+bore_end_overlap = 0.08;
 wall = 3;
 floor_thickness = 2.8;
 lid_roof_thickness = 2.8;
 corner_r = 7;
 
-row_gap = 8;
+// Compact lands retain enough material between channels while keeping the
+// diagonal P1S export inside a conservative 220 x 220 mm usable square.
+row_gap = 2.5;
 row_pitch = max_channel_d + row_gap;
 short_row_min_gap = 18;
-channel_edge_land = 5;
-// Continuous raised interior bed beneath the fitted channels. Matching the
-// lid roof thickness gives both halves the same deliberate, solid appearance.
-channel_deck_h = 9.5;
+channel_edge_land = 2.5;
+// The single interior bed rises just past the tube equator.  It replaces the
+// former deck, separate cradle blocks, and cantilever retention features.
+equator_pass = 0.8;
+channel_deck_h = 12.85; // max_channel_d / 2 + equator_pass
 connector_backset = angled_transition_z + 2;
 connector_expand_start = 2;
 connector_expand_end = ov - insert_z_tolerance - 2;
@@ -60,14 +70,13 @@ profile_lengths = [
     mouthpiece_total_length + connector_extra_l
 ];
 profile_max_ds = [connector_channel_d, channel_d, connector_channel_d];
-// Actual recess spans include end clearance. Connector profiles already include
-// their expanded connector end, so they need clearance on only the opposite end.
+// Each recess has only the specified total axial play, shared between its ends.
 profile_cut_spans = [
-    profile_lengths[0] + end_clearance,
-    profile_lengths[1] + end_clearance * 2,
-    profile_lengths[2] + end_clearance
+    profile_lengths[0] + axial_clearance,
+    profile_lengths[1] + axial_clearance,
+    profile_lengths[2] + axial_clearance
 ];
-profile_cut_center_offsets = [-end_clearance / 2, 0, -end_clearance / 2];
+profile_cut_center_offsets = [0, 0, 0];
 short_row_min_length = profile_cut_spans[1] + profile_cut_spans[2]
     + short_row_min_gap * 3;
 case_inner_l = max(
@@ -77,7 +86,7 @@ case_inner_l = max(
 case_inner_w = row_pitch + max_channel_d + channel_edge_land * 2;
 case_outer_l = case_inner_l + wall * 2;
 case_outer_w = case_inner_w + wall * 2;
-case_outer_h = max_channel_d / 2 + floor_thickness + 4;
+case_outer_h = floor_thickness + channel_deck_h;
 slot_z = floor_thickness + max_channel_d / 2;
 
 rim_h = 2.4;
@@ -249,20 +258,6 @@ slot_xs = [
 slot_ys = [-row_pitch / 2, row_pitch / 2, row_pitch / 2];
 slot_rot_zs = [0, 0, 180];
 
-// Localized ABS cantilever clips.  Each finger is isolated from the raised
-// deck by a relief pocket, bends radially away from the tube during insertion,
-// and carries a shallow inward hook above the tube meridian.
-retainer_clip_t = 1.2;
-retainer_clip_w = 10;
-retainer_clip_flex_l = 15;
-retainer_clip_interference = 0.35;
-retainer_clip_hook_h = 1.4;
-retainer_clip_hook_rise = 1.5;
-retainer_clip_relief = 0.8;
-retainer_clip_root_r = 1.2;
-retainer_end_margin = 8;
-retainer_connector_margin = 4;
-
 function slot_x(i) = slot_xs[i];
 function slot_y(i) = slot_ys[i];
 function slot_rot_z(i) = slot_rot_zs[i];
@@ -271,22 +266,6 @@ function profile_d(i) = profile_max_ds[i];
 function body_x0(i) = -profile_l(i) / 2;
 function body_x1(i) = body_x0(i) + slot_lengths[i];
 function connector_x1(i) = body_x1(i) + connector_extra_l;
-function retainer_x0(i) = body_x0(i) + retainer_end_margin;
-function retainer_x1(i) = slot_has_connector[i]
-    ? body_x1(i) - connector_backset - retainer_connector_margin
-    : body_x1(i) - retainer_end_margin;
-function retainer_l(i) = max(0, retainer_x1(i) - retainer_x0(i));
-// Choose only as many independent bands as the safe, normal-diameter span can
-// support.  The previous minimum of two made the two mouthpiece bands overlap
-// and fuse into one misleading block because that span is only about 13 mm.
-function retainer_count(i) = retainer_l(i) > 160 ? 4
-    : (retainer_l(i) > 80 ? 3
-    : (retainer_l(i) > 36 ? 2
-    : (retainer_l(i) > 8 ? 1 : 0)));
-function retainer_pitch(i) = retainer_count(i) > 0
-    ? retainer_l(i) / retainer_count(i) : 0;
-function retainer_band_l(i) = min(retainer_clip_w,
-    max(8, retainer_pitch(i) * 0.45));
 
 module rounded_box(size, r) {
     hull() {
@@ -307,9 +286,16 @@ module profiled_channel_cut(i, extra_depth = 0, flat_relief = true) {
     x0 = body_x0(i);
     x1 = body_x1(i);
     x2 = connector_x1(i);
+    cut_x0 = x0 - end_clearance;
+    cut_x1 = (slot_has_connector[i] ? x2 : x1) + end_clearance;
 
     union() {
-        profiled_segment(x0 - end_clearance, x0, channel_d, channel_d);
+        profiled_segment(
+            cut_x0 - bore_end_overlap,
+            x0,
+            channel_d,
+            channel_d
+        );
 
         if (slot_has_connector[i]) {
             profiled_segment(x0, x1 - connector_backset, channel_d, channel_d);
@@ -331,22 +317,39 @@ module profiled_channel_cut(i, extra_depth = 0, flat_relief = true) {
                 connector_channel_d,
                 channel_d
             );
-            profiled_segment(x2, x2 + end_clearance, channel_d, channel_d);
+            profiled_segment(
+                x2,
+                cut_x1 + bore_end_overlap,
+                channel_d,
+                channel_d
+            );
         } else {
             profiled_segment(x0, x1, channel_d, channel_d);
-            profiled_segment(x1, x1 + end_clearance, channel_d, channel_d);
+            profiled_segment(
+                x1,
+                cut_x1 + bore_end_overlap,
+                channel_d,
+                channel_d
+            );
         }
 
-        // The bottom uses an open relief so parts remain easy to lift out.
-        // The lid omits it, leaving a cylindrical indentation that follows
-        // the flute instead of a flat-sided pocket.
-        if (flat_relief)
-            translate([0, 0, profile_d(i) / 4])
+        // Open only the material above the cradle lip.  The relief must begin
+        // at equator_pass, not below the tube centerline, so the cylindrical
+        // sidewall remains curved all the way to its just-past-equator top.
+        // The lid omits this relief and retains its matching cylindrical cut.
+        if (flat_relief) {
+            relief_h = profile_d(i) / 2 + extra_depth;
+            translate([
+                (cut_x0 + cut_x1) / 2,
+                0,
+                equator_pass + relief_h / 2
+            ])
                 cube([
-                    profile_l(i) + end_clearance * 2,
+                    cut_x1 - cut_x0,
                     profile_d(i),
-                    profile_d(i) / 2 + extra_depth
+                    relief_h
                 ], center = true);
+        }
     }
 }
 
@@ -357,113 +360,8 @@ module all_channel_cuts(extra_depth = 0, flat_relief = true) {
                 profiled_channel_cut(i, extra_depth, flat_relief);
 }
 
-module bottom_channel_cradle(i) {
-    cradle_l = profile_l(i) + end_clearance * 2;
-    channel_r = profile_d(i) / 2;
-    cradle_overlap = 2;
-
-    difference() {
-        translate([0, 0, floor_thickness - cradle_overlap / 2 + channel_r / 2])
-            cube([cradle_l, profile_d(i) + 2, channel_r + cradle_overlap], center = true);
-        translate([0, 0, slot_z])
-            profiled_channel_cut(i, 2);
-    }
-}
-
-module cantilever_retainer(i, x_center, clip_w) {
-    tube_r = od / 2;
-    channel_r = channel_d / 2;
-    tip_z = slot_z + retainer_clip_hook_rise;
-    root_z = tip_z - retainer_clip_flex_l;
-    finger_y = channel_r + retainer_clip_t / 2;
-    hook_reach = part_clearance + retainer_clip_interference;
-
-    // Rounded root transition reduces the peak strain at the fixed end.
-    hull() {
-        translate([x_center, finger_y, root_z])
-            rounded_box([clip_w, retainer_clip_t,
-                retainer_clip_root_r], min(retainer_clip_root_r / 2, clip_w / 4));
-        translate([x_center, finger_y,
-            tip_z - retainer_clip_hook_h])
-            rounded_box([clip_w, retainer_clip_t,
-                retainer_clip_hook_h], min(retainer_clip_t / 2, clip_w / 4));
-    }
-    // A shallow ramped hook gives 0.35 mm radial interference on the tube.
-    hull() {
-        translate([x_center, finger_y,
-            tip_z - retainer_clip_hook_h])
-            rounded_box([clip_w, retainer_clip_t,
-                retainer_clip_hook_h], min(retainer_clip_t / 2, clip_w / 4));
-        translate([x_center,
-            tube_r - retainer_clip_interference + 0.15,
-            tip_z - retainer_clip_hook_h / 2])
-            rounded_box([clip_w, 0.3,
-                retainer_clip_hook_h / 2], 0.15);
-    }
-}
-
-module cantilever_retainers(i) {
-    count = retainer_count(i);
-    usable_l = retainer_l(i);
-    band_l = retainer_band_l(i);
-
-    if (count > 0)
-        for (n = [0 : count - 1])
-            cantilever_retainer(
-                i,
-                retainer_x0(i) + usable_l * (n + 0.5) / count,
-                band_l
-            );
-}
-
-module cantilever_retainer_clearances(i) {
-    count = retainer_count(i);
-    usable_l = retainer_l(i);
-    clip_w = retainer_band_l(i);
-    channel_r = channel_d / 2;
-    tip_z = slot_z + retainer_clip_hook_rise;
-    relief_bottom_z = floor_thickness + 0.3;
-
-    if (count > 0)
-        for (n = [0 : count - 1])
-            translate([
-                retainer_x0(i) + usable_l * (n + 0.5) / count,
-                channel_r + retainer_clip_t / 2,
-                (relief_bottom_z + tip_z + 0.3) / 2
-            ])
-                cube([
-                    clip_w + retainer_clip_relief * 2,
-                    retainer_clip_t + retainer_clip_relief * 2,
-                    tip_z + 0.3 - relief_bottom_z
-                ], center = true);
-}
-
-module all_cantilever_retainer_clearances() {
-    for (i = [0 : 2])
-        translate([slot_x(i), slot_y(i), 0])
-            rotate([0, 0, slot_rot_z(i)])
-                cantilever_retainer_clearances(i);
-}
-
-module all_cantilever_retainers() {
-    for (i = [0 : 2])
-        translate([slot_x(i), slot_y(i), 0])
-            rotate([0, 0, slot_rot_z(i)])
-                cantilever_retainers(i);
-}
-
-module bottom_fitted_channels() {
-    for (i = [0 : 2])
-        translate([slot_x(i), slot_y(i), 0]) {
-            rotate([0, 0, slot_rot_z(i)]) {
-                bottom_channel_cradle(i);
-            }
-        }
-}
-
 module bottom_channel_deck() {
-    // A continuous false floor produces a uniform interior surface. The slight
-    // perimeter overlap bonds it into the shell instead of leaving a seam.
+    // One continuous, visually simple bed forms every half-cylinder cradle.
     difference() {
         translate([0, 0, floor_thickness])
             rounded_box(
@@ -1047,18 +945,11 @@ module bottom_case_core() {
             lid_hinge_relief();
         }
         bottom_channel_deck();
-        bottom_fitted_channels();
     }
 }
 
 module bottom_case() {
-    union() {
-        difference() {
-            bottom_case_core();
-            all_cantilever_retainer_clearances();
-        }
-        all_cantilever_retainers();
-    }
+    bottom_case_core();
 }
 
 module bottom_assembly() {
@@ -1343,7 +1234,6 @@ module latch_coupon() {
                 latch_nub_r + 0.8]) sphere(r = latch_nub_r + 0.05);
     }
 }
-part="bottom";
 if (part == "none") {
 } else if (part == "bottom") {
     bottom_assembly();

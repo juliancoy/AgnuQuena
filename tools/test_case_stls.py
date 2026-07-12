@@ -23,12 +23,12 @@ ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED = {
     "QuenaCaseBottom.stl": {
-        "size": (260.6, 76.8, 26.05),
+        "size": (249.2, 65.1, 22.55),
         "min_triangles": 2200,
         "components": 1,
     },
     "QuenaCaseLid.stl": {
-        "size": (260.6, 76.8, 20.2),
+        "size": (249.2, 65.1, 19.8988),
         "min_triangles": 1200,
         "components": 1,
     },
@@ -38,7 +38,7 @@ EXPECTED = {
         "components": 2,
     },
     "QuenaCaseFullHingeCoupon.stl": {
-        "size": (242.6, 57.2, 13.8),
+        "size": (231.2, 57.2, 13.8),
         "min_triangles": 2000,
         "components": 2,
     },
@@ -48,7 +48,7 @@ EXPECTED = {
         "components": 2,
     },
     "QuenaCaseAssembly.stl": {
-        "size": (260.6, 76.8, 37.0),
+        "size": (249.2, 65.1, 33.2),
         "min_triangles": 4500,
         "components": 2,
     },
@@ -184,47 +184,38 @@ def run_channel_layout_checks() -> None:
     channel_d = tube_d + 2 * scad_scalar("part_clearance")
     connector_d = tube_d + 2 * scad_scalar("shell_width")
     max_channel_d = connector_d + 2 * scad_scalar("part_clearance")
-    deck_below_center = max_channel_d / 2 - deck_h
-    deck_opening = 2 * math.sqrt(
-        max((channel_d / 2) ** 2 - deck_below_center**2, 0)
-    )
+    equator_pass = scad_scalar("equator_pass")
+    axial_clearance = scad_scalar("axial_clearance")
+    radial_clearance = scad_scalar("part_clearance")
 
     source = (ROOT / "QuenaCase.scad").read_text(encoding="utf-8")
-    if "module cantilever_retainer(i, x_center, clip_w)" not in source:
-        raise AssertionError("channels lack localized cantilever retainers")
-    clip_t = scad_scalar("retainer_clip_t")
-    clip_l = scad_scalar("retainer_clip_flex_l")
-    clip_interference = scad_scalar("retainer_clip_interference")
-    clip_strain = 1.5 * clip_t * clip_interference / clip_l**2
-    if clip_strain > 0.015:
-        raise AssertionError(
-            f"ABS retainer clip strain is too high: {100*clip_strain:.2f}%"
-        )
+    if "module cantilever_retainer" in source:
+        raise AssertionError("obsolete cantilever retainers remain in the case")
+    if not math.isclose(deck_h, max_channel_d / 2 + equator_pass, abs_tol=0.01):
+        raise AssertionError("channel bed does not terminate at its equator target")
+    if not 0.3 <= equator_pass <= 1.2:
+        raise AssertionError(f"equator overrun {equator_pass:.2f} mm is unsuitable")
+    if axial_clearance > 1.0:
+        raise AssertionError(f"axial clearance {axial_clearance:.2f} mm is too loose")
+    if radial_clearance > 0.4:
+        raise AssertionError(f"radial clearance {radial_clearance:.2f} mm is too loose")
 
     if horizontal_land < 8.0:
         raise AssertionError(
             f"horizontal channel land is only {horizontal_land:.2f} mm"
         )
-    if vertical_land < 6.0:
+    if vertical_land < 2.5:
         raise AssertionError(f"vertical channel land is only {vertical_land:.2f} mm")
-    if edge_land < 4.0:
+    if edge_land < 2.5:
         raise AssertionError(f"channel perimeter land is only {edge_land:.2f} mm")
-    if deck_h < 0.8:
-        raise AssertionError(f"channel filler deck is only {deck_h:.2f} mm thick")
-    if deck_below_center <= 0 or deck_opening < tube_d + 0.3:
-        raise AssertionError(
-            f"raised bed obstructs insertion: {deck_opening:.2f} mm opening for "
-            f"{tube_d:.2f} mm tube"
-        )
-
     print(
         "QuenaCase channel layout: ok, "
         f"{horizontal_land:.1f} mm minimum horizontal distribution gap, "
         f"{vertical_land:.1f} mm vertical land, "
         f"{edge_land:.1f} mm perimeter land, "
-        f"{deck_h:.1f} mm raised bed, "
-        f"{deck_opening:.2f} mm opening at bed edge, "
-        f"ABS cantilever clip strain {100*clip_strain:.2f}%"
+        f"{deck_h:.2f} mm single raised bed, "
+        f"{equator_pass:.2f} mm past equator, "
+        f"{axial_clearance:.2f} mm axial and {radial_clearance:.2f} mm radial clearance"
     )
 
 

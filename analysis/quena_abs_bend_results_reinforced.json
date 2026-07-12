@@ -1,0 +1,196 @@
+{
+  "completed_increments": 16,
+  "last_completed_load_n": 42.9,
+  "first_failure_mode": "not_reached",
+  "predicted_first_failure_load_n": null,
+  "predicted_load_point_displacement_at_failure_mm": null,
+  "interlayer_failure_load_n": null,
+  "bulk_failure_load_n": null,
+  "failure_location": {
+    "node": 1086,
+    "z_mm": 180.6708000234894,
+    "nearest_hole": "E"
+  },
+  "failure_limits_mpa": {
+    "interlayer_axial": 36.86,
+    "bulk_principal": 38.0
+  },
+  "increments": [
+    {
+      "time": 0.02,
+      "load_n": 1.2,
+      "max_axial_tension_mpa": 0.425559,
+      "max_principal_tension_mpa": 0.42679382165351115,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 0.165855675,
+      "maximum_displacement_mm": 0.16708186033513153
+    },
+    {
+      "time": 0.04,
+      "load_n": 2.4,
+      "max_axial_tension_mpa": 0.850964,
+      "max_principal_tension_mpa": 0.8534403821381378,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 0.331643125,
+      "maximum_displacement_mm": 0.3341071726963013
+    },
+    {
+      "time": 0.07,
+      "load_n": 4.2,
+      "max_axial_tension_mpa": 1.48878,
+      "max_principal_tension_mpa": 1.4931313927160894,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 0.580194475,
+      "maximum_displacement_mm": 0.5845410986184177
+    },
+    {
+      "time": 0.115,
+      "load_n": 6.9,
+      "max_axial_tension_mpa": 2.44485,
+      "max_principal_tension_mpa": 2.4520423655829,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 0.9527236,
+      "maximum_displacement_mm": 0.9599486118792195
+    },
+    {
+      "time": 0.165,
+      "load_n": 9.9,
+      "max_axial_tension_mpa": 3.5062,
+      "max_principal_tension_mpa": 3.5165894410540273,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 1.366214,
+      "maximum_displacement_mm": 1.376715754587953
+    },
+    {
+      "time": 0.215,
+      "load_n": 12.9,
+      "max_axial_tension_mpa": 4.56652,
+      "max_principal_tension_mpa": 4.580148915385466,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 1.7792369999999997,
+      "maximum_displacement_mm": 1.7931013143176293
+    },
+    {
+      "time": 0.265,
+      "load_n": 15.9,
+      "max_axial_tension_mpa": 5.62581,
+      "max_principal_tension_mpa": 5.642721073428393,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 2.19178075,
+      "maximum_displacement_mm": 2.2090982871566056
+    },
+    {
+      "time": 0.315,
+      "load_n": 18.9,
+      "max_axial_tension_mpa": 6.68403,
+      "max_principal_tension_mpa": 6.704265993552429,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 2.6038277499999998,
+      "maximum_displacement_mm": 2.6246785365231315
+    },
+    {
+      "time": 0.365,
+      "load_n": 21.9,
+      "max_axial_tension_mpa": 7.74116,
+      "max_principal_tension_mpa": 7.764763808944549,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 3.01536525,
+      "maximum_displacement_mm": 3.039853682511111
+    },
+    {
+      "time": 0.415,
+      "load_n": 24.9,
+      "max_axial_tension_mpa": 8.79718,
+      "max_principal_tension_mpa": 8.824194657590198,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 3.4263835,
+      "maximum_displacement_mm": 3.454585679268436
+    },
+    {
+      "time": 0.465,
+      "load_n": 27.900000000000002,
+      "max_axial_tension_mpa": 9.85207,
+      "max_principal_tension_mpa": 9.882538629632892,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 3.8368654999999996,
+      "maximum_displacement_mm": 3.868886109107428
+    },
+    {
+      "time": 0.515,
+      "load_n": 30.900000000000002,
+      "max_axial_tension_mpa": 10.9058,
+      "max_principal_tension_mpa": 10.939766049468407,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 4.2467965,
+      "maximum_displacement_mm": 4.282726954037511
+    },
+    {
+      "time": 0.565,
+      "load_n": 33.9,
+      "max_axial_tension_mpa": 11.9584,
+      "max_principal_tension_mpa": 11.995906389952816,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 4.6561675,
+      "maximum_displacement_mm": 4.696109618511115
+    },
+    {
+      "time": 0.615,
+      "load_n": 36.9,
+      "max_axial_tension_mpa": 13.0098,
+      "max_principal_tension_mpa": 13.050890456597905,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 5.0649625,
+      "maximum_displacement_mm": 5.109006061245471
+    },
+    {
+      "time": 0.665,
+      "load_n": 39.900000000000006,
+      "max_axial_tension_mpa": 14.0599,
+      "max_principal_tension_mpa": 14.10461837135282,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 5.47316925,
+      "maximum_displacement_mm": 5.5214276933446875
+    },
+    {
+      "time": 0.715,
+      "load_n": 42.9,
+      "max_axial_tension_mpa": 15.1088,
+      "max_principal_tension_mpa": 15.157189856672247,
+      "critical_node": 1086,
+      "critical_z_mm": 180.6708000234894,
+      "nearest_hole": "E",
+      "load_point_displacement_mm": 5.8807755,
+      "maximum_displacement_mm": 5.933346259765992
+    }
+  ]
+}

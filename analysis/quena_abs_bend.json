@@ -1,0 +1,25 @@
+{
+  "nodes": 20499,
+  "tetrahedra": 61156,
+  "fixture_nodes": {
+    "left": 18,
+    "right": 18,
+    "load": 40
+  },
+  "load_n": 60.0,
+  "abs": {
+    "elastic_modulus_mpa": 2000.0,
+    "poisson": 0.35,
+    "bulk_tensile_strength_mpa": 38.0,
+    "adhesion_factor": 0.97,
+    "interlayer_tensile_strength_mpa": 36.86
+  },
+  "adhesion_penalties": {
+    "ambient_humidity": 0.03,
+    "cool_enclosure": 0.0,
+    "part_cooling_fan": 0.0,
+    "low_nozzle_temperature": 0.0,
+    "thick_layers": 0.0,
+    "surface_contamination": 0.0
+  }
+}

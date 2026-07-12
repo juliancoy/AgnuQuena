@@ -150,6 +150,28 @@ The default grid is intentionally coarse enough to run on CPU. Reduce
 `--cell-mm` only after validating runtime and memory use; 3D FDTD must keep
 `--courant` below `1/sqrt(3)`.
 
+### Breath source and environmental inputs
+
+The 3D runner accepts physical breath parameters rather than an arbitrary
+"soft/hard" label. Flow and jet area determine velocity and dynamic pressure;
+vertical/lateral angles and lip distance determine source coupling. Air
+temperature and relative humidity alter sound speed and therefore resonance.
+
+```sh
+python3 acoustics/quena_3d.py --note A4 --steps 8192 \
+  --flow-l-min 12 --jet-width-mm 8 --jet-thickness-mm 1.2 \
+  --vertical-angle-deg 15 --lateral-angle-deg 5 --lip-distance-mm 8 \
+  --temperature-c 22 --relative-humidity-pct 50 --label a4_breath
+```
+
+This remains a linear scalar-pressure source-coupling model. It is appropriate
+for resonance and sensitivity screening: breath quantity changes amplitude and
+angle changes coupling, while temperature/humidity change frequency through
+sound speed. It does **not** resolve the turbulent lip jet, vortex shedding,
+self-sustained oscillation, pitch bending, or register selection. Those require
+a transient compressible CFD model with the exterior mouthpiece/lip geometry;
+do not interpret this source model as that CFD calculation.
+
 Current coarse-grid validation:
 
 ```sh

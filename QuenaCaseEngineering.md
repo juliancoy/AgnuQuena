@@ -143,12 +143,13 @@ creep, fatigue, or crack propagation.
 ## Print Practice
 
 For a Bambu Lab P1S, use `QuenaCaseBottom_P1S.stl` and
-`QuenaCaseLid_P1S.stl`. The original `260.6 mm` case length is too large when
+`QuenaCaseLid_P1S.stl`. The compact `249.2 mm` case length is still too large when
 aligned to one bed axis. These exports rotate each half `45 degrees`, producing
-a `230.37 x 230.37 mm` XY footprint. The bottom remains interior-up with its
+a `214.04 x 214.04 mm` XY footprint. The bottom remains interior-up with its
 full floor on Z=0; the lid is flipped exterior-down so its full roof, rather
 than the latch tips, contacts Z=0. Both fit inside the nominal `256 x 256 mm`
-P1S build area with about `12.8 mm` clearance per side when centered.
+P1S build area, and also stays within a conservative `220 x 220 mm` usable
+square with about `3.0 mm` clearance per side when centered.
 
 Print `QuenaCaseHingeCoupon.stl` before printing the full case. The coupon is a
 compact two-piece flat-on-bed test: one half carries the same central knuckle
@@ -161,25 +162,25 @@ The pin roots are separated by the same `80 mm` effective flex span used by the
 ABS installation model. Install one pin first as described below.
 
 `QuenaCaseFullHingeCoupon.stl` is the full-width hinge coupon. It uses the same
-`230.6 mm` hinge span and knuckle layout as the case: two outer case-side
+`219.2 mm` hinge span and knuckle layout as the case: two outer case-side
 sockets, and one middle lid knuckle carrying the two outward pins. The latest validated
 readings are:
 
 - `QuenaCaseHingeCoupon.stl`: `5800` triangles, `116.0 x 55.2 x 13.8 mm`,
   `2` connected components.
 - `QuenaCaseFullHingeCoupon.stl`: `2116` triangles,
-  `242.6 x 57.2 x 13.8 mm`, `2` connected components.
+  `231.2 x 57.2 x 13.8 mm`, `2` connected components.
 - `QuenaCaseFullHingeCoupon_9views.png`: `1500 x 1101 px`.
-- `QuenaCaseBottom.stl`: `3660` triangles, `260.6 x 80.0 x 26.1 mm`,
+- `QuenaCaseBottom.stl`: `8536` triangles, `249.2 x 65.1 x 22.6 mm`,
   `1` connected component.
-- `QuenaCaseLid.stl`: `1816` triangles, `260.6 x 80.0 x 17.8 mm`,
+- `QuenaCaseLid.stl`: `7120` triangles, `249.2 x 65.1 x 19.9 mm`,
   `1` connected component.
 - `QuenaCaseLatch.stl`: `56.0 x 8.3 x 11.6 mm`.
-- `QuenaCaseLatchCoupon.stl`: `74.0 x 9.6 x 12.2 mm`.
-- `QuenaCaseAssembly.stl`: `260.6 x 83.2 x 37.0 mm`.
+- `QuenaCaseLatchCoupon.stl`: `200.0 x 34.0 x 12.0 mm`.
+- `QuenaCaseAssembly.stl`: `249.2 x 65.1 x 33.2 mm`.
 - Closed overlap check: empty OpenSCAD intersection.
 - Hinge sweep check: passes from `0` to `140` degrees around
-  `(0.00, -36.70, 22.55)`.
+  `(0.00, -30.85, 19.05)`.
 
 Use the coupon to record:
 
