@@ -5,10 +5,11 @@
 The case now uses an integrated snap-fit hinge instead of a removable filament
 pin. Critical dimensions:
 
-- Hinge axis: `y=-36.7 mm`, `z=22.55 mm`
-- Lid pin bearing diameter: `3.2 mm`
+- Hinge axis: `y=-32.65 mm`, `z=15.8 mm`, centered on the case seam
+- Rear-shell inset: `1.8 mm`; resulting rear projection: `5.4 mm`
+- Lid pin bearing diameter: `3.6 mm`
 - Rounded pin nose: `0.4 mm` spherical radius blended over `0.8 mm`
-- Bottom socket diameter: `3.55 mm`
+- Bottom socket diameter: `3.95 mm`
 - Diametral socket clearance: `0.35 mm`
 - Pin length: `3.0 mm`
 - Blind socket depth: `4.2 mm`
@@ -16,7 +17,16 @@ pin. Critical dimensions:
 - Full-diameter bearing engagement: `1.3 mm`
 - Axial bottoming reserve: `2.2 mm`
 - Minimum socket wall: `1.625 mm`
-- Lid closed Z offset: `19.45 mm`
+- Lid closed Z offset: `15.95 mm`
+
+Both shell bodies are exactly `15.65 mm` high. Their meeting faces are flat;
+the former projecting bottom rim and matching lid socket have been removed.
+All hinge barrels use fully rounded capsule ends so adjacent knuckles cannot
+catch on sharp end edges during the lid swing. The barrels overlap the rear
+shell by `1.8 mm`, turning the attachment into a continuous integrated boss
+instead of a tangent-mounted appendage. This reduces projection without
+thinning the closed socket wall or hiding the rotation envelope inside the
+case.
 
 The lid middle knuckle carries two outward-pointing pins with tapered insertion
 tips. The bottom half outer knuckles carry uninterrupted blind sockets. This
@@ -91,7 +101,9 @@ asymmetric.
 - Raised land between the two channel rows: `2.5 mm`.
 - Raised perimeter land around the channel field: `2.5 mm` minimum.
 - A single continuous `12.85 mm` bed forms the recesses and terminates `0.8 mm`
-  beyond the tube equator. There are no separate cradles or cantilever clips.
+  beyond the nominal tube equator. The flute centerline is depressed another
+  `0.5 mm`, so the bottom insert edges wrap over and grip it. There are no
+  separate cradles or cantilever clips.
 
 ## Validation
 
@@ -105,10 +117,10 @@ python3 tools/test_case_stls.py
 This checks:
 
 - STL bounds and connected-component counts.
-- Hinge clearance, socket wall, effective engagement, bearing length, and
-  bottoming reserve directly from the OpenSCAD parameters.
+- Hinge clearance, socket wall, effective engagement, bearing length, body
+  inset, and bottoming reserve directly from the OpenSCAD parameters.
 - Closed clamshell solid overlap using OpenSCAD CSG intersection.
-- Empty-case hinge sweep from `0` to `140` degrees around the actual hinge axis.
+- Empty-case hinge sweep from `0` to `180` degrees around the actual hinge axis.
 - Loaded hinge sweep over the same range using solid envelopes for all three
   flute parts, including connector bulges and transitions. The test repeats at
   18 combinations of the permitted axial, lateral, and lidward clearances.
@@ -145,8 +157,8 @@ creep, fatigue, or crack propagation.
 
 ## Print Practice
 
-For a Bambu Lab P1S, use `QuenaCaseBottom_P1S.stl` and
-`QuenaCaseLid_P1S.stl`. The compact `249.2 mm` case length is still too large when
+`QuenaCaseBottom.stl` and `QuenaCaseLid.stl` are the single canonical half
+exports and are already oriented for the Bambu Lab P1S. The compact `249.2 mm` case length is still too large when
 aligned to one bed axis. These exports rotate each half `45 degrees`, producing
 a `214.04 x 214.04 mm` XY footprint. The bottom remains interior-up with its
 full floor on Z=0; the lid is flipped exterior-down so its full roof, rather

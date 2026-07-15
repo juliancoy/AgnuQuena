@@ -56,6 +56,7 @@ channel_edge_land = 2.5;
 // The single interior bed rises just past the tube equator.  It replaces the
 // former deck, separate cradle blocks, and cantilever retention features.
 equator_pass = 0.8;
+flute_seat_depth = 0.5;
 channel_deck_h = 12.85; // max_channel_d / 2 + equator_pass
 connector_backset = angled_transition_z + 2;
 connector_expand_start = 2;
@@ -87,7 +88,10 @@ case_inner_w = row_pitch + max_channel_d + channel_edge_land * 2;
 case_outer_l = case_inner_l + wall * 2;
 case_outer_w = case_inner_w + wall * 2;
 case_outer_h = floor_thickness + channel_deck_h;
-slot_z = floor_thickness + max_channel_d / 2;
+lid_outer_h = case_outer_h;
+// Seat every flute section 0.5 mm below the nominal half-depth.  The raised
+// channel edges therefore wrap just past the equator and lightly grip it.
+slot_z = floor_thickness + max_channel_d / 2 - flute_seat_depth;
 
 rim_h = 2.4;
 rim_wall = 1.4;
@@ -96,8 +100,8 @@ lid_z_clearance = 0.3;
 
 lid_closed_z = case_outer_h + lid_z_clearance;
 
-hinge_outer_d = 6.8;
-hinge_axle_d = 3.2;
+hinge_outer_d = 7.2;
+hinge_axle_d = 3.6;
 hinge_socket_clearance = 0.35;
 hinge_socket_d = hinge_axle_d + hinge_socket_clearance;
 hinge_stator_closed = 1;
@@ -110,8 +114,14 @@ hinge_backer_extension = 1.2;
 hinge_nub_support_y = 0.9;
 hinge_nub_support_gap = 0.2;
 hinge_nub_support_base_overlap = 0.15;
-hinge_axis_y = -case_outer_w / 2;
-hinge_axis_z = case_outer_h + hinge_outer_d / 2;
+// Recess the barrel into the rear shell so it reads as an integrated hinge
+// boss.  Enough barrel remains outside the body for lid rotation and a closed,
+// full-thickness stator wall.
+hinge_body_inset = 1.8;
+hinge_axis_y = -case_outer_w / 2 - hinge_outer_d / 2 + hinge_body_inset;
+// Put the pivot on the center of the clearance plane between equal-height
+// halves.  This keeps the hinge neutral instead of biasing it toward the lid.
+hinge_axis_z = case_outer_h + lid_z_clearance / 2;
 hinge_span = case_outer_l - 30;
 hinge_gap = 1.0;
 hinge_bottom_knuckles = [
@@ -510,20 +520,26 @@ module hinge_pin_breakaway_supports(
     }
 }
 
-module hinge_tab(x1, x2, local_z) {
+module hinge_tab(x1, x2, local_z, seam_side = -1) {
     attach_y = -case_outer_w / 2 + 0.4;
 
     translate([
         (x1 + x2) / 2,
         (hinge_axis_y + attach_y) / 2,
-        local_z
+        local_z + seam_side * hinge_tab_t / 2
     ])
         cube([x2 - x1, attach_y - hinge_axis_y, hinge_tab_t], center = true);
 }
 
 module hinge_barrel(x1, x2, local_z) {
+    // A capsule profile removes the square annular ends that can catch the
+    // neighboring knuckle as the lid swings.
+    end_r = hinge_outer_d / 2;
     translate([0, hinge_axis_y, local_z])
-        x_cylinder_between(x1, x2, hinge_outer_d);
+        hull() {
+            translate([x1 + end_r, 0, 0]) sphere(r = end_r);
+            translate([x2 - end_r, 0, 0]) sphere(r = end_r);
+        }
 }
 
 module hinge_barrel_rect_support(x1, x2, local_y, local_z, base_z) {
@@ -548,10 +564,10 @@ module hinge_socket_channel_cut(x1, x2, local_y, local_z) {
         x_cylinder_between(x1 - 0.1, x2 + 0.1, hinge_socket_d);
 }
 
-module hinge_support(x1, x2, local_z) {
+module hinge_support(x1, x2, local_z, seam_side = -1) {
     union() {
         hinge_barrel(x1, x2, local_z);
-        hinge_tab(x1, x2, local_z);
+        hinge_tab(x1, x2, local_z, seam_side);
     }
 }
 
@@ -603,7 +619,7 @@ module lid_hinge() {
     M2 = hinge_span / 6 - hinge_gap / 2;
 
     for (segment = hinge_lid_knuckles) {
-        hinge_support(segment[0], segment[1], local_axis_z);
+        hinge_support(segment[0], segment[1], local_axis_z, 1);
     }
 
     // Short, tapered nubs snap into the outer hinge sockets.
@@ -629,16 +645,26 @@ module lid_bottom_hinge_relief() {
 }
 
 module lid_hinge_relief() {
-    relief_y = hinge_outer_d + 1;
-    relief_z = rim_h + hinge_outer_d / 2;
+    // The recessed lid knuckle occupies part of the bottom rear wall when the
+    // case is closed.  Clear its complete swept cross-section through the top
+    // of that wall, with a small FDM allowance, instead of allowing the two
+    // case halves to fuse geometrically.
+    relief_clearance = 0.3;
+    relief_y = hinge_outer_d + relief_clearance * 2;
+    relief_bottom = hinge_axis_z - hinge_outer_d / 2 - relief_clearance;
+    relief_h = case_outer_h - relief_bottom + 0.02;
 
     for (segment = hinge_lid_knuckles)
         translate([
             (segment[0] + segment[1]) / 2,
             hinge_axis_y + relief_y / 2,
-            case_outer_h + relief_z / 2
+            relief_bottom + relief_h / 2
         ])
-            cube([segment[1] - segment[0] + 2, relief_y, relief_z], center = true);
+            cube([
+                segment[1] - segment[0] + relief_clearance * 2,
+                relief_y,
+                relief_h
+            ], center = true);
 }
 
 module front_pull(local_z = bottom_pull_z) {
@@ -894,7 +920,9 @@ module lid_simple_latch() {
 }
 
 module bottom_simple_latch_indent_cut() {
-    pocket_depth = latch_tongue_t + 0.25;
+    // Include the rounded root shoulder, which blends 0.35 mm farther inward
+    // than the tongue itself, plus closing clearance at the centered hinge.
+    pocket_depth = latch_tongue_t + 1.0;
     pocket_base_y = case_outer_w / 2 - pocket_depth;
     for (xc = latch_point_xs) {
         // Receive the complete tongue thickness so its outside face is flush
@@ -902,11 +930,11 @@ module bottom_simple_latch_indent_cut() {
         translate([
             xc,
             case_outer_w / 2 - pocket_depth / 2 + 0.1,
-            latch_nub_z - 1.0
+            latch_nub_z - 3.0
         ]) rounded_box([
             latch_tongue_root_w + 1.0,
             pocket_depth + 0.2,
-            latch_tongue_flex_l - 1.0
+            latch_tongue_flex_l + 1.0
         ], 0.8);
         translate([
             xc,
@@ -1001,7 +1029,6 @@ module bottom_case_core() {
         difference() {
             union() {
                 rounded_box([case_outer_l, case_outer_w, case_outer_h], corner_r);
-                bottom_rim();
             }
             translate([0, 0, floor_thickness])
                 rounded_box([case_inner_l, case_inner_w, case_outer_h + 2], max(corner_r - wall, 1));
@@ -1028,27 +1055,31 @@ module bottom_assembly() {
 }
 
 module lid_case() {
-    lid_h = max_channel_d / 2 + lid_roof_thickness + rim_h;
+    // The two case halves have identical outside height.  Their meeting faces
+    // are flat; no tongue, ridge, or receiving groove crosses the seam.
+    lid_h = lid_outer_h;
 
     difference() {
         rounded_box([case_outer_l, case_outer_w, lid_h], corner_r);
-        translate([0, 0, -0.01])
-            lid_rim_socket();
         translate([0, 0, -lid_closed_z])
             all_channel_cuts(4, false);
     }
 }
 
 module lid_assembly() {
-    difference() {
-        union() {
-            lid_case();
-            lid_hinge();
-            lid_simple_latch();
-            lid_thumb_grip();
+    union() {
+        // The bottom-knuckle clearance belongs to the lid shell only.  Keep
+        // it out of the hinge union so it cannot square-cut the rounded pins.
+        difference() {
+            union() {
+                lid_case();
+                lid_simple_latch();
+                lid_thumb_grip();
+            }
+            lid_bottom_hinge_relief();
+            lid_simple_latch_relief_cuts();
         }
-        lid_bottom_hinge_relief();
-        lid_simple_latch_relief_cuts();
+        lid_hinge();
     }
 }
 
@@ -1311,7 +1342,7 @@ if (part == "none") {
     rotate([0, 0, 45]) bottom_assembly();
 } else if (part == "lid_p1s") {
     rotate([0, 0, 45])
-        translate([0, 0, max_channel_d / 2 + lid_roof_thickness + rim_h])
+        translate([0, 0, lid_outer_h])
             rotate([180, 0, 0]) lid_assembly();
 } else if (part == "hinge_coupon") {
     hinge_coupon();

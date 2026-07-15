@@ -23,22 +23,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED = {
     "QuenaCaseBottom.stl": {
-        "size": (249.2, 65.1, 22.55),
+        "size": (214.04, 214.04, 19.5),
         "min_triangles": 2200,
         "components": 1,
     },
     "QuenaCaseLid.stl": {
-        "size": (249.2, 65.77, 20.0985),
+        "size": (214.04, 214.04, 19.3957),
         "min_triangles": 1200,
         "components": 1,
     },
     "QuenaCaseHingeCoupon.stl": {
-        "size": (116.0, 55.2, 13.8),
+        "size": (116.0, 55.4, 14.2),
         "min_triangles": 3000,
         "components": 2,
     },
     "QuenaCaseFullHingeCoupon.stl": {
-        "size": (231.2, 57.2, 13.8),
+        "size": (231.2, 57.4, 14.2),
         "min_triangles": 2000,
         "components": 2,
     },
@@ -48,13 +48,13 @@ EXPECTED = {
         "components": 7,
     },
     "QuenaCaseAssembly.stl": {
-        "size": (249.2, 65.77, 33.2),
+        "size": (249.2, 67.77, 31.6),
         "min_triangles": 4500,
-        "components": 1,
+        "components": 2,
     },
 }
 
-LID_SWEEP_MAX_DEG = 140
+LID_SWEEP_MAX_DEG = 180
 CONTACT_TOLERANCE_MM = 0.05
 CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
 
@@ -109,6 +109,7 @@ def run_hinge_design_checks() -> None:
     knuckle_gap = scad_scalar("hinge_gap")
     stator_closed = scad_scalar("hinge_stator_closed")
     backer_extension = scad_scalar("hinge_backer_extension")
+    body_inset = scad_scalar("hinge_body_inset")
     nub_support_y = scad_scalar("hinge_nub_support_y")
     nub_support_gap = scad_scalar("hinge_nub_support_gap")
     nub_support_overlap = scad_scalar("hinge_nub_support_base_overlap")
@@ -142,6 +143,8 @@ def run_hinge_design_checks() -> None:
         raise AssertionError("hinge outer stator must remain closed")
     if not 0.8 <= backer_extension <= 1.5:
         raise AssertionError("hinge rectangular backer extension is out of range")
+    if not 1.5 <= body_inset <= 2.0:
+        raise AssertionError("hinge body inset must retain rotational clearance")
     if not 0.8 <= nub_support_y <= 1.2:
         raise AssertionError("hinge nub support blade width is out of range")
     if not 0.15 <= nub_support_gap <= 0.3:
@@ -156,7 +159,8 @@ def run_hinge_design_checks() -> None:
         f"{pin_engagement:.2f} mm pin engagement, "
         f"{full_diameter_engagement:.2f} mm full-diameter bearing, "
         f"{axial_reserve:.2f} mm axial reserve, closed stator, "
-        f"{backer_extension:.1f} mm backer extension, nub breakaway blades"
+        f"{body_inset:.1f} mm body inset, {backer_extension:.1f} mm backer extension, "
+        "nub breakaway blades"
     )
 
 
@@ -437,13 +441,6 @@ def run_hinge_sweep_check() -> None:
         print("QuenaCase hinge sweep: skipped, install pybullet to enable")
         return
 
-    bottom_path = ROOT / "QuenaCaseBottom.stl"
-    lid_path = ROOT / "QuenaCaseLid.stl"
-    for path in (bottom_path, lid_path):
-        if not path.exists():
-            raise AssertionError(f"{path.name}: missing; render it with openscad first")
-
-    bottom_triangles = read_stl_triangles(bottom_path)
     hinge_axis_y, hinge_axis_z, lid_closed_z = evaluated_hinge_pose()
     hinge_axis = (0.0, hinge_axis_y, hinge_axis_z)
     closed_lid_position = (0.0, 0.0, lid_closed_z)
@@ -460,6 +457,8 @@ def run_hinge_sweep_check() -> None:
             temp_path = Path(temp_dir)
             support_free_scad = temp_path / "support_free_lid.scad"
             support_free_lid = temp_path / "support_free_lid.stl"
+            validation_bottom_scad = temp_path / "validation_bottom.scad"
+            validation_bottom = temp_path / "validation_bottom.stl"
             stored_parts_scad = temp_path / "stored_parts.scad"
             stored_parts_stl = temp_path / "stored_parts.stl"
             support_free_scad.write_text(
@@ -474,6 +473,24 @@ def run_hinge_sweep_check() -> None:
                     "-o",
                     str(support_free_lid),
                     str(support_free_scad),
+                ],
+                check=True,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+            )
+            validation_bottom_scad.write_text(
+                f'include <{ROOT / "QuenaCase.scad"}>;\nbottom_assembly();\n',
+                encoding="utf-8",
+            )
+            subprocess.run(
+                [
+                    "openscad",
+                    "-D",
+                    'part="none"',
+                    "-o",
+                    str(validation_bottom),
+                    str(validation_bottom_scad),
                 ],
                 check=True,
                 text=True,
@@ -499,6 +516,7 @@ def run_hinge_sweep_check() -> None:
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
             )
+            bottom_triangles = read_stl_triangles(validation_bottom)
             lid_triangles = read_stl_triangles(support_free_lid)
             stored_parts_triangles = read_stl_triangles(stored_parts_stl)
             bottom_obj = temp_path / "bottom.obj"

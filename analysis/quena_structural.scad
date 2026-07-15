@@ -1,5 +1,4 @@
-// Continuous tone-hole tube used for structural FEA.  Command-line -D values
-// can select the production oval (0.82) or the historical circle (1.0).
+// Continuous production tone-hole tube used for structural FEA exports.
 use <../Quena.scad>
 
 tube();
