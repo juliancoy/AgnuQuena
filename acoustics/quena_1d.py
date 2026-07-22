@@ -30,16 +30,33 @@ from acoustics.materials import (  # noqa: E402
 
 
 SPEED_OF_SOUND_MM_S = 343_000.0
-TARGET_HZ = {
-    "G4": 392.00,
-    "A4": 440.00,
-    "B4": 493.88,
-    "C5": 523.25,
-    "D5": 587.33,
-    "E5": 659.26,
-    "F#5": 739.99,
-    "G5": 783.99,
+NOTE_SEMITONES = {
+    "C": 0,
+    "C#": 1,
+    "D": 2,
+    "D#": 3,
+    "E": 4,
+    "F": 5,
+    "F#": 6,
+    "G": 7,
+    "G#": 8,
+    "A": 9,
+    "A#": 10,
+    "B": 11,
 }
+
+
+def note_frequency_12tet(note: str, concert_a_hz: float = 440.0) -> float:
+    """Return the exact 12-TET frequency for a scientific-pitch note name."""
+    pitch_class = note[:-1]
+    octave = int(note[-1])
+    midi_note = 12 * (octave + 1) + NOTE_SEMITONES[pitch_class]
+    return concert_a_hz * 2.0 ** ((midi_note - 69) / 12.0)
+
+
+# The instrument's diatonic G scale, modeled in 12-TET with concert A4=440 Hz.
+G_SCALE_NOTES = ("G4", "A4", "B4", "C5", "D5", "E5", "F#5", "G5")
+TARGET_HZ = {note: note_frequency_12tet(note) for note in G_SCALE_NOTES}
 HOLE_TO_NOTE = {
     "A": "A4",
     "B": "B4",

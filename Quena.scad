@@ -56,11 +56,11 @@ e = 0.004;
 friction_expand_default = 0.35;
 insert_z_tolerance = 0.4;
 
-// Rounded-square openings provide broad, comfortable corners without adding
-// raised pads under the fingers. Their long axis follows the flute and their
-// narrower circumferential span preserves material at the bending-critical sides.
-tone_hole_axial_scale = 1.25;
-tone_hole_circumferential_scale = 1 / tone_hole_axial_scale;
+// Equal-area rounded-square openings provide broad, comfortable corners
+// without adding raised pads under the fingers. Keep both profile axes equal:
+// changing either scale makes the finger opening a rounded rectangle.
+tone_hole_axial_scale = 1;
+tone_hole_circumferential_scale = 1;
 tone_hole_corner_ratio = 0.28;
 
 //translate([20,0,0]) tube();
