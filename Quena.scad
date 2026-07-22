@@ -310,18 +310,24 @@ module tube() {
     }
 }
 
-// translate([-bw / 2, -bw / 2, 0]) cube([bw, bw, bl]);
-translate([0,25,0])
-mouthpiece();
+// Select a single printable component from the command line, for example:
+// openscad -D 'export_part="part2"' -o QuenaPart2.stl Quena.scad
+export_part = "layout";
 
-//translate([0,75,0])
-//tube();
-
-for (i = [0 : len(part_lengths) - 1]) {
-    if(accent_ring_z > 0) translate([0,0,-e]) inner_curve_ring(i);
-    accent_ring(i);
+if (export_part == "part1") {
+    mouthpiece();
+} else if (export_part == "part2") {
+    piece(0, 0);
+} else if (export_part == "part3") {
+    piece(1, 0);
+} else {
+    translate([0,25,0]) mouthpiece();
+    for (i = [0 : len(part_lengths) - 1]) {
+        if(accent_ring_z > 0) translate([0,0,-e]) inner_curve_ring(i);
+        accent_ring(i);
+    }
+    piecewise();
 }
-piecewise();
 
 /*
 for testing measurements

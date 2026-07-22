@@ -1,6 +1,6 @@
 shell_width = 2;
 inner_dia = 18;
-outer_dia = 22  
+outer_dia = 22;
 total_dia = outer_dia + shell_width;
 height = 15;
 e = 0.001;
