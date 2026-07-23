@@ -1,0 +1,59 @@
+// GENERATED FILE. DO NOT EDIT.
+// Source: designs/quena.json
+// Regenerate: python3 tools/generate_quena.py
+generated_design_id = "agnuquena-g";
+generated_spec_sha256 = "8bfb1afed15f7b4496c1aee6297cefd0f6a3eb949de8042282bb14981d4ab432";
+
+quena_facet_count = 100.0;
+shell_width = 1.5;
+id = 17.5;
+od = 20.5;
+hd = 19.0;
+taper = 0.0;
+ido = 17.5;
+odo = 20.5;
+mouthpiece_total_length = 30.0;
+unacoustic_length = 6.0;
+mouthpiece_active_length = 24.0;
+pitch_raise_cents = 12.0;
+length_tuning_scale = 0.993092495437;
+acoustic_length = 393.264628193;
+zadj = -8.0;
+total_height = 399.264628193;
+angled_transition_z = 3.0;
+accent_ring_z = 0.0;
+ov = 7.0;
+non_mouthpiece_acoustic_length = 369.264628193;
+tube_part_1_length = 230.0;
+tube_part_2_length = 139.264628193;
+part_lengths = [tube_part_1_length, tube_part_2_length];
+part_start = [0, tube_part_1_length];
+tube_spacing_factor = 0.6;
+e = 0.004;
+friction_expand_default = 0.35;
+insert_z_tolerance = 0.4;
+tone_hole_axial_scale = 1.0;
+tone_hole_circumferential_scale = 1.0;
+tone_hole_corner_ratio = 0.28;
+lower_tube_hole_angle_spread = 12.0;
+lower_tube_first_hole_offset = 25.0;
+lower_tube_hole_spacing = 40.0;
+
+tone_hole_a_z = 335.0;
+tone_hole_a_angle = -12.0;
+tone_hole_a_diameter = 17.35;
+tone_hole_b_z = 295.0;
+tone_hole_b_angle = 12.0;
+tone_hole_b_diameter = 17.25;
+tone_hole_c_z = 255.0;
+tone_hole_c_angle = 0.0;
+tone_hole_c_diameter = 11.3;
+tone_hole_d_z = 211.80420763;
+tone_hole_d_angle = 5.0;
+tone_hole_d_diameter = 11.1;
+tone_hole_e_z = 180.670757898;
+tone_hole_e_angle = -5.0;
+tone_hole_e_diameter = 11.1;
+tone_hole_fs_z = 152.91382265;
+tone_hole_fs_angle = 0.0;
+tone_hole_fs_diameter = 11.13;

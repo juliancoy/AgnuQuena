@@ -22,6 +22,7 @@ TRANSLATE_RE = re.compile(
 TONE_HOLE_RE = re.compile(
     r"\btone_hole\s*\(\s*(?P<z>.+)\s*,\s*(?P<angle>[^,]+)\s*,\s*(?P<d>[^,)]+)\s*\)"
 )
+INCLUDE_RE = re.compile(r"^\s*include\s*<(?P<path>[^>]+)>")
 MEASURE_RE = re.compile(
     r"^\s*//\s*(?P<note>[A-G](?:#|b)?\d?)\s+"
     r"(?P<expected>[0-9]+(?:\.[0-9]+)?)\s+"
@@ -190,9 +191,60 @@ def parse_scad(scad: str) -> tuple[dict[str, float], list[dict[str, object]], li
     return env, holes, measurements
 
 
-def scad_at(commit: str) -> str | None:
-    out = git(["show", f"{commit}:Quena.scad"], check=False)
-    return out if out else None
+def expand_scad_includes(
+    scad: str,
+    source_path: Path,
+    loader,
+    seen: frozenset[str] | None = None,
+) -> str:
+    """Inline OpenSCAD include files while preserving source order."""
+    seen = seen or frozenset({source_path.as_posix()})
+    expanded: list[str] = []
+    for line in scad.splitlines():
+        match = INCLUDE_RE.match(line)
+        if not match:
+            expanded.append(line)
+            continue
+        include_path = source_path.parent / match.group("path")
+        key = include_path.as_posix()
+        if key in seen:
+            raise ValueError(f"circular OpenSCAD include: {key}")
+        included = loader(include_path)
+        if included is None:
+            raise FileNotFoundError(f"OpenSCAD include not found: {key}")
+        expanded.append(
+            expand_scad_includes(
+                included,
+                include_path,
+                loader,
+                seen | {key},
+            )
+        )
+    return "\n".join(expanded) + "\n"
+
+
+def read_scad_with_includes(path: Path) -> str:
+    path = path.resolve()
+
+    def loader(include_path: Path) -> str | None:
+        return include_path.read_text(encoding="utf-8") if include_path.exists() else None
+
+    return expand_scad_includes(
+        path.read_text(encoding="utf-8"),
+        path,
+        loader,
+    )
+
+
+def scad_at(commit: str, path: Path = Path("Quena.scad")) -> str | None:
+    def loader(include_path: Path) -> str | None:
+        out = git(["show", f"{commit}:{include_path.as_posix()}"], check=False)
+        return out if out else None
+
+    source = loader(path)
+    if source is None:
+        return None
+    return expand_scad_includes(source, path, loader)
 
 
 def tuning_csv_at(commit: str) -> list[dict[str, object]]:
@@ -261,7 +313,7 @@ def main() -> int:
         work_items.append(
             (
                 Commit(sha="WORKTREE", date="", subject="current working tree"),
-                Path("Quena.scad").read_text(encoding="utf-8"),
+                read_scad_with_includes(Path("Quena.scad")),
                 tuning_csv_at("HEAD"),
             )
         )

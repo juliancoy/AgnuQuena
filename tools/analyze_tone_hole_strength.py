@@ -14,6 +14,7 @@ import argparse
 import json
 import math
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -25,17 +26,30 @@ class Hole:
     diameter_mm: float
 
 
-ID_MM = 17.5
-OD_MM = 20.5
-LENGTH_MM = 369.265
-HOLES = (
-    Hole("A", 335.0000, 17.35),
-    Hole("B", 295.0000, 17.25),
-    Hole("C", 255.0000, 11.30),
-    Hole("D", 211.8042, 11.10),
-    Hole("E", 180.6708, 11.10),
-    Hole("F#", 152.9138, 11.13),
-)
+REPO_ROOT = Path(__file__).resolve().parents[1]
+MANIFEST_PATH = REPO_ROOT / "generated" / "quena_manifest.json"
+
+
+def generated_geometry() -> tuple[float, float, float, tuple[Hole, ...]]:
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    geometry = manifest["geometry"]
+    holes = tuple(
+        Hole(
+            note=str(hole["name"]),
+            z_mm=float(hole["physical_z_mm"]),
+            diameter_mm=float(hole["diameter_mm"]),
+        )
+        for hole in manifest["holes"]
+    )
+    return (
+        float(geometry["bore_id_mm"]),
+        float(geometry["outer_diameter_mm"]),
+        float(geometry["non_mouthpiece_length_mm"]),
+        holes,
+    )
+
+
+ID_MM, OD_MM, LENGTH_MM, HOLES = generated_geometry()
 
 
 def section_properties(

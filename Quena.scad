@@ -14,74 +14,11 @@
 // Z-seam random
 // Brim adhesion
 
-$fn = 100;
-// shell_width = 2.25;
-shell_width = 1.5;
-id = 17.5;  // internal diameter at mouthpiece
-od = id + shell_width*2;  // outer diameter at mouthpiece
-hd = (id+od)/2; // half diameter
+// All production dimensions and tone-hole geometry are generated from the
+// canonical design specification in designs/quena.json.
+include <generated/quena_parameters.scad>
 
-// Taper to the outlet (o)
-taper = 0;
-ido = id - taper;
-odo = od - taper;
-mouthpiece_total_length = 30;
-unacoustic_length = 6; 
-mouthpiece_active_length = mouthpiece_total_length-unacoustic_length; // distance from mouthpiece start to active edge
-
-pitch_raise_cents = 12; // measured tuning is flat by this amount
-length_tuning_scale = pow(2, -pitch_raise_cents / 1200);
-function tuned_length(length) = length * length_tuning_scale;
-
-//acoustic_length = 404.5; // Acoustic length from tone edge
-acoustic_length = tuned_length(396); // Acoustic length from tone edge
-zadj = -8;
-total_height = acoustic_length + unacoustic_length;   // total height
-
-angled_transition_z = 3;
-accent_ring_z = 0;
-
-ov = 7;    // part overlap sleeve
-
-non_mouthpiece_acoustic_length = acoustic_length - mouthpiece_active_length;
-
-// 3-part
-tube_part_1_length = 230; // height of part 1
-tube_part_2_length = non_mouthpiece_acoustic_length - tube_part_1_length; // height of part 2 (whatever's left)
-part_lengths = [tube_part_1_length, tube_part_2_length];
-part_start = [0, tube_part_1_length];
-tube_spacing_factor = 0.6;
-
-e = 0.004;
-friction_expand_default = 0.35;
-insert_z_tolerance = 0.4;
-
-// Equal-area rounded-square openings provide broad, comfortable corners
-// without adding raised pads under the fingers. Keep both profile axes equal:
-// changing either scale makes the finger opening a rounded rectangle.
-tone_hole_axial_scale = 1;
-tone_hole_circumferential_scale = 1;
-tone_hole_corner_ratio = 0.28;
-
-// Fan the lower-hand holes around the tube for a more natural finger spread.
-// This only changes their circumferential position; the tuned axial centers
-// stay unchanged.
-lower_tube_hole_angle_spread = 12;
-
-// Spread the lower-hand holes across the printable lower tube instead of
-// centering them inside the old cluster. These are physical offsets from the
-// tube joint: 25, 65, and 105 mm, leaving useful material at both ends.
-lower_tube_first_hole_offset = 25;
-lower_tube_hole_spacing = 40;
-lower_tube_hole_c_z = tube_part_1_length + lower_tube_first_hole_offset;
-lower_tube_hole_b_z = lower_tube_hole_c_z + lower_tube_hole_spacing;
-lower_tube_hole_a_z = lower_tube_hole_b_z + lower_tube_hole_spacing;
-
-// The distal moves add acoustic length. Increase each equal-area opening to
-// preserve the measured tone-hole correction as closely as the tube permits.
-lower_tube_hole_a_diameter = 17.35;
-lower_tube_hole_b_diameter = 17.25;
-lower_tube_hole_c_diameter = 11.3;
+$fn = quena_facet_count;
 
 //translate([20,0,0]) tube();
 
@@ -91,12 +28,12 @@ module tube_negative() {
 }
 
 module tone_hole_air() {
-    tone_hole(lower_tube_hole_a_z, -lower_tube_hole_angle_spread, lower_tube_hole_a_diameter); // A
-    tone_hole(lower_tube_hole_b_z, lower_tube_hole_angle_spread, lower_tube_hole_b_diameter);  // B
-    tone_hole(lower_tube_hole_c_z, 0, lower_tube_hole_c_diameter);                             // C
-    tone_hole(tuned_length(245.5)- mouthpiece_active_length+zadj, 5, 11.1);    // D
-    tone_hole(tuned_length(214.15)- mouthpiece_active_length+zadj, -5, 11.1);  // E
-    tone_hole(tuned_length(186.2)- mouthpiece_active_length+zadj, 0, 11.13);   // F#
+    tone_hole(tone_hole_a_z, tone_hole_a_angle, tone_hole_a_diameter);    // A
+    tone_hole(tone_hole_b_z, tone_hole_b_angle, tone_hole_b_diameter);    // B
+    tone_hole(tone_hole_c_z, tone_hole_c_angle, tone_hole_c_diameter);    // C
+    tone_hole(tone_hole_d_z, tone_hole_d_angle, tone_hole_d_diameter);    // D
+    tone_hole(tone_hole_e_z, tone_hole_e_angle, tone_hole_e_diameter);    // E
+    tone_hole(tone_hole_fs_z, tone_hole_fs_angle, tone_hole_fs_diameter); // F#
 }
 
 module tone_hole(z, angle, hole_d) {
@@ -208,10 +145,15 @@ module piecewise_vert(){
 
 module piecewise(){
     for (i = [0 : len(part_lengths) - 1]) {
-        difference(){
-            piece(i, tube_spacing_factor);
-            translate([0,0,-cube_cut/2]) cube([cube_cut,cube_cut,cube_cut], center=true);
-        }
+        printable_piece(i, tube_spacing_factor);
+    }
+}
+
+module printable_piece(pieceno, yfactor=0) {
+    difference(){
+        piece(pieceno, yfactor);
+        translate([0,0,-cube_cut/2])
+        cube([cube_cut,cube_cut,cube_cut], center=true);
     }
 }
 
@@ -337,9 +279,9 @@ export_part = "layout";
 if (export_part == "part1") {
     mouthpiece();
 } else if (export_part == "part2") {
-    piece(0, 0);
+    printable_piece(0);
 } else if (export_part == "part3") {
-    piece(1, 0);
+    printable_piece(1);
 } else {
     translate([0,25,0]) mouthpiece();
     for (i = [0 : len(part_lengths) - 1]) {

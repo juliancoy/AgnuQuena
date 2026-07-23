@@ -2,8 +2,8 @@
 """Estimate AgnuQuena pitches with a calibrated 1D bore model.
 
 This is not a replacement for the planned 3D FDTD path. It is a small,
-deterministic acoustic model that turns the current OpenSCAD tone-hole geometry
-into pitch estimates and compares them with measured tune-check results.
+deterministic acoustic model that turns the generated production manifest (or
+an OpenSCAD fallback) into pitch estimates and compares them with measurements.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
-from tools.compare_measurements import parse_scad  # noqa: E402
+from tools.compare_measurements import parse_scad, read_scad_with_includes  # noqa: E402
 from acoustics.materials import (  # noqa: E402
     apply_material_to_geometry,
     canonical_material_keys,
@@ -75,6 +75,7 @@ class Hole:
     note: str
     acoustic_mm: float
     diameter_mm: float
+    calibrated_correction_mm: float | None = None
 
 
 @dataclass(frozen=True)
@@ -104,7 +105,7 @@ def parse_float(value: str) -> float:
 
 
 def geometry_from_scad(path: Path) -> Geometry:
-    env, holes, _measurements = parse_scad(path.read_text(encoding="utf-8"))
+    env, holes, _measurements = parse_scad(read_scad_with_includes(path))
     mouthpiece_active_length = float(env["mouthpiece_active_length"])
     zadj = float(env["zadj"])
     acoustic_holes = []
@@ -129,6 +130,35 @@ def geometry_from_scad(path: Path) -> Geometry:
         unacoustic_length_mm=float(env["unacoustic_length"]),
         mouthpiece_active_length_mm=mouthpiece_active_length,
         z_adjust_mm=zadj,
+    )
+
+
+def geometry_from_manifest(path: Path) -> Geometry:
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    generated_geometry = manifest["geometry"]
+    holes = [
+        Hole(
+            name=str(hole["name"]),
+            note=str(hole["target_note"]),
+            acoustic_mm=float(hole["acoustic_position_mm"]),
+            diameter_mm=float(hole["diameter_mm"]),
+            calibrated_correction_mm=(
+                float(hole["calibrated_correction_mm"])
+                if hole.get("calibrated_correction_mm") is not None
+                else None
+            ),
+        )
+        for hole in manifest["holes"]
+    ]
+    return Geometry(
+        source=str(path),
+        acoustic_length_mm=float(generated_geometry["acoustic_length_mm"]),
+        holes=holes,
+        unacoustic_length_mm=float(generated_geometry["unacoustic_length_mm"]),
+        mouthpiece_active_length_mm=float(
+            generated_geometry["mouthpiece_active_length_mm"]
+        ),
+        z_adjust_mm=float(generated_geometry["z_adjust_mm"]),
     )
 
 
@@ -222,6 +252,7 @@ def simulate(
     measurements: dict[str, dict[str, float]],
     open_end_correction_mm: float,
     tonehole_correction_mm: float,
+    calibrated_correction_delta_mm: float = 0.0,
 ) -> list[dict[str, object]]:
     rows: list[dict[str, object]] = []
 
@@ -241,7 +272,12 @@ def simulate(
     )
 
     for hole in geometry.holes:
-        effective = hole.acoustic_mm + tonehole_correction_mm
+        correction = (
+            hole.calibrated_correction_mm + calibrated_correction_delta_mm
+            if hole.calibrated_correction_mm is not None
+            else tonehole_correction_mm
+        )
+        effective = hole.acoustic_mm + correction
         predicted = freq_for_length(effective)
         rows.append(
             row_for_note(
@@ -249,7 +285,7 @@ def simulate(
                 source=f"hole_{hole.name}",
                 acoustic_mm=hole.acoustic_mm,
                 diameter_mm=hole.diameter_mm,
-                correction_mm=tonehole_correction_mm,
+                correction_mm=correction,
                 effective_mm=effective,
                 predicted_hz=predicted,
                 measured=measurements.get(hole.note),
@@ -316,6 +352,11 @@ def write_csv(path: Path, rows: list[dict[str, object]]) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--scad", default="Quena.scad", help="SCAD file for WORKTREE simulation")
+    parser.add_argument(
+        "--manifest",
+        default="generated/quena_manifest.json",
+        help="generated WORKTREE geometry manifest; pass an empty value to parse --scad",
+    )
     parser.add_argument("--commit", default="WORKTREE", help="geometry history commit or WORKTREE")
     parser.add_argument("--history-dir", default="measurements/history")
     parser.add_argument("--measurement-note", default="measurements/2026-07-05-quena-tuning-pass.md")
@@ -337,7 +378,11 @@ def main() -> int:
         return 0
 
     if args.commit == "WORKTREE":
-        geometry = geometry_from_scad(REPO_ROOT / args.scad)
+        geometry = (
+            geometry_from_manifest(REPO_ROOT / args.manifest)
+            if args.manifest
+            else geometry_from_scad(REPO_ROOT / args.scad)
+        )
     else:
         geometry = geometry_from_history(args.commit, REPO_ROOT / args.history_dir)
     profile = material_profile(args.material)
@@ -359,7 +404,13 @@ def main() -> int:
     )
     tonehole_correction_mm += profile.tonehole_correction_delta_mm
 
-    rows = simulate(geometry, measurements, open_end_correction_mm, tonehole_correction_mm)
+    rows = simulate(
+        geometry,
+        measurements,
+        open_end_correction_mm,
+        tonehole_correction_mm,
+        calibrated_correction_delta_mm=profile.tonehole_correction_delta_mm,
+    )
     out_dir = REPO_ROOT / args.out_dir
     label = args.label or args.commit.lower().replace("/", "_")
     csv_path = out_dir / f"quena_1d_simulation_{label}.csv"

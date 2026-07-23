@@ -4,6 +4,7 @@ __pycache__/
 *.pyc
 acoustics/out/
 *.wav
+/build/
 
 # CalculiX result dumps are generated and can exceed GitHub's 100 MB limit.
 analysis/*.frd

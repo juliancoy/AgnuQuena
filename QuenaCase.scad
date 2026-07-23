@@ -4,29 +4,14 @@
 
 $fn = 64;
 
+// Shared flute dimensions are generated from designs/quena.json.
+include <generated/quena_parameters.scad>
+
 // Select "bottom", "lid", "bottom_p1s", "lid_p1s", "hinge_coupon",
 // "full_hinge_coupon", "latch", "latch_coupon", "assembly", "preview", or "none".
 // Override from the CLI with:
 // openscad -D 'part="bottom"' -o QuenaCaseBottom.stl QuenaCase.scad
 part = is_undef(part) ? "preview" : part;
-
-// Quena dimensions copied from Quena.scad so the case can be rendered alone.
-shell_width = 1.5;
-id = 17.5;
-od = id + shell_width * 2;
-mouthpiece_total_length = 30;
-pitch_raise_cents = 12;
-length_tuning_scale = pow(2, -pitch_raise_cents / 1200);
-function tuned_length(length) = length * length_tuning_scale;
-acoustic_length = tuned_length(396);
-unacoustic_length = 6;
-mouthpiece_active_length = mouthpiece_total_length - unacoustic_length;
-non_mouthpiece_acoustic_length = acoustic_length - mouthpiece_active_length;
-tube_part_1_length = 230;
-tube_part_2_length = non_mouthpiece_acoustic_length - tube_part_1_length;
-ov = 7;
-angled_transition_z = 3;
-insert_z_tolerance = 0.4;
 
 // Case fit and print parameters.
 // Close, printable fit around each part.  These are diametral/radial clearances;

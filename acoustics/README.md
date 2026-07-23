@@ -4,14 +4,21 @@ This folder contains acoustic simulation tools for the quena geometry.
 
 ## Calibrated 1D Model
 
-`quena_1d.py` reads the OpenSCAD tone-hole geometry or generated measurement
-history, applies a simple end-corrected bore model, and writes pitch estimates
-that can be compared with tune-check measurements.
+`quena_1d.py` reads the generated production manifest by default (with an
+OpenSCAD fallback for historical work), applies calibrated per-hole corrections
+where available, and writes pitch estimates that can be compared with
+tune-check measurements.
 
 Run the current worktree model:
 
 ```sh
 python3 acoustics/quena_1d.py
+```
+
+To bypass the generated manifest and inspect a standalone SCAD file:
+
+```sh
+python3 acoustics/quena_1d.py --manifest "" --scad Quena.scad
 ```
 
 Run a measured historical geometry and fit its correction from the saved
