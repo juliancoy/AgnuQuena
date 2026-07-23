@@ -63,6 +63,26 @@ tone_hole_axial_scale = 1;
 tone_hole_circumferential_scale = 1;
 tone_hole_corner_ratio = 0.28;
 
+// Fan the lower-hand holes around the tube for a more natural finger spread.
+// This only changes their circumferential position; the tuned axial centers
+// stay unchanged.
+lower_tube_hole_angle_spread = 12;
+
+// Spread the lower-hand holes across the printable lower tube instead of
+// centering them inside the old cluster. These are physical offsets from the
+// tube joint: 25, 65, and 105 mm, leaving useful material at both ends.
+lower_tube_first_hole_offset = 25;
+lower_tube_hole_spacing = 40;
+lower_tube_hole_c_z = tube_part_1_length + lower_tube_first_hole_offset;
+lower_tube_hole_b_z = lower_tube_hole_c_z + lower_tube_hole_spacing;
+lower_tube_hole_a_z = lower_tube_hole_b_z + lower_tube_hole_spacing;
+
+// The distal moves add acoustic length. Increase each equal-area opening to
+// preserve the measured tone-hole correction as closely as the tube permits.
+lower_tube_hole_a_diameter = 17.35;
+lower_tube_hole_b_diameter = 17.25;
+lower_tube_hole_c_diameter = 11.3;
+
 //translate([20,0,0]) tube();
 
 module tube_negative() {
@@ -71,9 +91,9 @@ module tube_negative() {
 }
 
 module tone_hole_air() {
-    tone_hole(tuned_length(341)- mouthpiece_active_length+zadj, -5, 10.1);     // A
-    tone_hole(tuned_length(302.75)- mouthpiece_active_length+zadj, 5, 10.35);  // B
-    tone_hole(tuned_length(279.25)- mouthpiece_active_length+zadj, 0, 9.75);   // C
+    tone_hole(lower_tube_hole_a_z, -lower_tube_hole_angle_spread, lower_tube_hole_a_diameter); // A
+    tone_hole(lower_tube_hole_b_z, lower_tube_hole_angle_spread, lower_tube_hole_b_diameter);  // B
+    tone_hole(lower_tube_hole_c_z, 0, lower_tube_hole_c_diameter);                             // C
     tone_hole(tuned_length(245.5)- mouthpiece_active_length+zadj, 5, 11.1);    // D
     tone_hole(tuned_length(214.15)- mouthpiece_active_length+zadj, -5, 11.1);  // E
     tone_hole(tuned_length(186.2)- mouthpiece_active_length+zadj, 0, 11.13);   // F#

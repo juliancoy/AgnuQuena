@@ -19,6 +19,9 @@ TRANSLATE_RE = re.compile(
     r"translate\s*\(\s*\[\s*0\s*,\s*0\s*,\s*(?P<z>[^\]]+)\]\s*\)"
     r".*?cylinder\s*\([^;]*?\bd\s*=\s*(?P<d>[^,)]+(?:[+-]\s*[^,)]+)*)",
 )
+TONE_HOLE_RE = re.compile(
+    r"\btone_hole\s*\(\s*(?P<z>.+)\s*,\s*(?P<angle>[^,]+)\s*,\s*(?P<d>[^,)]+)\s*\)"
+)
 MEASURE_RE = re.compile(
     r"^\s*//\s*(?P<note>[A-G](?:#|b)?\d?)\s+"
     r"(?P<expected>[0-9]+(?:\.[0-9]+)?)\s+"
@@ -158,6 +161,21 @@ def parse_scad(scad: str) -> tuple[dict[str, float], list[dict[str, object]], li
         if translated and "rotate" in line:
             z = eval_expr(translated.group("z"), env)
             d = eval_expr(translated.group("d"), env)
+            note_match = NOTE_COMMENT_RE.search(line)
+            if z is not None and d is not None:
+                holes.append(
+                    {
+                        "note": note_match.group("note") if note_match else "",
+                        "z_mm": z,
+                        "diameter_mm": d,
+                        "source": strip_line_comment(line),
+                    }
+                )
+
+        tone_hole = TONE_HOLE_RE.search(line)
+        if tone_hole:
+            z = eval_expr(tone_hole.group("z"), env)
+            d = eval_expr(tone_hole.group("d"), env)
             note_match = NOTE_COMMENT_RE.search(line)
             if z is not None and d is not None:
                 holes.append(
