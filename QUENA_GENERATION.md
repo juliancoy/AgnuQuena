@@ -40,6 +40,7 @@ The generator derives:
 - lower-hand hole positions from the layout policy;
 - measured-compensation hole diameters;
 - OpenSCAD parameters shared by the flute and case;
+- ergonomic hole diameter and width limits;
 - hole edge, inter-hole ligament, and print-height validation;
 - a machine-readable geometry and validation manifest.
 

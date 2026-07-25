@@ -16,81 +16,81 @@
   },
   "holes": [
     {
-      "acoustic_position_mm": 367.0,
+      "acoustic_position_mm": 338.0,
       "angle_deg": -12.0,
-      "calibrated_correction_mm": 21.354612008731863,
+      "calibrated_correction_mm": 50.42764279043337,
       "compensation": {
         "diameter_increment_mm": 0.05,
         "empirical_factor": 2.1692095345623796,
-        "estimated_pitch_delta_cents": 0.004108097241185105,
-        "generated_effective_length_mm": 388.35461200873186,
+        "estimated_pitch_delta_cents": -0.32142296504295464,
+        "generated_effective_length_mm": 388.42764279043337,
         "model": "lefebvre_2011_open_tonehole_shunt",
         "target_effective_length_mm": 388.35553354814124,
-        "unrounded_diameter_mm": 17.34956601515296
+        "unrounded_diameter_mm": 10.009961684663722
       },
-      "diameter_mm": 17.35,
+      "diameter_mm": 10.0,
       "diameter_mode": "measured_compensation",
       "name": "A",
-      "physical_z_mm": 335.0,
+      "physical_z_mm": 306.0,
       "position": {
-        "local_offset_mm": 105.0,
+        "local_offset_mm": 76.0,
         "mode": "lower_hand",
         "part": 2
       },
-      "profile_axial_width_mm": 15.921105869827306,
-      "profile_circumferential_width_mm": 15.921105869827306,
+      "profile_axial_width_mm": 7.799965411730955,
+      "profile_circumferential_width_mm": 10.795799877828312,
       "target_note": "A4"
     },
     {
-      "acoustic_position_mm": 327.0,
+      "acoustic_position_mm": 308.0,
       "angle_deg": 12.0,
-      "calibrated_correction_mm": 21.60120586959158,
+      "calibrated_correction_mm": 40.65847180788887,
       "compensation": {
         "diameter_increment_mm": 0.05,
         "empirical_factor": 2.1725105357290677,
-        "estimated_pitch_delta_cents": 0.19901565214102004,
-        "generated_effective_length_mm": 348.6012058695916,
+        "estimated_pitch_delta_cents": -0.08535685821293487,
+        "generated_effective_length_mm": 348.6584718078889,
         "model": "lefebvre_2011_open_tonehole_shunt",
         "target_effective_length_mm": 348.64128195529963,
-        "unrounded_diameter_mm": 17.231430064464803
+        "unrounded_diameter_mm": 11.603296688757837
       },
-      "diameter_mm": 17.25,
+      "diameter_mm": 11.600000000000001,
       "diameter_mode": "measured_compensation",
       "name": "B",
-      "physical_z_mm": 295.0,
+      "physical_z_mm": 276.0,
       "position": {
-        "local_offset_mm": 65.0,
+        "local_offset_mm": 46.0,
         "mode": "lower_hand",
         "part": 2
       },
-      "profile_axial_width_mm": 15.829341570865763,
-      "profile_circumferential_width_mm": 15.829341570865763,
+      "profile_axial_width_mm": 9.04795987760791,
+      "profile_circumferential_width_mm": 12.523127858280846,
       "target_note": "B4"
     },
     {
-      "acoustic_position_mm": 287.0,
+      "acoustic_position_mm": 278.0,
       "angle_deg": 0.0,
-      "calibrated_correction_mm": 40.45381891057366,
+      "calibrated_correction_mm": 49.3948298601689,
       "compensation": {
         "diameter_increment_mm": 0.05,
         "empirical_factor": 2.079197672696821,
-        "estimated_pitch_delta_cents": -0.058776610663735025,
-        "generated_effective_length_mm": 327.45381891057366,
+        "estimated_pitch_delta_cents": 0.253124018743449,
+        "generated_effective_length_mm": 327.3948298601689,
         "model": "lefebvre_2011_open_tonehole_shunt",
         "target_effective_length_mm": 327.4427018123856,
-        "unrounded_diameter_mm": 11.302101826004218
+        "unrounded_diameter_mm": 9.843342499309074
       },
-      "diameter_mm": 11.3,
+      "diameter_mm": 9.850000000000001,
       "diameter_mode": "measured_compensation",
       "name": "C",
-      "physical_z_mm": 255.0,
+      "physical_z_mm": 246.0,
       "position": {
-        "local_offset_mm": 25.0,
+        "local_offset_mm": 16.0,
         "mode": "lower_hand",
         "part": 2
       },
-      "profile_axial_width_mm": 10.369365782654095,
-      "profile_circumferential_width_mm": 10.369365782654095,
+      "profile_axial_width_mm": 7.682965930554992,
+      "profile_circumferential_width_mm": 10.63386287966089,
       "target_note": "C5"
     },
     {
@@ -106,8 +106,8 @@
         "mode": "tuned_source",
         "source_position_mm": 245.5
       },
-      "profile_axial_width_mm": 10.185837184731012,
-      "profile_circumferential_width_mm": 10.185837184731012,
+      "profile_axial_width_mm": 8.65796160702136,
+      "profile_circumferential_width_mm": 11.983337864389426,
       "target_note": "D5"
     },
     {
@@ -123,8 +123,8 @@
         "mode": "tuned_source",
         "source_position_mm": 214.15
       },
-      "profile_axial_width_mm": 10.185837184731012,
-      "profile_circumferential_width_mm": 10.185837184731012,
+      "profile_axial_width_mm": 8.65796160702136,
+      "profile_circumferential_width_mm": 11.983337864389426,
       "target_note": "E5"
     },
     {
@@ -140,8 +140,8 @@
         "mode": "tuned_source",
         "source_position_mm": 186.2
       },
-      "profile_axial_width_mm": 10.213366474419477,
-      "profile_circumferential_width_mm": 10.213366474419477,
+      "profile_axial_width_mm": 8.681361503256555,
+      "profile_circumferential_width_mm": 12.015725264022914,
       "target_note": "F#5"
     }
   ],
@@ -152,7 +152,7 @@
           "F#",
           "E"
         ],
-        "mm": 17.557333417889907,
+        "mm": 19.087273692326193,
         "part": 1
       },
       {
@@ -160,7 +160,7 @@
           "E",
           "D"
         ],
-        "mm": 20.947612547220075,
+        "mm": 22.475488124929726,
         "part": 1
       },
       {
@@ -168,7 +168,7 @@
           "C",
           "B"
         ],
-        "mm": 26.900646323240068,
+        "mm": 21.63453709591855,
         "part": 2
       },
       {
@@ -176,62 +176,62 @@
           "B",
           "A"
         ],
-        "mm": 24.124776279653464,
+        "mm": 21.57603735533057,
         "part": 2
       }
     ],
     "constraints": {
       "diameter_bounds_mm": [
         5.0,
-        18.0
+        12.0
       ],
       "maximum_print_height_mm": 240.0,
-      "maximum_profile_width_mm": 16.5,
+      "maximum_profile_width_mm": 13.0,
       "minimum_axial_ligament_mm": 12.0,
       "minimum_part_end_ligament_mm": 10.0
     },
     "end_ligaments": [
       {
-        "end_mm": 26.30407525815259,
+        "end_mm": 59.36464548720077,
         "hole": "A",
         "part": 2,
-        "start_mm": 97.03944706508634
+        "start_mm": 72.10001729413455
       },
       {
-        "end_mm": 66.34995740763337,
+        "end_mm": 88.74064825426228,
         "hole": "B",
         "part": 2,
-        "start_mm": 57.08532921456714
+        "start_mm": 41.47602006119604
       },
       {
-        "end_mm": 109.0799453017392,
+        "end_mm": 119.42314522778875,
         "hole": "C",
         "part": 2,
-        "start_mm": 19.815317108672957
+        "start_mm": 12.158517034722507
       },
       {
-        "end_mm": 13.102873777842163,
+        "end_mm": 13.86681156669699,
         "hole": "D",
         "part": 1,
-        "start_mm": 206.71128903742684
+        "start_mm": 207.47522682628164
       },
       {
-        "end_mm": 44.23632350979325,
+        "end_mm": 45.00026129864808,
         "hole": "E",
         "part": 1,
-        "start_mm": 175.57783930547575
+        "start_mm": 176.34177709433055
       },
       {
-        "end_mm": 71.97949411241417,
+        "end_mm": 72.74549659799563,
         "hole": "F#",
         "part": 1,
-        "start_mm": 147.80713941316634
+        "start_mm": 148.57314189874782
       }
     ],
     "maximum_print_height_mm": 237.6,
-    "maximum_profile_width_mm": 15.921105869827306,
-    "minimum_axial_ligament_mm": 17.557333417889907,
-    "minimum_end_ligament_mm": 13.102873777842163,
+    "maximum_profile_width_mm": 12.523127858280846,
+    "minimum_axial_ligament_mm": 19.087273692326193,
+    "minimum_end_ligament_mm": 12.158517034722507,
     "status": "passed"
   },
   "parts": [
@@ -254,10 +254,10 @@
     }
   ],
   "schema_version": 1,
-  "spec_sha256": "8bfb1afed15f7b4496c1aee6297cefd0f6a3eb949de8042282bb14981d4ab432",
+  "spec_sha256": "daa9ff02d532e96034526301140bdec66f2cd8490821ca2207e82312800d4594",
   "tone_hole_profile": {
-    "axial_scale": 1.0,
-    "circumferential_scale": 1.0,
+    "axial_scale": 0.85,
+    "circumferential_scale": 1.1764705882352942,
     "corner_ratio": 0.28,
     "shape": "equal_area_rounded_square"
   }

@@ -35,11 +35,22 @@ def test_lower_hand_layout_spans_the_printable_section():
     _, manifest = generate(load_spec())
     holes = {hole["name"]: hole for hole in manifest["holes"]}
 
-    assert holes["C"]["position"]["local_offset_mm"] == 25.0
-    assert holes["B"]["position"]["local_offset_mm"] == 65.0
-    assert holes["A"]["position"]["local_offset_mm"] == 105.0
-    assert holes["B"]["physical_z_mm"] - holes["C"]["physical_z_mm"] == 40.0
-    assert holes["A"]["physical_z_mm"] - holes["B"]["physical_z_mm"] == 40.0
+    assert holes["C"]["position"]["local_offset_mm"] == 16.0
+    assert holes["B"]["position"]["local_offset_mm"] == 46.0
+    assert holes["A"]["position"]["local_offset_mm"] == 76.0
+    assert holes["B"]["physical_z_mm"] - holes["C"]["physical_z_mm"] == 30.0
+    assert holes["A"]["physical_z_mm"] - holes["B"]["physical_z_mm"] == 30.0
+
+
+def test_holes_are_ergonomic_and_wider_than_tall():
+    _, manifest = generate(load_spec())
+
+    for hole in manifest["holes"]:
+        assert hole["diameter_mm"] <= 12.0
+        assert (
+            hole["profile_circumferential_width_mm"]
+            > hole["profile_axial_width_mm"]
+        )
 
 
 def test_measured_compensation_stays_inside_half_a_cent():
@@ -68,4 +79,13 @@ def test_manufacturing_constraint_violation_rejects_generation():
     spec["manufacturing_constraints"]["maximum_print_height_mm"] = 200.0
 
     with pytest.raises(DesignError, match="print height"):
+        generate(spec)
+
+
+def test_overdistributed_lower_hand_layout_rejects_oversized_holes():
+    spec = copy.deepcopy(load_spec())
+    spec["lower_hand_layout"]["first_center_offset_mm"] = 25.0
+    spec["lower_hand_layout"]["center_spacing_mm"] = 40.0
+
+    with pytest.raises(DesignError, match="diameter bounds"):
         generate(spec)
