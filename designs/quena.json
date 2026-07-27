@@ -10,7 +10,7 @@
     "mouthpiece_total_length_mm": 30.0,
     "unacoustic_length_mm": 6.0,
     "z_adjust_mm": -8.0,
-    "tube_part_1_length_mm": 230.0
+    "tube_part_1_length_mm": 222.0
   },
   "connectors": {
     "overlap_mm": 7.0,
@@ -26,8 +26,8 @@
   },
   "tone_hole_profile": {
     "shape": "equal_area_rounded_square",
-    "axial_scale": 0.85,
-    "circumferential_scale": 1.1764705882352942,
+    "axial_scale": 1.0,
+    "circumferential_scale": 1.0,
     "corner_ratio": 0.28
   },
   "lower_hand_layout": {
@@ -39,7 +39,7 @@
   "tonehole_compensation": {
     "model": "lefebvre_2011_open_tonehole_shunt",
     "speed_of_sound_mm_s": 343000.0,
-    "diameter_increment_mm": 0.05
+    "diameter_increment_mm": 0.01
   },
   "holes": [
     {
@@ -110,12 +110,20 @@
       "target_note": "D5",
       "position": {
         "mode": "tuned_source",
-        "source_position_mm": 245.5
+        "source_position_mm": 235.56001
       },
       "angle_deg": 5.0,
       "diameter": {
-        "mode": "fixed",
-        "value_mm": 11.1
+        "mode": "measured_compensation",
+        "reference": {
+          "source_position_mm": 245.5,
+          "diameter_mm": 11.1
+        },
+        "calibration": {
+          "source_position_mm": 245.5,
+          "diameter_mm": 11.1,
+          "measured_frequency_hz": 564.0
+        }
       }
     },
     {
@@ -123,12 +131,20 @@
       "target_note": "E5",
       "position": {
         "mode": "tuned_source",
-        "source_position_mm": 214.15
+        "source_position_mm": 204.329134
       },
       "angle_deg": -5.0,
       "diameter": {
-        "mode": "fixed",
-        "value_mm": 11.1
+        "mode": "measured_compensation",
+        "reference": {
+          "source_position_mm": 214.15,
+          "diameter_mm": 11.1
+        },
+        "calibration": {
+          "source_position_mm": 214.15,
+          "diameter_mm": 11.1,
+          "measured_frequency_hz": 630.0
+        }
       }
     },
     {
@@ -136,12 +152,20 @@
       "target_note": "F#5",
       "position": {
         "mode": "tuned_source",
-        "source_position_mm": 186.2
+        "source_position_mm": 176.825369
       },
       "angle_deg": 0.0,
       "diameter": {
-        "mode": "fixed",
-        "value_mm": 11.13
+        "mode": "measured_compensation",
+        "reference": {
+          "source_position_mm": 186.2,
+          "diameter_mm": 11.13
+        },
+        "calibration": {
+          "source_position_mm": 186.2,
+          "diameter_mm": 11.13,
+          "measured_frequency_hz": 714.0
+        }
       }
     }
   ],

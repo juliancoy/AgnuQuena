@@ -20,6 +20,7 @@ STL_PARTS = [
     # Canonical half exports are print-oriented for the project's P1S target.
     ("bottom_p1s", ROOT / "QuenaCaseBottom.stl", True),
     ("lid_p1s", ROOT / "QuenaCaseLid.stl", True),
+    ("lid_logo_p1s", ROOT / "QuenaCaseLidLogo.stl", True),
     ("hinge_coupon", ROOT / "QuenaCaseHingeCoupon.stl", False),
     ("full_hinge_coupon", ROOT / "QuenaCaseFullHingeCoupon.stl", False),
     ("latch_coupon", ROOT / "QuenaCaseLatchCoupon.stl", False),
@@ -48,15 +49,15 @@ CAMERAS = [
 ]
 
 LID_HINGE_CLOSEUP_CAMERAS = [
-    "-40,-32.65,3.1,65,0,25,95",
-    "-40,-32.65,3.1,90,0,0,95",
-    "-40,-32.65,3.1,90,0,90,95",
-    "0,-32.65,3.1,65,0,25,210",
-    "0,-32.65,3.1,90,0,0,210",
-    "0,-32.65,3.1,0,0,0,210",
-    "40,-32.65,3.1,65,0,335,95",
-    "40,-32.65,3.1,90,0,180,95",
-    "40,-32.65,3.1,90,0,270,95",
+    "-40,-31.25,3.1,65,0,25,95",
+    "-40,-31.25,3.1,90,0,0,95",
+    "-40,-31.25,3.1,90,0,90,95",
+    "0,-31.25,3.1,65,0,25,210",
+    "0,-31.25,3.1,90,0,0,210",
+    "0,-31.25,3.1,0,0,0,210",
+    "40,-31.25,3.1,65,0,335,95",
+    "40,-31.25,3.1,90,0,180,95",
+    "40,-31.25,3.1,90,0,270,95",
 ]
 
 

@@ -29,7 +29,6 @@ def main() -> None:
     jobs: tuple[Callable[[], None], ...] = (
         render_and_validate_stls,
         lambda: run("tools/render_case_assets.py", "--views"),
-        lambda: run("tools/model_hinge_snap.py", "--material", "all"),
         lambda: run("tools/model_latch_snap.py", "--material", "all"),
         lambda: run("tools/simulate_case_inversion.py"),
     )

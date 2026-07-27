@@ -23,22 +23,27 @@ ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED = {
     "QuenaCaseBottom.stl": {
-        "size": (214.04, 214.04, 19.5),
+        "size": (211.824, 211.824, 18.7),
         "min_triangles": 2200,
         "components": 1,
     },
     "QuenaCaseLid.stl": {
-        "size": (214.04, 214.04, 19.3957),
+        "size": (211.824, 211.824, 18.5966),
         "min_triangles": 1200,
         "components": 1,
     },
+    "QuenaCaseLidLogo.stl": {
+        "size": (139.4049, 141.7288, 0.6),
+        "min_triangles": 5000,
+        "components": 21,
+    },
     "QuenaCaseHingeCoupon.stl": {
-        "size": (116.0, 55.4, 14.2),
+        "size": (72.0, 54.5966, 12.6),
         "min_triangles": 3000,
         "components": 2,
     },
     "QuenaCaseFullHingeCoupon.stl": {
-        "size": (231.2, 57.4, 14.2),
+        "size": (228.064, 56.5966, 12.6),
         "min_triangles": 2000,
         "components": 2,
     },
@@ -48,7 +53,7 @@ EXPECTED = {
         "components": 7,
     },
     "QuenaCaseAssembly.stl": {
-        "size": (249.2, 67.77, 31.6),
+        "size": (246.064, 65.5666, 31.6),
         "min_triangles": 4500,
         "components": 2,
     },
@@ -60,15 +65,19 @@ CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
 
 
 def scad_scalar(name: str) -> float:
-    source = (ROOT / "QuenaCase.scad").read_text(encoding="utf-8")
-    match = re.search(
-        rf"^\s*{re.escape(name)}\s*=\s*([-+]?\d+(?:\.\d+)?)\s*;",
-        source,
-        flags=re.MULTILINE,
-    )
-    if not match:
-        raise AssertionError(f"QuenaCase.scad: missing numeric parameter {name}")
-    return float(match.group(1))
+    for source_path in (
+        ROOT / "QuenaCase.scad",
+        ROOT / "generated" / "quena_parameters.scad",
+    ):
+        source = source_path.read_text(encoding="utf-8")
+        match = re.search(
+            rf"^\s*{re.escape(name)}\s*=\s*([-+]?\d+(?:\.\d+)?)\s*;",
+            source,
+            flags=re.MULTILINE,
+        )
+        if match:
+            return float(match.group(1))
+    raise AssertionError(f"OpenSCAD sources: missing numeric parameter {name}")
 
 
 def evaluated_hinge_pose() -> tuple[float, float, float]:
@@ -99,68 +108,42 @@ def evaluated_hinge_pose() -> tuple[float, float, float]:
 
 
 def run_hinge_design_checks() -> None:
-    axle_d = scad_scalar("hinge_axle_d")
-    socket_clearance = scad_scalar("hinge_socket_clearance")
+    pin_d = scad_scalar("hinge_pin_d")
+    bore_clearance = scad_scalar("hinge_bore_clearance")
+    bore_d = pin_d + bore_clearance
     outer_d = scad_scalar("hinge_outer_d")
-    nub_l = scad_scalar("hinge_nub_l")
-    tip_l = scad_scalar("hinge_pin_tip_l")
-    tip_r = scad_scalar("hinge_pin_tip_r")
-    socket_depth = scad_scalar("hinge_socket_depth")
     knuckle_gap = scad_scalar("hinge_gap")
-    stator_closed = scad_scalar("hinge_stator_closed")
+    end_allowance = scad_scalar("hinge_pin_end_allowance")
     backer_extension = scad_scalar("hinge_backer_extension")
     body_inset = scad_scalar("hinge_body_inset")
-    nub_support_y = scad_scalar("hinge_nub_support_y")
-    nub_support_gap = scad_scalar("hinge_nub_support_gap")
-    nub_support_overlap = scad_scalar("hinge_nub_support_base_overlap")
 
-    socket_d = axle_d + socket_clearance
-    socket_wall = (outer_d - socket_d) / 2
-    pin_engagement = nub_l - knuckle_gap
-    full_diameter_engagement = pin_engagement - tip_l
-    axial_reserve = socket_depth - pin_engagement
+    barrel_wall = (outer_d - bore_d) / 2
+    rear_projection = outer_d - body_inset
 
-    if not 0.25 <= socket_clearance <= 0.55:
+    if not math.isclose(pin_d, 1.75, abs_tol=1e-9):
+        raise AssertionError("hinge pin must use standard 1.75 mm filament")
+    if not 0.20 <= bore_clearance <= 0.35:
         raise AssertionError(
-            f"hinge diametral clearance {socket_clearance:.2f} mm is outside 0.25-0.55 mm"
+            f"hinge bore clearance {bore_clearance:.2f} mm is outside 0.20-0.35 mm"
         )
-    if socket_wall < 1.5:
-        raise AssertionError(f"hinge socket wall is only {socket_wall:.2f} mm")
-    if axial_reserve < 1.0:
-        raise AssertionError(f"hinge axial reserve is only {axial_reserve:.2f} mm")
-    if pin_engagement < 1.8:
-        raise AssertionError(f"hinge pin engagement is only {pin_engagement:.2f} mm")
-    if full_diameter_engagement + 1e-9 < 1.2:
-        raise AssertionError(
-            "hinge full-diameter bearing engagement is only "
-            f"{full_diameter_engagement:.2f} mm"
-        )
-    if not 0 < tip_l < nub_l:
-        raise AssertionError("hinge pin taper length must be shorter than the pin")
-    if not 0 < tip_r <= tip_l / 2:
-        raise AssertionError("hinge pin nose radius must fit within the lead-in length")
-    if stator_closed != 1:
-        raise AssertionError("hinge outer stator must remain closed")
+    if barrel_wall < 1.5:
+        raise AssertionError(f"hinge barrel wall is only {barrel_wall:.2f} mm")
+    if not 0.4 <= knuckle_gap <= 0.8:
+        raise AssertionError("hinge knuckle gap is unsuitable for FDM assembly")
+    if not 0.4 <= end_allowance <= 1.0:
+        raise AssertionError("hinge pin end allowance is unsuitable for heat staking")
     if not 0.8 <= backer_extension <= 1.5:
         raise AssertionError("hinge rectangular backer extension is out of range")
-    if not 1.5 <= body_inset <= 2.0:
+    if not 2.2 <= body_inset <= 2.6:
         raise AssertionError("hinge body inset must retain rotational clearance")
-    if not 0.8 <= nub_support_y <= 1.2:
-        raise AssertionError("hinge nub support blade width is out of range")
-    if not 0.15 <= nub_support_gap <= 0.3:
-        raise AssertionError("hinge nub support gap must be about one layer")
-    if nub_support_overlap < 0.1:
-        raise AssertionError("hinge nub support blades lack base overlap")
+    if rear_projection > 3.5:
+        raise AssertionError(f"hinge rear projection is {rear_projection:.2f} mm")
 
     print(
         "QuenaCase hinge design: ok, "
-        f"{socket_clearance:.2f} mm diametral clearance, "
-        f"{socket_wall:.2f} mm socket wall, "
-        f"{pin_engagement:.2f} mm pin engagement, "
-        f"{full_diameter_engagement:.2f} mm full-diameter bearing, "
-        f"{axial_reserve:.2f} mm axial reserve, closed stator, "
-        f"{body_inset:.1f} mm body inset, {backer_extension:.1f} mm backer extension, "
-        "nub breakaway blades"
+        f"{pin_d:.2f} mm filament pin, {bore_d:.2f} mm bore, "
+        f"{barrel_wall:.2f} mm barrel wall, {knuckle_gap:.2f} mm knuckle gaps, "
+        f"{rear_projection:.2f} mm rear projection, heat-staked ends"
     )
 
 

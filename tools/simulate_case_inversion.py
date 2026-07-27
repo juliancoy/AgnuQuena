@@ -18,15 +18,16 @@ SCAD = ROOT / "QuenaCase.scad"
 
 
 def scalar(name: str) -> float:
-    text = SCAD.read_text(encoding="utf-8")
-    match = re.search(
-        rf"^\s*{re.escape(name)}\s*=\s*([-+]?\d+(?:\.\d+)?)\s*;",
-        text,
-        re.MULTILINE,
-    )
-    if not match:
-        raise ValueError(f"missing numeric OpenSCAD parameter: {name}")
-    return float(match.group(1))
+    for source_path in (SCAD, ROOT / "generated" / "quena_parameters.scad"):
+        text = source_path.read_text(encoding="utf-8")
+        match = re.search(
+            rf"^\s*{re.escape(name)}\s*=\s*([-+]?\d+(?:\.\d+)?)\s*;",
+            text,
+            re.MULTILINE,
+        )
+        if match:
+            return float(match.group(1))
+    raise ValueError(f"missing numeric OpenSCAD parameter: {name}")
 
 
 def main() -> None:

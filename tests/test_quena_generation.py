@@ -35,6 +35,7 @@ def test_lower_hand_layout_spans_the_printable_section():
     _, manifest = generate(load_spec())
     holes = {hole["name"]: hole for hole in manifest["holes"]}
 
+    assert holes["C"]["physical_z_mm"] == 238.0
     assert holes["C"]["position"]["local_offset_mm"] == 16.0
     assert holes["B"]["position"]["local_offset_mm"] == 46.0
     assert holes["A"]["position"]["local_offset_mm"] == 76.0
@@ -42,14 +43,13 @@ def test_lower_hand_layout_spans_the_printable_section():
     assert holes["A"]["physical_z_mm"] - holes["B"]["physical_z_mm"] == 30.0
 
 
-def test_holes_are_ergonomic_and_wider_than_tall():
+def test_holes_are_small_equal_area_rounded_squares():
     _, manifest = generate(load_spec())
 
     for hole in manifest["holes"]:
-        assert hole["diameter_mm"] <= 12.0
-        assert (
-            hole["profile_circumferential_width_mm"]
-            > hole["profile_axial_width_mm"]
+        assert hole["diameter_mm"] <= 10.26
+        assert hole["profile_circumferential_width_mm"] == pytest.approx(
+            hole["profile_axial_width_mm"]
         )
 
 
@@ -71,7 +71,7 @@ def test_fast_acoustic_model_consumes_generated_corrections():
     assert corrections["A"] is not None
     assert corrections["B"] is not None
     assert corrections["C"] is not None
-    assert corrections["D"] is None
+    assert corrections["D"] is not None
 
 
 def test_manufacturing_constraint_violation_rejects_generation():

@@ -1,4 +1,4 @@
-$fn=80;
+b$fn=80;
 fast_air_chamber_x = 8;
 fast_air_chamber_y = 2;
 shell_width = 4;
