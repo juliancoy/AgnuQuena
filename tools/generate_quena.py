@@ -59,6 +59,19 @@ def round_to_increment(value: float, increment: float) -> float:
     return math.floor(value / increment + 0.5 + 1e-12) * increment
 
 
+def note_frequency_12tet(note: str, concert_a_hz: float = 440.0) -> float:
+    """Return the 12-TET frequency for a scientific-pitch note name."""
+    names = ("C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B")
+    split = 2 if len(note) > 2 and note[1] == "#" else 1
+    try:
+        pitch_class = names.index(note[:split])
+        octave = int(note[split:])
+    except (ValueError, IndexError) as exc:
+        raise DesignError(f"invalid target note {note!r}") from exc
+    midi_note = (octave + 1) * 12 + pitch_class
+    return concert_a_hz * 2.0 ** ((midi_note - 69) / 12.0)
+
+
 def rounded_square_side(diameter_mm: float, corner_ratio: float) -> float:
     denominator = 1.0 - (4.0 - math.pi) * corner_ratio**2
     return diameter_mm * math.sqrt((math.pi / 4.0) / denominator)
@@ -206,9 +219,9 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
         "connectors.angled_transition_mm",
     )
     accent_ring = number(connectors["accent_ring_mm"], "connectors.accent_ring_mm")
-    friction_expand = number(
-        connectors["friction_expand_mm"],
-        "connectors.friction_expand_mm",
+    radial_clearance = positive(
+        connectors["radial_clearance_mm"],
+        "connectors.radial_clearance_mm",
     )
     insert_tolerance = number(
         connectors["insert_z_tolerance_mm"],
@@ -316,19 +329,10 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
             )
             diameter = exact_diameter
         elif diameter_mode == "measured_compensation":
-            reference = diameter_spec["reference"]
             calibration = diameter_spec["calibration"]
-            reference_source = positive(
-                reference["source_position_mm"],
-                f"hole {name} reference.source_position_mm",
-            )
-            reference_diameter = positive(
-                reference["diameter_mm"],
-                f"hole {name} reference.diameter_mm",
-            )
-            calibration_source = positive(
-                calibration["source_position_mm"],
-                f"hole {name} calibration.source_position_mm",
+            calibration_acoustic_position = positive(
+                calibration["acoustic_position_mm"],
+                f"hole {name} calibration.acoustic_position_mm",
             )
             calibration_diameter = positive(
                 calibration["diameter_mm"],
@@ -340,7 +344,6 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
             )
 
             measured_effective_length = speed_of_sound / (2.0 * measured_frequency)
-            calibration_acoustic_position = calibration_source * length_scale
             calibration_geometric_correction = tonehole_equivalent_correction(
                 calibration_diameter,
                 bore_radius,
@@ -352,16 +355,8 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
             if empirical_factor <= 0:
                 raise DesignError(f"hole {name}: calibration produced a non-positive factor")
 
-            reference_acoustic_position = reference_source * length_scale
-            target_effective_length = (
-                reference_acoustic_position
-                + empirical_factor
-                * tonehole_equivalent_correction(
-                    reference_diameter,
-                    bore_radius,
-                    shell_width,
-                )
-            )
+            target_frequency = note_frequency_12tet(str(hole_spec["target_note"]))
+            target_effective_length = speed_of_sound / (2.0 * target_frequency)
             required_correction = target_effective_length - acoustic_position
             if required_correction <= 0:
                 raise DesignError(
@@ -552,7 +547,7 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
             "rendering.layout_spacing_factor",
         ),
         "e": positive(rendering["epsilon_mm"], "rendering.epsilon_mm"),
-        "friction_expand_default": friction_expand,
+        "connector_radial_clearance": radial_clearance,
         "insert_z_tolerance": insert_tolerance,
         "tone_hole_axial_scale": axial_scale,
         "tone_hole_circumferential_scale": circumferential_scale,
@@ -584,6 +579,13 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
             "unacoustic_length_mm": unacoustic_length,
             "z_adjust_mm": z_adjust,
             "non_mouthpiece_length_mm": non_mouthpiece_length,
+        },
+        "connectors": {
+            "radial_clearance_mm": radial_clearance,
+            "diametral_clearance_mm": radial_clearance * 2.0,
+            "outer_diameter_mm": outer_diameter
+            + 2.0 * (shell_width + radial_clearance),
+            "wall_width_mm": shell_width,
         },
         "parts": [
             {
@@ -676,7 +678,7 @@ def render_scad(spec: dict[str, Any], params: dict[str, float]) -> str:
     for name in (
         "tube_spacing_factor",
         "e",
-        "friction_expand_default",
+        "connector_radial_clearance",
         "insert_z_tolerance",
         "tone_hole_axial_scale",
         "tone_hole_circumferential_scale",

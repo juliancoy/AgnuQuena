@@ -45,9 +45,13 @@ The generator derives:
 - a machine-readable geometry and validation manifest.
 
 The compensation model uses the low-frequency open-tone-hole shunt fit identified
-in the specification, calibrated independently for each lower-hand hole from the
-saved prototype measurements. Diameter results are rounded to the configured
-production increment. The fit is based on Antoine Lefebvre's *Computational
+in the specification, calibrated independently for each hole from the saved
+prototype measurements. Each calibrated opening is solved directly against its
+12-TET `target_note`; no legacy reference geometry defines the tuning target.
+Calibration stores the printed prototype's actual acoustic hole position, so a
+later body-length correction cannot rescale and invalidate that measurement.
+Diameter results are rounded to the configured production increment. The fit is
+based on Antoine Lefebvre's *Computational
 Acoustic Methods for the Design of Woodwind Instruments*, equations 2.3.1–2.3.2:
 <https://escholarship.mcgill.ca/concern/theses/0z708w835>.
 

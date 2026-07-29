@@ -18,7 +18,7 @@ part = is_undef(part) ? "preview" : part;
 // Close, printable fit around each part.  These are diametral/radial clearances;
 // the separate axial clearance below controls end play.
 part_clearance = 0.3;
-connector_d = od + shell_width * 2;
+connector_d = od + (shell_width + connector_radial_clearance) * 2;
 channel_d = od + part_clearance * 2;
 connector_channel_d = connector_d + part_clearance * 2;
 max_channel_d = connector_channel_d;

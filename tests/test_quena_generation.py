@@ -8,6 +8,7 @@ from acoustics.quena_1d import geometry_from_manifest
 from tools.generate_quena import (
     DesignError,
     generate,
+    note_frequency_12tet,
     render_manifest,
     render_scad,
 )
@@ -31,23 +32,37 @@ def test_generated_artifacts_match_the_canonical_spec():
     assert MANIFEST_PATH.read_text(encoding="utf-8") == render_manifest(manifest)
 
 
+def test_three_wall_shell_and_connector_clearance_are_explicit():
+    parameters, manifest = generate(load_spec())
+
+    assert parameters["shell_width"] == pytest.approx(1.2)
+    assert parameters["od"] == pytest.approx(19.9)
+    assert parameters["connector_radial_clearance"] == pytest.approx(0.2)
+    assert manifest["connectors"]["radial_clearance_mm"] == pytest.approx(0.2)
+    assert manifest["connectors"]["diametral_clearance_mm"] == pytest.approx(0.4)
+    assert manifest["connectors"]["outer_diameter_mm"] == pytest.approx(22.7)
+    assert manifest["connectors"]["wall_width_mm"] == pytest.approx(1.2)
+
+
 def test_lower_hand_layout_spans_the_printable_section():
     _, manifest = generate(load_spec())
     holes = {hole["name"]: hole for hole in manifest["holes"]}
 
-    assert holes["C"]["physical_z_mm"] == 238.0
-    assert holes["C"]["position"]["local_offset_mm"] == 16.0
-    assert holes["B"]["position"]["local_offset_mm"] == 46.0
-    assert holes["A"]["position"]["local_offset_mm"] == 76.0
+    assert holes["C"]["physical_z_mm"] == 242.0
+    assert holes["C"]["position"]["local_offset_mm"] == 20.0
+    assert holes["B"]["position"]["local_offset_mm"] == 50.0
+    assert holes["A"]["position"]["local_offset_mm"] == 80.0
     assert holes["B"]["physical_z_mm"] - holes["C"]["physical_z_mm"] == 30.0
     assert holes["A"]["physical_z_mm"] - holes["B"]["physical_z_mm"] == 30.0
+    tube_1 = next(part for part in manifest["parts"] if part["name"] == "tube_1")
+    assert tube_1["length_mm"] == 222.0
 
 
 def test_holes_are_small_equal_area_rounded_squares():
     _, manifest = generate(load_spec())
 
     for hole in manifest["holes"]:
-        assert hole["diameter_mm"] <= 10.26
+        assert hole["diameter_mm"] <= 10.30
         assert hole["profile_circumferential_width_mm"] == pytest.approx(
             hole["profile_axial_width_mm"]
         )
@@ -60,6 +75,36 @@ def test_measured_compensation_stays_inside_half_a_cent():
     assert compensated
     for hole in compensated:
         assert abs(hole["compensation"]["estimated_pitch_delta_cents"]) < 0.5
+
+
+def test_measured_compensation_targets_each_explicit_12tet_note():
+    spec = load_spec()
+    _, manifest = generate(spec)
+    speed_of_sound = spec["tonehole_compensation"]["speed_of_sound_mm_s"]
+
+    for hole in manifest["holes"]:
+        target_hz = note_frequency_12tet(hole["target_note"])
+        assert hole["compensation"]["target_effective_length_mm"] == pytest.approx(
+            speed_of_sound / (2.0 * target_hz)
+        )
+
+
+def test_prototype_calibration_does_not_rescale_with_new_body_length():
+    spec = load_spec()
+    _, baseline = generate(spec)
+    changed_spec = copy.deepcopy(spec)
+    changed_spec["geometry"]["pitch_raise_cents"] += 10.0
+    _, changed = generate(changed_spec)
+
+    baseline_factors = {
+        hole["name"]: hole["compensation"]["empirical_factor"]
+        for hole in baseline["holes"]
+    }
+    changed_factors = {
+        hole["name"]: hole["compensation"]["empirical_factor"]
+        for hole in changed["holes"]
+    }
+    assert changed_factors == pytest.approx(baseline_factors)
 
 
 def test_fast_acoustic_model_consumes_generated_corrections():

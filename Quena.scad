@@ -79,7 +79,7 @@ module mouthpiece(){
 
     // connector
     difference() {
-        color("green") translate([0, 0, mouthpiece_actual_length-accent_ring_z]) sleve_wide_outer((mouthpiece_actual_length) / total_height, friction_expand_default,insert_z_tolerance);
+        color("green") translate([0, 0, mouthpiece_actual_length-accent_ring_z]) sleve_wide_outer((mouthpiece_actual_length) / total_height, connector_radial_clearance, insert_z_tolerance);
         translate([0,0,-1])
         tube_negative();
     }
@@ -112,7 +112,7 @@ module piece(pieceno, yfactor, z=0){
         }
         if(pieceno < len(part_lengths) - 1){ // top connector insert
             difference() {
-                color("green") translate([0, 0, part_lengths[pieceno]-accent_ring_z]) sleve_wide_outer((part_lengths[pieceno]) / total_height, friction_expand_default, insert_z_tolerance);
+                color("green") translate([0, 0, part_lengths[pieceno]-accent_ring_z]) sleve_wide_outer((part_lengths[pieceno]) / total_height, connector_radial_clearance, insert_z_tolerance);
                 tube_negative();
             }
         }
@@ -184,54 +184,38 @@ module inner_curve_ring(i=0){
     }
 }
 
-// i added a little width to make it fit more snugly
-// This is the inner piece on top
-// its additive
-module sleve_wide(height_on_tube_normalized, friction_expand, ztolerence=0) {
-    odlb = od * (1 - height_on_tube_normalized) + odo * height_on_tube_normalized; // outer diameter linear interpolate bottom
-    odlt = od * (1 - (height_on_tube_normalized + ov/total_height)) + odo * (height_on_tube_normalized + ov/total_height); // outer diameter linear interpolate top
-    odltt = od * (1 - (height_on_tube_normalized + (ov+angled_transition_z)/total_height)) + odo * (height_on_tube_normalized + (ov+angled_transition_z)/total_height); // outer diameter linear interpolate top
-
-    obot = odlb - shell_width + friction_expand;
-    otop = odlt - shell_width + friction_expand;
-
-    odlttt = (ov+angled_transition_z)/total_height;
-    idltt_id  = id  * (1 - (height_on_tube_normalized + odlttt));
-    idltt_ido = ido * (height_on_tube_normalized + odlttt);
-    idltt = idltt_id + idltt_ido ; // outer diameter linear interpolate top
-
-    cylinder(h = ov - ztolerence, d1 = obot, d2=otop);
-
-    // angled top part
-    if(accent_ring_z == 0)
-    translate([0, 0, ov-e-ztolerence]) cylinder(h = angled_transition_z, d1 = otop, d2 = idltt);
-}
-
-
 // to keep a constant diameter across the part, this comes out
-module sleve_wide_outer(height_on_tube_normalized, friction_expand, ztolerence=0) {
+module sleve_wide_outer(height_on_tube_normalized, radial_clearance=0, ztolerence=0) {
     odlb = od * (1 - height_on_tube_normalized) + odo * height_on_tube_normalized; // outer diameter linear interpolate bottom
     odlt = od * (1 - (height_on_tube_normalized + ov/total_height)) + odo * (height_on_tube_normalized + ov/total_height); // outer diameter linear interpolate top
     odltt = od * (1 - (height_on_tube_normalized + (ov+angled_transition_z)/total_height)) + odo * (height_on_tube_normalized + (ov+angled_transition_z)/total_height); // outer diameter linear interpolate top
-
-    obot = odlb - shell_width + friction_expand;
-    otop = odlt - shell_width + friction_expand;
-
-    odlttt = (ov+angled_transition_z)/total_height;
-    idltt_id  = id  * (1 - (height_on_tube_normalized + odlttt));
-    idltt_ido = ido * (height_on_tube_normalized + odlttt);
-    idltt = idltt_id + idltt_ido ; // outer diameter linear interpolate top
 
     translate([0,0,-2])
     difference(){
         union(){
-            cylinder(h = ov - ztolerence, d1 = odlb+shell_width*2, d2=odlt+shell_width*2);
+            cylinder(
+                h = ov - ztolerence,
+                d1 = odlb + (shell_width + radial_clearance)*2,
+                d2 = odlt + (shell_width + radial_clearance)*2
+            );
             translate([0,0,-angled_transition_z])
-            cylinder(h = angled_transition_z, d1 = odlb, d2=odlt+shell_width*2);
+            cylinder(
+                h = angled_transition_z,
+                d1 = odlb,
+                d2 = odlt + (shell_width + radial_clearance)*2
+            );
             translate([0,0,ov - ztolerence])
-            cylinder(h = angled_transition_z, d1 = odlt+shell_width*2, d2=odlb);
+            cylinder(
+                h = angled_transition_z,
+                d1 = odlt + (shell_width + radial_clearance)*2,
+                d2 = odlb
+            );
         }            
-        cylinder(h = angled_transition_z+ov - ztolerence, d1 = odlb, d2=odlt);
+        cylinder(
+            h = angled_transition_z+ov - ztolerence,
+            d1 = odlb + radial_clearance*2,
+            d2 = odlt + radial_clearance*2
+        );
 
         
     }

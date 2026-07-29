@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#071715">
+  <title>AgnuQuena Acoustic Lab</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./acoustics.css">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js"
+      }
+    }
+  </script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="./acoustics.html" aria-label="AgnuQuena Acoustic Lab">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <span>
+        <strong>AgnuQuena</strong>
+        <small>Acoustic Lab</small>
+      </span>
+    </a>
+    <nav>
+      <a class="active" href="./acoustics.html">Air simulation</a>
+      <a href="./index.html">Case mechanics</a>
+    </nav>
+    <div id="gpuBadge" class="status checking">
+      <span></span>
+      Detecting WebGPU
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Browser-native acoustic inspection</p>
+        <h1>See the geometry<br>the solver is testing.</h1>
+      </div>
+      <p class="hero-copy">
+        Drive a turbulent mouth jet across the production notch and watch it
+        couple to the bore, rounded-square tone holes, and surrounding air.
+        The three-dimensional flow field runs locally in your browser.
+      </p>
+    </section>
+
+    <section class="lab-grid">
+      <article class="simulation-card">
+        <div class="card-heading">
+          <div>
+            <p class="kicker">Longitudinal CFD slice</p>
+            <h2 id="simulationTitle">A4 · Hole A</h2>
+          </div>
+          <div class="live-readout">
+            <span>flow time</span>
+            <strong id="simTime">0.00 ms</strong>
+          </div>
+        </div>
+
+        <div class="canvas-shell">
+          <canvas id="pressureCanvas" width="960" height="520"></canvas>
+          <div class="canvas-key">
+            <span><i class="negative"></i> low pressure</span>
+            <span><i class="wall"></i> wall</span>
+            <span><i class="positive"></i> high pressure / fast flow</span>
+          </div>
+          <div class="axis-label mouthpiece">mouthpiece</div>
+          <div class="axis-label foot">foot</div>
+        </div>
+
+        <div class="transport">
+          <button id="toggleRun" class="primary" type="button">
+            <span class="play-icon" aria-hidden="true"></span>
+            Run CFD
+          </button>
+          <button id="resetSimulation" type="button">Reset flow</button>
+          <label class="speed">
+            <span>Steps / frame <output id="speedValue">3</output></span>
+            <input id="speed" type="range" min="1" max="8" value="3" step="1">
+          </label>
+        </div>
+      </article>
+
+      <aside class="controls-card">
+        <div>
+          <p class="kicker">Test configuration</p>
+          <h2>Boundary model</h2>
+        </div>
+
+        <label class="field">
+          <span>Active fingering</span>
+          <select id="noteSelect"></select>
+        </label>
+
+        <label class="field">
+          <span>Displayed field</span>
+          <select id="fieldSelect">
+            <option value="pressure">Acoustic pressure</option>
+            <option value="speed">Flow speed</option>
+            <option value="vorticity">Vorticity</option>
+          </select>
+        </label>
+
+        <label class="range-field">
+          <span>Slice angle <output id="sliceAngleValue">0°</output></span>
+          <input id="sliceAngle" type="range" min="0" max="359" value="0" step="1">
+        </label>
+
+        <label class="range-field">
+          <span>Jet speed <output id="jetSpeedValue">12.0 m/s</output></span>
+          <input id="jetSpeed" type="range" min="4" max="20" value="12" step="0.5">
+        </label>
+
+        <label class="range-field">
+          <span>Inlet turbulence <output id="turbulenceValue">10%</output></span>
+          <input id="turbulence" type="range" min="0" max="25" value="10" step="1">
+        </label>
+
+        <dl class="spec-list">
+          <div>
+            <dt>Grid</dt>
+            <dd id="gridMetric">424 × 48 × 48</dd>
+          </div>
+          <div>
+            <dt>Voxel</dt>
+            <dd>1.00 mm</dd>
+          </div>
+          <div>
+            <dt>Bore</dt>
+            <dd>17.50 mm</dd>
+          </div>
+          <div>
+            <dt>Wall</dt>
+            <dd>1.20 mm</dd>
+          </div>
+          <div><dt>Flow model</dt><dd>3D LES</dd></div>
+          <div><dt>Reynolds</dt><dd id="reynoldsMetric">6,400</dd></div>
+          <div>
+            <dt>Target</dt>
+            <dd id="targetMetric">440.00 Hz</dd>
+          </div>
+        </dl>
+
+        <div class="truth-note">
+          <span>What is exact here?</span>
+          <p id="truthText">
+            The visible mesh is the assembled, validated production STL. Its
+            triangle surfaces are sampled onto the solver grid and form the
+            solid boundary for pressure and all three velocity components.
+          </p>
+        </div>
+      </aside>
+    </section>
+
+    <section class="inspection-grid">
+      <article class="geometry-card">
+        <div class="card-heading">
+          <div>
+            <p class="kicker">Loaded production STL assembly</p>
+            <h2>Exact printable flute</h2>
+          </div>
+          <span id="productionRevision" class="revision">verifying STL hashes</span>
+        </div>
+        <div class="production-shell">
+          <canvas id="productionCanvas"></canvas>
+          <div class="production-proof">
+            <strong id="productionProof">Loading validated mesh…</strong>
+            <span id="volumeStatus">3D solver volume ready · run CFD to populate</span>
+            <span>Live 2D field plane + 3D solver samples · drag to orbit · scroll to zoom</span>
+            <div class="production-views">
+              <button type="button" data-production-view="full">Full flute</button>
+              <button type="button" data-production-view="holes">Tone holes</button>
+              <button type="button" data-production-view="mouth">Mouthpiece</button>
+            </div>
+            <button id="volumeOverlayToggle" type="button">Hide 3D flow</button>
+            <button id="pressureOverlayToggle" type="button">Show pressure plane</button>
+          </div>
+        </div>
+      </article>
+
+      <article class="profile-card">
+        <p class="kicker">Selected opening</p>
+        <h2 id="profileTitle">Hole A profile</h2>
+        <div class="profile-visual">
+          <svg id="profileSvg" viewBox="0 0 240 240" role="img"
+               aria-label="Rounded-square tone-hole profile">
+            <defs>
+              <pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
+                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" stroke-width=".6"/>
+              </pattern>
+            </defs>
+            <rect x="12" y="12" width="216" height="216" rx="16" class="profile-grid"/>
+            <rect id="profileShape" x="75" y="75" width="90" height="90" rx="25"
+                  class="profile-shape"/>
+            <line x1="75" y1="184" x2="165" y2="184" class="dimension-line"/>
+            <text id="profileWidth" x="120" y="205" text-anchor="middle">7.27 mm</text>
+          </svg>
+        </div>
+        <dl class="profile-metrics">
+          <div><dt>Equivalent Ø</dt><dd id="diameterMetric">7.90 mm</dd></div>
+          <div><dt>Profile width</dt><dd id="profileMetric">7.27 mm</dd></div>
+          <div><dt>Corner ratio</dt><dd>0.28</dd></div>
+          <div><dt>Axial center</dt><dd id="positionMetric">302.00 mm</dd></div>
+        </dl>
+      </article>
+    </section>
+
+    <section class="model-notes">
+      <p class="eyebrow">Read the model honestly</p>
+      <div class="notes-grid">
+        <article>
+          <span>01</span>
+          <h3>Production solid boundary</h3>
+          <p>
+            The three validated print STLs are assembled at their production
+            offsets. Their sampled triangle surfaces—not duplicated tube
+            dimensions—define the 1 mm no-slip CFD boundary.
+          </p>
+        </article>
+        <article>
+          <span>02</span>
+          <h3>Exterior compressible LES</h3>
+          <p>
+            The solver advances all three velocity components and acoustic
+            pressure through the bore and exterior air. A Smagorinsky subgrid
+            viscosity dissipates unresolved turbulent eddies.
+          </p>
+        </article>
+        <article>
+          <span>03</span>
+          <h3>Resolved scale and limits</h3>
+          <p>
+            This is a browser-scale 1 mm large-eddy simulation, not micrometre
+            direct numerical simulation. The mouth jet and exterior radiation
+            are simulated, while eddies below one voxel are modeled.
+          </p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>AgnuQuena acoustic workbench</span>
+    <span>Current generated geometry · July 2026</span>
+  </footer>
+
+  <script type="module" src="./acoustics.js"></script>
+</body>
+</html>

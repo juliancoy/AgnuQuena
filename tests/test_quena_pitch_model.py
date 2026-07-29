@@ -33,4 +33,4 @@ def test_lower_tube_holes_are_evenly_spaced_and_parsed():
         abs_tol=1e-9,
     )
     assert a_hole.acoustic_mm - b_hole.acoustic_mm == 30.0
-    assert [hole.diameter_mm for hole in (a_hole, b_hole, c_hole)] == [9.03, 10.26, 8.86]
+    assert [hole.diameter_mm for hole in (a_hole, b_hole, c_hole)] == [7.90, 10.30, 7.98]
