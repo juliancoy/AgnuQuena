@@ -3,7 +3,7 @@
   "design_id": "agnuquena-g",
   "geometry": {
     "bore_id_mm": 17.5,
-    "shell_width_mm": 1.2,
+    "shell_width_mm": 0.8,
     "taper_mm": 0.0,
     "nominal_acoustic_length_mm": 396.0,
     "pitch_raise_cents": -11.74,
@@ -16,7 +16,7 @@
     "overlap_mm": 7.0,
     "angled_transition_mm": 3.0,
     "accent_ring_mm": 0.0,
-    "radial_clearance_mm": 0.2,
+    "radial_clearance_mm": 0.0,
     "insert_z_tolerance_mm": 0.4
   },
   "rendering": {
@@ -52,6 +52,7 @@
       "angle_factor": -1.0,
       "diameter": {
         "mode": "measured_compensation",
+        "minimum_mm": 10.1,
         "calibration": {
           "source": "measurements/2026-07-27-210508-0400-guided-tuning.csv",
           "acoustic_position_mm": 330.0,
@@ -70,6 +71,7 @@
       "angle_factor": 1.0,
       "diameter": {
         "mode": "measured_compensation",
+        "minimum_mm": 11.6,
         "calibration": {
           "source": "measurements/2026-07-27-210508-0400-guided-tuning.csv",
           "acoustic_position_mm": 300.0,
@@ -88,6 +90,7 @@
       "angle_factor": 0.0,
       "diameter": {
         "mode": "measured_compensation",
+        "minimum_mm": 9.75,
         "calibration": {
           "source": "measurements/2026-07-27-210508-0400-guided-tuning.csv",
           "acoustic_position_mm": 270.0,
@@ -106,6 +109,7 @@
       "angle_deg": 5.0,
       "diameter": {
         "mode": "measured_compensation",
+        "minimum_mm": 10.5,
         "calibration": {
           "source": "measurements/2026-07-27-210508-0400-guided-tuning.csv",
           "acoustic_position_mm": 233.932878,
@@ -124,6 +128,7 @@
       "angle_deg": -5.0,
       "diameter": {
         "mode": "measured_compensation",
+        "minimum_mm": 11.1,
         "calibration": {
           "source": "measurements/2026-07-27-210508-0400-guided-tuning.csv",
           "acoustic_position_mm": 202.91773,
@@ -142,6 +147,7 @@
       "angle_deg": 0.0,
       "diameter": {
         "mode": "measured_compensation",
+        "minimum_mm": 11.13,
         "calibration": {
           "source": "measurements/2026-07-27-210508-0400-guided-tuning.csv",
           "acoustic_position_mm": 175.603947,

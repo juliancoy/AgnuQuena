@@ -23,6 +23,7 @@ def render_and_validate_stls() -> None:
     """Render STLs before validating the newly generated meshes."""
     run("tools/render_case_assets.py", "--stls")
     run("tools/test_case_stls.py")
+    run("tools/test_case_browser.py")
 
 
 def main() -> None:

@@ -20,6 +20,10 @@ STL_PARTS = [
     # Canonical half exports are print-oriented for the project's P1S target.
     ("bottom_p1s", ROOT / "QuenaCaseBottom.stl", True),
     ("lid_p1s", ROOT / "QuenaCaseLid.stl", True),
+    # Browser mechanics uses model-space meshes so rendering and collision
+    # share the exact hinge coordinates without undoing print transforms.
+    ("bottom", ROOT / "QuenaCaseBottomViewer.stl", True),
+    ("lid", ROOT / "QuenaCaseLidViewer.stl", True),
     ("lid_logo_p1s", ROOT / "QuenaCaseLidLogo.stl", True),
     ("hinge_coupon", ROOT / "QuenaCaseHingeCoupon.stl", False),
     ("full_hinge_coupon", ROOT / "QuenaCaseFullHingeCoupon.stl", False),
@@ -49,15 +53,15 @@ CAMERAS = [
 ]
 
 LID_HINGE_CLOSEUP_CAMERAS = [
-    "-40,-31.25,3.1,65,0,25,95",
-    "-40,-31.25,3.1,90,0,0,95",
-    "-40,-31.25,3.1,90,0,90,95",
-    "0,-31.25,3.1,65,0,25,210",
-    "0,-31.25,3.1,90,0,0,210",
-    "0,-31.25,3.1,0,0,0,210",
-    "40,-31.25,3.1,65,0,335,95",
-    "40,-31.25,3.1,90,0,180,95",
-    "40,-31.25,3.1,90,0,270,95",
+    "-40,-28.15,1.0,65,0,25,95",
+    "-40,-28.15,1.0,90,0,0,95",
+    "-40,-28.15,1.0,90,0,90,95",
+    "0,-28.15,1.0,65,0,25,210",
+    "0,-28.15,1.0,90,0,0,210",
+    "0,-28.15,1.0,0,0,0,210",
+    "40,-28.15,1.0,65,0,335,95",
+    "40,-28.15,1.0,90,0,180,95",
+    "40,-28.15,1.0,90,0,270,95",
 ]
 
 
@@ -158,17 +162,20 @@ def render_view_sheet(part: str, output: Path, *, force: bool = False) -> None:
         print(output.relative_to(ROOT))
 
 
-def copy_website_assets() -> None:
-    asset_dir = ROOT / "website" / "assets"
-    asset_dir.mkdir(parents=True, exist_ok=True)
-    for _, output, copy_to_site in STL_PARTS:
-        if copy_to_site:
-            target = asset_dir / output.name
-            if not is_current(target, (output,)):
-                shutil.copy2(output, target)
-                print(target.relative_to(ROOT))
-            else:
-                print(f"Skipping current website asset: {target.relative_to(ROOT)}")
+def copy_site_assets() -> None:
+    for asset_dir in (
+        ROOT / "website" / "assets",
+        ROOT / "site-hosting" / "public" / "assets",
+    ):
+        asset_dir.mkdir(parents=True, exist_ok=True)
+        for _, output, copy_to_site in STL_PARTS:
+            if copy_to_site:
+                target = asset_dir / output.name
+                if not is_current(target, (output,)):
+                    shutil.copy2(output, target)
+                    print(target.relative_to(ROOT))
+                else:
+                    print(f"Skipping current site asset: {target.relative_to(ROOT)}")
 
 
 def main() -> None:
@@ -184,7 +191,7 @@ def main() -> None:
     if render_stls:
         for part, output, _ in STL_PARTS:
             render_stl(part, output, force=args.force)
-        copy_website_assets()
+        copy_site_assets()
 
     if render_views:
         for part, output in VIEW_SHEETS:

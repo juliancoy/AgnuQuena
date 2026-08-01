@@ -23,12 +23,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 EXPECTED = {
     "QuenaCaseBottom.stl": {
-        "size": (211.824, 211.824, 18.7),
+        "size": (211.704, 211.704, 18.7),
         "min_triangles": 2200,
         "components": 1,
     },
     "QuenaCaseLid.stl": {
-        "size": (211.824, 211.824, 18.5966),
+        "size": (211.704, 211.704, 17.198),
+        "min_triangles": 1200,
+        "components": 1,
+    },
+    "QuenaCaseBottomViewer.stl": {
+        "size": (251.494, 59.553, 18.7),
+        "min_triangles": 2200,
+        "components": 1,
+    },
+    "QuenaCaseLidViewer.stl": {
+        "size": (251.494, 59.17, 17.198),
         "min_triangles": 1200,
         "components": 1,
     },
@@ -38,12 +48,12 @@ EXPECTED = {
         "components": 21,
     },
     "QuenaCaseHingeCoupon.stl": {
-        "size": (72.0, 54.5966, 12.6),
+        "size": (72.0, 54.1, 15.4),
         "min_triangles": 3000,
         "components": 2,
     },
     "QuenaCaseFullHingeCoupon.stl": {
-        "size": (228.064, 56.5966, 12.6),
+        "size": (243.5, 57.153, 15.4),
         "min_triangles": 2000,
         "components": 2,
     },
@@ -53,7 +63,7 @@ EXPECTED = {
         "components": 7,
     },
     "QuenaCaseAssembly.stl": {
-        "size": (246.064, 65.5666, 31.6),
+        "size": (251.494, 60.223, 28.8),
         "min_triangles": 4500,
         "components": 2,
     },
@@ -77,7 +87,30 @@ def scad_scalar(name: str) -> float:
         )
         if match:
             return float(match.group(1))
-    raise AssertionError(f"OpenSCAD sources: missing numeric parameter {name}")
+    with tempfile.TemporaryDirectory(prefix="quena_case_scalar_") as temp_dir:
+        temp_path = Path(temp_dir)
+        probe_scad = temp_path / "scalar.scad"
+        probe_stl = temp_path / "scalar.stl"
+        probe_scad.write_text(
+            f'include <{ROOT / "QuenaCase.scad"}>;\n'
+            f'echo("SCAD_SCALAR", {name});\n'
+            "cube(1);\n",
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            ["openscad", "-D", 'part="none"', "-o", str(probe_stl), str(probe_scad)],
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+    evaluated = re.search(
+        r'ECHO:\s*"SCAD_SCALAR",\s*([-+\d.eE]+)',
+        result.stdout,
+    )
+    if not evaluated:
+        raise AssertionError(f"OpenSCAD sources: could not evaluate parameter {name}")
+    return float(evaluated.group(1))
 
 
 def evaluated_hinge_pose() -> tuple[float, float, float]:
@@ -108,42 +141,48 @@ def evaluated_hinge_pose() -> tuple[float, float, float]:
 
 
 def run_hinge_design_checks() -> None:
-    pin_d = scad_scalar("hinge_pin_d")
-    bore_clearance = scad_scalar("hinge_bore_clearance")
-    bore_d = pin_d + bore_clearance
-    outer_d = scad_scalar("hinge_outer_d")
-    knuckle_gap = scad_scalar("hinge_gap")
-    end_allowance = scad_scalar("hinge_pin_end_allowance")
-    backer_extension = scad_scalar("hinge_backer_extension")
+    axle_d = scad_scalar("hinge_axle_d")
+    bore_clearance = scad_scalar("hinge_bearing_clearance")
+    bore_d = axle_d + bore_clearance
+    outer_d = scad_scalar("hinge_bearing_outer_d")
+    snap_throat = scad_scalar("hinge_snap_throat")
+    segment_w = scad_scalar("hinge_segment_w")
+    segment_gap = scad_scalar("hinge_segment_gap")
+    print_flat = scad_scalar("hinge_axle_print_flat")
     body_inset = scad_scalar("hinge_body_inset")
 
-    barrel_wall = (outer_d - bore_d) / 2
+    bearing_wall = (outer_d - bore_d) / 2
+    snap_interference = axle_d - snap_throat
     rear_projection = outer_d - body_inset
 
-    if not math.isclose(pin_d, 1.75, abs_tol=1e-9):
-        raise AssertionError("hinge pin must use standard 1.75 mm filament")
-    if not 0.20 <= bore_clearance <= 0.35:
+    if not 4.2 <= axle_d <= 5.0:
+        raise AssertionError("integral hinge axle diameter is unsuitable")
+    if not 0.25 <= bore_clearance <= 0.45:
         raise AssertionError(
-            f"hinge bore clearance {bore_clearance:.2f} mm is outside 0.20-0.35 mm"
+            f"hinge bore clearance {bore_clearance:.2f} mm is outside 0.25-0.45 mm"
         )
-    if barrel_wall < 1.5:
-        raise AssertionError(f"hinge barrel wall is only {barrel_wall:.2f} mm")
-    if not 0.4 <= knuckle_gap <= 0.8:
-        raise AssertionError("hinge knuckle gap is unsuitable for FDM assembly")
-    if not 0.4 <= end_allowance <= 1.0:
-        raise AssertionError("hinge pin end allowance is unsuitable for heat staking")
-    if not 0.8 <= backer_extension <= 1.5:
-        raise AssertionError("hinge rectangular backer extension is out of range")
-    if not 2.2 <= body_inset <= 2.6:
+    if bearing_wall < 1.3:
+        raise AssertionError(f"hinge bearing wall is only {bearing_wall:.2f} mm")
+    if not 0.7 <= snap_interference <= 1.0:
+        raise AssertionError("hinge snap throat does not provide positive capture")
+    if not 10.0 <= segment_w <= 18.0:
+        raise AssertionError("hinge bearing segments are not independently compliant")
+    if not 0.8 <= segment_gap <= 1.4:
+        raise AssertionError("hinge segment gap is unsuitable for FDM assembly")
+    if not 0.5 <= print_flat <= 0.8:
+        raise AssertionError("hinge axle D-flat is unsuitable for support-free printing")
+    if not 4.0 <= body_inset <= 4.3:
         raise AssertionError("hinge body inset must retain rotational clearance")
-    if rear_projection > 3.5:
+    if rear_projection > 4.5:
         raise AssertionError(f"hinge rear projection is {rear_projection:.2f} mm")
 
     print(
         "QuenaCase hinge design: ok, "
-        f"{pin_d:.2f} mm filament pin, {bore_d:.2f} mm bore, "
-        f"{barrel_wall:.2f} mm barrel wall, {knuckle_gap:.2f} mm knuckle gaps, "
-        f"{rear_projection:.2f} mm rear projection, heat-staked ends"
+        f"{axle_d:.2f} mm integral D-flat axle, {bore_d:.2f} mm bearing bore, "
+        f"{bearing_wall:.2f} mm bearing wall, {snap_interference:.2f} mm "
+        f"snap interference, {segment_w:.1f} mm independent clips, "
+        f"{rear_projection:.2f} mm rear projection, web-captured ends, "
+        "support-free exports"
     )
 
 
@@ -153,7 +192,7 @@ def run_latch_design_checks() -> None:
     tongue_t = scad_scalar("latch_tongue_t")
     flex_l = scad_scalar("latch_tongue_flex_l")
     travel = protrusion - indent
-    if not 0.15 <= travel <= 0.40:
+    if not 0.20 <= travel <= 0.45:
         raise AssertionError(f"latch release travel {travel:.2f} mm is unsuitable")
     if tongue_t < 1.2 or flex_l < 7.0:
         raise AssertionError("latch tongue is too thin or too short")
@@ -169,7 +208,9 @@ def run_channel_layout_checks() -> None:
     deck_h = scad_scalar("channel_deck_h")
     tube_d = scad_scalar("id") + 2 * scad_scalar("shell_width")
     channel_d = tube_d + 2 * scad_scalar("part_clearance")
-    connector_d = tube_d + 2 * scad_scalar("shell_width")
+    connector_d = tube_d + 2 * (
+        scad_scalar("shell_width") + scad_scalar("connector_radial_clearance")
+    )
     max_channel_d = connector_d + 2 * scad_scalar("part_clearance")
     equator_pass = scad_scalar("equator_pass")
     axial_clearance = scad_scalar("axial_clearance")

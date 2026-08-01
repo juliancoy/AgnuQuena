@@ -9,7 +9,8 @@
   <script type="importmap">
     {
       "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js"
+        "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+        "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.5/build/index.module.js"
       }
     }
   </script>
@@ -45,7 +46,7 @@
 
       <label class="slider">
         <span>Manual angle</span>
-        <input id="angleSlider" type="range" min="0" max="135" value="0" step="1">
+        <input id="angleSlider" type="range" min="0" max="180" value="0" step="1">
       </label>
 
       <div class="metrics">
@@ -59,24 +60,23 @@
         </div>
         <div>
           <span>Hinge axis</span>
-          <strong>X @ y=-31.7, z=22.3 mm</strong>
+          <strong>X @ y=-28.15, z=14.40 mm</strong>
         </div>
         <div>
           <span>Physics</span>
-          <strong>Ammo.js / Bullet hinge</strong>
+          <strong>Exact STL triangle BVH</strong>
         </div>
       </div>
 
       <p class="note">
         The simulation displays the generated STL meshes and drives the lid
-        around the captured-pin hinge axis with Bullet hinge constraints. The
-        removable front clip is shown in the closed position and hidden during
-        the opening sweep.
+        around the integral snap-over hinge axis. The detector checks the same
+        model-space STL triangles shown on screen; the detector is not a
+        separate box approximation.
       </p>
     </aside>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/ammo.js@0.0.10/ammo.js"></script>
-  <script type="module" src="./sim.js?v=9"></script>
+  <script type="module" src="./sim.js?v=10"></script>
 </body>
 </html>

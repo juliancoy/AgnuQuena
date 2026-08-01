@@ -1,6 +1,6 @@
 // AgnuQuena carrying case
 // Self-contained OpenSCAD model inspired by common hinged enclosure patterns:
-// rounded shell, captured-pin hinge, snap clip, and fitted internal channels.
+// rounded shell, snap-over axle hinge, snap clip, and fitted internal channels.
 
 $fn = 64;
 
@@ -50,7 +50,7 @@ channel_edge_land = 2.5;
 // former deck, separate cradle blocks, and cantilever retention features.
 equator_pass = 0.8;
 flute_seat_depth = 0.5;
-channel_deck_h = 12.85; // max_channel_d / 2 + equator_pass
+channel_deck_h = max_channel_d / 2 + equator_pass;
 connector_backset = angled_transition_z + 2;
 connector_expand_start = 2;
 connector_expand_end = ov - insert_z_tolerance - 2;
@@ -93,28 +93,45 @@ lid_z_clearance = 0.3;
 
 lid_closed_z = case_outer_h + lid_z_clearance;
 
-// Compact interleaved knuckles use ordinary 1.75 mm filament as a continuous
-// captured hinge pin. Heat-stake both ends after insertion.
-hinge_outer_d = 5.6;
-hinge_pin_d = 1.75;
-hinge_bore_clearance = 0.25;
-hinge_bore_d = hinge_pin_d + hinge_bore_clearance;
-hinge_pin_end_allowance = 0.6;
-hinge_backer_extension = 1.2;
+// The lid carries a continuous integral axle. Seven independent C-bearings on
+// the bottom snap radially over it, while eight interleaved lid webs support the
+// axle. Broad engagement replaces both the former short end nubs and the loose
+// filament-pin assembly.
+hinge_axle_d = 4.6;
+// The production lid is exported exterior-down, so its source-space axle top
+// becomes the printer-facing underside. This shallow D-flat starts each axle
+// span as a short bridge and avoids slicer-generated support.
+hinge_axle_print_flat = 0.60;
+hinge_bearing_clearance = 0.35;
+hinge_bearing_bore_d = hinge_axle_d + hinge_bearing_clearance;
+hinge_bearing_outer_d = 8.4;
+hinge_snap_throat = 3.8;
+hinge_snap_lead = 1.2;
+hinge_segment_w = 14.5;
+hinge_segment_gap = 1.0;
+hinge_segment_pitch = hinge_segment_w + hinge_segment_gap;
 // Recess the barrel into the rear shell so it reads as an integrated hinge
 // boss while retaining enough external radius for the lid to rotate.
-hinge_body_inset = 2.4;
-hinge_axis_y = -case_outer_w / 2 - hinge_outer_d / 2 + hinge_body_inset;
+hinge_body_inset = 4.1;
+hinge_axis_y = -case_outer_w / 2 - hinge_bearing_outer_d / 2 + hinge_body_inset;
 // Put the pivot on the center of the clearance plane between equal-height
 // halves.  This keeps the hinge neutral instead of biasing it toward the lid.
 hinge_axis_z = case_outer_h + lid_z_clearance / 2;
-hinge_span = case_outer_l - 30;
-hinge_gap = 0.6;
-hinge_bottom_knuckles = [
-    [-hinge_span / 2, -hinge_span / 6 - hinge_gap / 2],
-    [ hinge_span / 6 + hinge_gap / 2,  hinge_span / 2]
+hinge_bearing_segments = [
+    for (i = [-6 : 2 : 6])
+        [i * hinge_segment_pitch - hinge_segment_w / 2,
+         i * hinge_segment_pitch + hinge_segment_w / 2]
 ];
-hinge_lid_knuckles = [[-hinge_span / 6 + hinge_gap / 2, hinge_span / 6 - hinge_gap / 2]];
+hinge_axle_support_segments = [
+    for (i = [-7 : 2 : 7])
+        [i * hinge_segment_pitch - hinge_segment_w / 2,
+         i * hinge_segment_pitch + hinge_segment_w / 2]
+];
+hinge_axle_x1 = hinge_axle_support_segments[0][0];
+hinge_axle_x2 = hinge_axle_support_segments[
+    len(hinge_axle_support_segments) - 1
+][1];
+hinge_span = hinge_axle_x2 - hinge_axle_x1;
 hinge_tab_t = 2.2;
 
 front_pull_w = 48;
@@ -187,9 +204,9 @@ latch_tongue_w = 16.0;
 latch_tongue_t = 1.6;
 latch_tongue_flex_l = 11.0;
 latch_tongue_y = case_outer_w / 2 - latch_tongue_t / 2;
-latch_nub_r = 1.2;
-latch_nub_protrusion = 1.00;
-latch_indent_depth = 0.65;
+latch_nub_r = 1.3;
+latch_nub_protrusion = 1.10;
+latch_indent_depth = 0.70;
 latch_release_deflection = latch_nub_protrusion - latch_indent_depth;
 latch_nub_z = case_outer_h - 1.35;
 latch_point_xs = [-72, 72];
@@ -497,59 +514,64 @@ module hinge_tab(x1, x2, local_z, seam_side = -1) {
         cube([x2 - x1, attach_y - hinge_axis_y, hinge_tab_t], center = true);
 }
 
-module hinge_barrel_at(x1, x2, local_y, local_z) {
-    // A capsule profile removes the square annular ends that can catch the
-    // neighboring knuckle as the lid swings.
-    end_r = hinge_outer_d / 2;
-    translate([0, local_y, local_z])
-        hull() {
-            translate([x1 + end_r, 0, 0]) sphere(r = end_r);
-            translate([x2 - end_r, 0, 0]) sphere(r = end_r);
+module hinge_axle_at(
+    x1,
+    x2,
+    local_y,
+    local_z,
+    d = hinge_axle_d,
+    flat_side = 0
+) {
+    if (flat_side == 0) {
+        translate([0, local_y, local_z]) x_cylinder_between(x1, x2, d);
+    } else {
+        r = d / 2;
+        cutoff_z = local_z + flat_side * (r - hinge_axle_print_flat);
+        keep_h = d + 2;
+        keep_center_z = flat_side > 0
+            ? cutoff_z - keep_h / 2
+            : cutoff_z + keep_h / 2;
+        intersection() {
+            translate([0, local_y, local_z])
+                x_cylinder_between(x1, x2, d);
+            translate([(x1 + x2) / 2, local_y, keep_center_z])
+                cube([x2 - x1 + 0.2, d + 2, keep_h], center = true);
         }
+    }
 }
 
-module hinge_bore_cut(x1, x2, local_y, local_z) {
-    translate([0, local_y, local_z])
-        x_cylinder_between(x1 - 0.2, x2 + 0.2, hinge_bore_d);
-}
-
-module hinge_pin_preview() {
-    translate([0, hinge_axis_y, hinge_axis_z])
-        x_cylinder_between(
-            -hinge_span / 2 - hinge_pin_end_allowance,
-            hinge_span / 2 + hinge_pin_end_allowance,
-            hinge_pin_d
-        );
-}
-
-module hinge_barrel_rect_support(x1, x2, local_y, local_z, base_z) {
-    support_h = local_z - hinge_outer_d / 2 - base_z + 0.35;
-    if (support_h > 0)
-        translate([
-            (x1 + x2) / 2,
-            local_y,
-            base_z + support_h / 2
-        ])
+module hinge_bearing_slot(x1, x2, local_y, local_z) {
+    outer_y = local_y - hinge_bearing_outer_d / 2 - 0.4;
+    inner_y = local_y - hinge_bearing_bore_d / 2 + 0.15;
+    hull() {
+        translate([(x1 + x2) / 2, outer_y, local_z])
             cube([
-                x2 - x1,
-                hinge_backer_extension,
-                support_h
+                x2 - x1 + 0.4,
+                0.3,
+                hinge_snap_throat + hinge_snap_lead * 2
             ], center = true);
+        translate([(x1 + x2) / 2, inner_y, local_z])
+            cube([x2 - x1 + 0.4, 0.3, hinge_snap_throat], center = true);
+    }
 }
 
-module hinge_support(x1, x2, local_z, seam_side = -1) {
+module hinge_bearing_at(x1, x2, local_y, local_z) {
     difference() {
-        union() {
-            hinge_barrel_at(x1, x2, hinge_axis_y, local_z);
-            hinge_tab(x1, x2, local_z, seam_side);
-        }
-        hinge_bore_cut(x1, x2, hinge_axis_y, local_z);
+        translate([0, local_y, local_z])
+            x_cylinder_between(x1, x2, hinge_bearing_outer_d);
+        translate([0, local_y, local_z])
+            x_cylinder_between(
+                x1 - 0.2,
+                x2 + 0.2,
+                hinge_bearing_bore_d
+            );
+        hinge_bearing_slot(x1, x2, local_y, local_z);
     }
 }
 
 module bottom_hinge_web(x1, x2, local_z) {
-    web_h = local_z - case_outer_h + hinge_outer_d / 2 + 0.35;
-    web_y = 3.6;
+    web_h = local_z - case_outer_h + hinge_bearing_outer_d / 2 + 0.35;
+    web_y = 4.2;
 
     translate([
         (x1 + x2) / 2,
@@ -560,55 +582,94 @@ module bottom_hinge_web(x1, x2, local_z) {
 }
 
 module bottom_hinge() {
-    for (segment = hinge_bottom_knuckles) {
-        bottom_hinge_web(segment[0], segment[1], hinge_axis_z);
-        hinge_support(segment[0], segment[1], hinge_axis_z);
+    for (segment = hinge_bearing_segments) {
+        difference() {
+            union() {
+                bottom_hinge_web(segment[0], segment[1], hinge_axis_z);
+                hinge_bearing_at(
+                    segment[0], segment[1], hinge_axis_y, hinge_axis_z
+                );
+            }
+            translate([0, hinge_axis_y, hinge_axis_z])
+                x_cylinder_between(
+                    segment[0] - 0.2,
+                    segment[1] + 0.2,
+                    hinge_bearing_bore_d
+                );
+            hinge_bearing_slot(
+                segment[0], segment[1], hinge_axis_y, hinge_axis_z
+            );
+        }
     }
 }
 
 module lid_hinge() {
     local_axis_z = hinge_axis_z - lid_closed_z;
-
-    for (segment = hinge_lid_knuckles) {
-        hinge_support(segment[0], segment[1], local_axis_z, 1);
-    }
+    hinge_axle_at(
+        hinge_axle_x1,
+        hinge_axle_x2,
+        hinge_axis_y,
+        local_axis_z,
+        hinge_axle_d,
+        1
+    );
+    for (segment = hinge_axle_support_segments)
+        hinge_tab(segment[0], segment[1], local_axis_z, 1);
 }
 
 module lid_bottom_hinge_relief() {
     local_axis_z = hinge_axis_z - lid_closed_z;
-    relief_y = 5.2;
-    relief_z = hinge_outer_d + 4;
+    relief_clearance = 0.3;
+    // The fixed bearing backer is rectangular, so its far corner sweeps a
+    // larger radius than the bearing barrel itself as the lid rotates.
+    relief_d = hinge_bearing_outer_d + 4;
 
-    for (segment = hinge_bottom_knuckles)
-        translate([
-            (segment[0] + segment[1]) / 2,
-            hinge_axis_y + relief_y / 2 - 0.4,
-            local_axis_z
-        ])
-            cube([segment[1] - segment[0] + 0.6, relief_y, relief_z], center = true);
+    for (segment = hinge_bearing_segments)
+        translate([0, hinge_axis_y, local_axis_z])
+            x_cylinder_between(
+                segment[0] - relief_clearance,
+                segment[1] + relief_clearance,
+                relief_d
+            );
+
+    // Once the pivot is recessed, the rounded top-rear edge of the bottom
+    // also sweeps through the lid between and beyond the bearing segments.
+    // Clear that small radius continuously; the separate bearing pockets
+    // above remain responsible for the much larger knuckle backers.
+    seam_sweep_r = sqrt(
+        pow(-case_outer_w / 2 - hinge_axis_y, 2)
+        + pow(case_outer_h - hinge_axis_z, 2)
+    ) + relief_clearance + 0.2;
+    translate([0, hinge_axis_y, local_axis_z])
+        x_cylinder_between(
+            -case_outer_l / 2 - 4,
+            case_outer_l / 2 + 4,
+            seam_sweep_r * 2
+        );
 }
 
 module lid_hinge_relief() {
-    // The recessed lid knuckle occupies part of the bottom rear wall when the
-    // case is closed.  Clear its complete swept cross-section through the top
+    // The recessed lid axle and its webs occupy part of the bottom rear wall
+    // when the case is closed. Clear its complete swept cross-section through the top
     // of that wall, with a small FDM allowance, instead of allowing the two
     // case halves to fuse geometrically.
     relief_clearance = 0.3;
-    relief_y = hinge_outer_d + relief_clearance * 2;
-    relief_bottom = hinge_axis_z - hinge_outer_d / 2 - relief_clearance;
+    relief_y = hinge_axle_d + relief_clearance * 2;
+    relief_bottom = hinge_axis_z - hinge_axle_d / 2 - relief_clearance;
     relief_h = case_outer_h - relief_bottom + 0.02;
 
-    for (segment = hinge_lid_knuckles)
-        translate([
-            (segment[0] + segment[1]) / 2,
-            hinge_axis_y + relief_y / 2,
-            relief_bottom + relief_h / 2
-        ])
-            cube([
-                segment[1] - segment[0] + relief_clearance * 2,
-                relief_y,
-                relief_h
-            ], center = true);
+    // The axle is continuous between its end webs, so its circular sweep must
+    // be relieved continuously from the bottom rear wall as well.
+    translate([
+        (hinge_axle_x1 + hinge_axle_x2) / 2,
+        hinge_axis_y,
+        relief_bottom + relief_h / 2
+    ])
+        cube([
+            hinge_axle_x2 - hinge_axle_x1 + relief_clearance * 2,
+            relief_y,
+            relief_h
+        ], center = true);
 }
 
 module front_pull(local_z = bottom_pull_z) {
@@ -1054,16 +1115,12 @@ module hinge_coupon() {
     coupon_base_w = 18;
     coupon_base_h = 3;
     coupon_wall_t = hinge_tab_t;
-    coupon_wall_h = hinge_outer_d + 4;
-    coupon_axis_z = coupon_base_h + hinge_outer_d / 2 + 2;
+    coupon_wall_h = hinge_bearing_outer_d + 4;
+    coupon_axis_z = coupon_base_h + hinge_bearing_outer_d / 2 + 2;
     coupon_gap_y = 18;
     second_half_y = coupon_base_w + coupon_gap_y;
-    middle_x1 = -20;
-    middle_x2 = 20;
-    outer_segments = [
-        [-coupon_span / 2, middle_x1 - hinge_gap],
-        [middle_x2 + hinge_gap, coupon_span / 2]
-    ];
+    bearing_segments = [[-7.25, 7.25]];
+    axle_support_segments = [[-22.75, -8.25], [8.25, 22.75]];
 
     module coupon_label(label_text, y) {
         translate([-coupon_base_l / 2 + 4, y - coupon_base_w / 2 + 2.8, coupon_base_h - 0.15])
@@ -1071,50 +1128,70 @@ module hinge_coupon() {
                 text(label_text, size = 4, halign = "left", valign = "bottom");
     }
 
-    module coupon_half(segments, y, label_text) {
+    module coupon_bearing_half(y) {
         translate([0, y, 0])
         union() {
             translate([-coupon_base_l / 2, -coupon_base_w / 2, 0])
                 cube([coupon_base_l, coupon_base_w, coupon_base_h]);
-            for (segment = segments) {
-                translate([
-                    (segment[0] + segment[1]) / 2,
-                    -coupon_base_w / 2 + coupon_wall_t / 2,
-                    coupon_base_h + coupon_wall_h / 2
-                ])
-                    cube([
-                        segment[1] - segment[0],
-                        coupon_wall_t,
-                        coupon_wall_h
-                    ], center = true);
+            for (segment = bearing_segments) {
+                local_y = -coupon_base_w / 2 + coupon_wall_t;
                 difference() {
-                    hinge_barrel_at(
-                        segment[0],
-                        segment[1],
-                        -coupon_base_w / 2 + coupon_wall_t,
-                        coupon_axis_z
-                    );
-                    hinge_bore_cut(
-                        segment[0],
-                        segment[1],
-                        -coupon_base_w / 2 + coupon_wall_t,
-                        coupon_axis_z
+                    union() {
+                        translate([
+                            (segment[0] + segment[1]) / 2,
+                            -coupon_base_w / 2 + coupon_wall_t / 2,
+                            coupon_base_h + coupon_wall_h / 2
+                        ]) cube([
+                            segment[1] - segment[0],
+                            coupon_wall_t,
+                            coupon_wall_h
+                        ], center = true);
+                        hinge_bearing_at(
+                            segment[0], segment[1], local_y, coupon_axis_z
+                        );
+                    }
+                    translate([0, local_y, coupon_axis_z])
+                        x_cylinder_between(
+                            segment[0] - 0.2,
+                            segment[1] + 0.2,
+                            hinge_bearing_bore_d
+                        );
+                    hinge_bearing_slot(
+                        segment[0], segment[1], local_y, coupon_axis_z
                     );
                 }
-                hinge_barrel_rect_support(
-                    segment[0],
-                    segment[1],
-                    -coupon_base_w / 2 + coupon_wall_t,
-                    coupon_axis_z,
-                    coupon_base_h
-                );
             }
-            coupon_label(label_text, 0);
+            coupon_label("CASE BEARINGS", 0);
         }
     }
 
-    coupon_half([[middle_x1, middle_x2]], 0, "LID KNUCKLE");
-    coupon_half(outer_segments, second_half_y, "CASE KNUCKLES");
+    module coupon_axle_half(y) {
+        local_y = -coupon_base_w / 2 + coupon_wall_t;
+        translate([0, y, 0]) union() {
+            translate([-coupon_base_l / 2, -coupon_base_w / 2, 0])
+                cube([coupon_base_l, coupon_base_w, coupon_base_h]);
+            hinge_axle_at(
+                -22.75, 22.75, local_y, coupon_axis_z, hinge_axle_d, -1
+            );
+            for (segment = axle_support_segments) {
+                support_h = coupon_axis_z - coupon_base_h
+                    + hinge_axle_d / 2;
+                translate([
+                    (segment[0] + segment[1]) / 2,
+                    -coupon_base_w / 2 + hinge_tab_t / 2,
+                    coupon_base_h + support_h / 2
+                ]) cube([
+                    segment[1] - segment[0],
+                    hinge_tab_t,
+                    support_h
+                ], center = true);
+            }
+            coupon_label("LID AXLE", 0);
+        }
+    }
+
+    coupon_axle_half(0);
+    coupon_bearing_half(second_half_y);
 }
 
 module full_hinge_coupon() {
@@ -1123,52 +1200,77 @@ module full_hinge_coupon() {
     coupon_gap_y = 20;
     coupon_bottom_y = 0;
     coupon_lid_y = coupon_base_w + coupon_gap_y;
-    coupon_axis_z = coupon_base_h + hinge_outer_d / 2 + 2;
+    coupon_axis_z = coupon_base_h + hinge_bearing_outer_d / 2 + 2;
     coupon_span = hinge_span;
 
-    module full_coupon_half(segments, y) {
+    module full_coupon_bearing_half(y) {
         translate([0, y, 0])
         union() {
             translate([-coupon_span / 2 - 6, -coupon_base_w / 2, 0])
                 cube([coupon_span + 12, coupon_base_w, coupon_base_h]);
-            for (segment = segments) {
-                translate([
-                    (segment[0] + segment[1]) / 2,
-                    -coupon_base_w / 2 + hinge_tab_t / 2,
-                    coupon_base_h + (hinge_outer_d + 4) / 2
-                ])
-                    cube([
-                        segment[1] - segment[0],
-                        hinge_tab_t,
-                        hinge_outer_d + 4
-                    ], center = true);
+            for (segment = hinge_bearing_segments) {
+                local_y = -coupon_base_w / 2 + hinge_tab_t;
                 difference() {
-                    hinge_barrel_at(
-                        segment[0],
-                        segment[1],
-                        -coupon_base_w / 2 + hinge_tab_t,
-                        coupon_axis_z
-                    );
-                    hinge_bore_cut(
-                        segment[0],
-                        segment[1],
-                        -coupon_base_w / 2 + hinge_tab_t,
-                        coupon_axis_z
+                    union() {
+                        translate([
+                            (segment[0] + segment[1]) / 2,
+                            -coupon_base_w / 2 + hinge_tab_t / 2,
+                            coupon_base_h
+                                + (hinge_bearing_outer_d + 4) / 2
+                        ]) cube([
+                            segment[1] - segment[0],
+                            hinge_tab_t,
+                            hinge_bearing_outer_d + 4
+                        ], center = true);
+                        hinge_bearing_at(
+                            segment[0], segment[1], local_y, coupon_axis_z
+                        );
+                    }
+                    translate([0, local_y, coupon_axis_z])
+                        x_cylinder_between(
+                            segment[0] - 0.2,
+                            segment[1] + 0.2,
+                            hinge_bearing_bore_d
+                        );
+                    hinge_bearing_slot(
+                        segment[0], segment[1], local_y, coupon_axis_z
                     );
                 }
-                hinge_barrel_rect_support(
-                    segment[0],
-                    segment[1],
-                    -coupon_base_w / 2 + hinge_tab_t,
-                    coupon_axis_z,
-                    coupon_base_h
-                );
             }
         }
     }
 
-    full_coupon_half(hinge_bottom_knuckles, coupon_bottom_y);
-    full_coupon_half(hinge_lid_knuckles, coupon_lid_y);
+    module full_coupon_axle_half(y) {
+        local_y = -coupon_base_w / 2 + hinge_tab_t;
+        translate([0, y, 0]) union() {
+            translate([-coupon_span / 2 - 6, -coupon_base_w / 2, 0])
+                cube([coupon_span + 12, coupon_base_w, coupon_base_h]);
+            hinge_axle_at(
+                hinge_axle_x1,
+                hinge_axle_x2,
+                local_y,
+                coupon_axis_z,
+                hinge_axle_d,
+                -1
+            );
+            for (segment = hinge_axle_support_segments) {
+                support_h = coupon_axis_z - coupon_base_h
+                    + hinge_axle_d / 2;
+                translate([
+                    (segment[0] + segment[1]) / 2,
+                    -coupon_base_w / 2 + hinge_tab_t / 2,
+                    coupon_base_h + support_h / 2
+                ]) cube([
+                    segment[1] - segment[0],
+                    hinge_tab_t,
+                    support_h
+                ], center = true);
+            }
+        }
+    }
+
+    full_coupon_axle_half(coupon_lid_y);
+    full_coupon_bearing_half(coupon_bottom_y);
 }
 
 module latch_coupon() {
@@ -1231,7 +1333,7 @@ if (part == "none") {
     lid_simple_latch();
 } else if (part == "latch_coupon") {
     latch_coupon();
-} else if (part == "assembly" || part == "print_in_place") {
+} else if (part == "assembly") {
     closed_assembly_case();
 } else {
     color("steelblue") bottom_assembly();
@@ -1240,6 +1342,5 @@ if (part == "none") {
         color("lightgray") lid_assembly();
     translate([0, 0, lid_closed_z])
         color("gold") lid_logo_inlay();
-    color("silver") hinge_pin_preview();
     preview_ghosts();
 }

@@ -6,7 +6,7 @@ const SPEC = {
   acousticLength: 398.6945166303481,
   boreDiameter: 17.5,
   outerDiameter: 19.9,
-  wall: 1.2,
+  wall: 0.8,
   cornerRatio: 0.28,
   notch: { width: 8.0, radius: 4.8, angle: 45.0, centerX: 9.5, centerZ: 0.3, length: 15.0 },
   holes: [

@@ -32,16 +32,24 @@ def test_generated_artifacts_match_the_canonical_spec():
     assert MANIFEST_PATH.read_text(encoding="utf-8") == render_manifest(manifest)
 
 
-def test_three_wall_shell_and_connector_clearance_are_explicit():
+def test_two_wall_shell_and_tight_connector_fit_are_explicit():
     parameters, manifest = generate(load_spec())
 
-    assert parameters["shell_width"] == pytest.approx(1.2)
-    assert parameters["od"] == pytest.approx(19.9)
-    assert parameters["connector_radial_clearance"] == pytest.approx(0.2)
-    assert manifest["connectors"]["radial_clearance_mm"] == pytest.approx(0.2)
-    assert manifest["connectors"]["diametral_clearance_mm"] == pytest.approx(0.4)
-    assert manifest["connectors"]["outer_diameter_mm"] == pytest.approx(22.7)
-    assert manifest["connectors"]["wall_width_mm"] == pytest.approx(1.2)
+    assert parameters["shell_width"] == pytest.approx(0.8)
+    assert parameters["od"] == pytest.approx(19.1)
+    assert parameters["connector_radial_clearance"] == pytest.approx(0.0)
+    assert manifest["connectors"]["radial_clearance_mm"] == pytest.approx(0.0)
+    assert manifest["connectors"]["diametral_clearance_mm"] == pytest.approx(0.0)
+    assert manifest["connectors"]["outer_diameter_mm"] == pytest.approx(20.7)
+    assert manifest["connectors"]["wall_width_mm"] == pytest.approx(0.8)
+
+
+def test_negative_connector_clearance_is_rejected():
+    spec = copy.deepcopy(load_spec())
+    spec["connectors"]["radial_clearance_mm"] = -0.01
+
+    with pytest.raises(DesignError, match="non-negative"):
+        generate(spec)
 
 
 def test_lower_hand_layout_spans_the_printable_section():
@@ -58,23 +66,37 @@ def test_lower_hand_layout_spans_the_printable_section():
     assert tube_1["length_mm"] == 222.0
 
 
-def test_holes_are_small_equal_area_rounded_squares():
+def test_holes_honor_playable_minimums_as_equal_area_rounded_squares():
     _, manifest = generate(load_spec())
 
+    expected_diameters = {
+        "A": 10.1,
+        "B": 11.6,
+        "C": 9.75,
+        "D": 10.5,
+        "E": 11.1,
+        "F#": 11.13,
+    }
     for hole in manifest["holes"]:
-        assert hole["diameter_mm"] <= 10.30
+        assert hole["diameter_mm"] == pytest.approx(
+            expected_diameters[hole["name"]]
+        )
         assert hole["profile_circumferential_width_mm"] == pytest.approx(
             hole["profile_axial_width_mm"]
         )
 
 
-def test_measured_compensation_stays_inside_half_a_cent():
+def test_measured_compensation_reports_ergonomic_pitch_tradeoff():
     _, manifest = generate(load_spec())
     compensated = [hole for hole in manifest["holes"] if hole["compensation"]]
 
     assert compensated
     for hole in compensated:
-        assert abs(hole["compensation"]["estimated_pitch_delta_cents"]) < 0.5
+        detail = hole["compensation"]
+        assert detail["minimum_applied"] is True
+        assert detail["minimum_diameter_mm"] == pytest.approx(hole["diameter_mm"])
+        assert detail["acoustically_tuned_diameter_mm"] < hole["diameter_mm"]
+        assert detail["estimated_pitch_delta_cents"] > 0.0
 
 
 def test_measured_compensation_targets_each_explicit_12tet_note():

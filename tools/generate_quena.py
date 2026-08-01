@@ -219,10 +219,12 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
         "connectors.angled_transition_mm",
     )
     accent_ring = number(connectors["accent_ring_mm"], "connectors.accent_ring_mm")
-    radial_clearance = positive(
+    radial_clearance = number(
         connectors["radial_clearance_mm"],
         "connectors.radial_clearance_mm",
     )
+    if radial_clearance < 0:
+        raise DesignError("radial_clearance_mm must be non-negative")
     insert_tolerance = number(
         connectors["insert_z_tolerance_mm"],
         "connectors.insert_z_tolerance_mm",
@@ -369,6 +371,19 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
                 bore_radius,
                 shell_width,
             )
+            acoustic_diameter = exact_diameter
+            minimum_diameter = diameter_spec.get("minimum_mm")
+            if minimum_diameter is not None:
+                minimum_diameter = positive(
+                    minimum_diameter,
+                    f"hole {name} diameter.minimum_mm",
+                )
+                if not diameter_bounds[0] <= minimum_diameter <= diameter_bounds[1]:
+                    raise DesignError(
+                        f"hole {name}: minimum diameter {minimum_diameter:g} mm "
+                        "violates configured bounds"
+                    )
+                exact_diameter = max(exact_diameter, minimum_diameter)
             diameter = round_to_increment(exact_diameter, diameter_increment)
             generated_effective_length = (
                 acoustic_position
@@ -385,6 +400,12 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
             compensation_detail = {
                 "model": compensation["model"],
                 "empirical_factor": empirical_factor,
+                "acoustically_tuned_diameter_mm": acoustic_diameter,
+                "minimum_diameter_mm": minimum_diameter,
+                "minimum_applied": (
+                    minimum_diameter is not None
+                    and minimum_diameter > acoustic_diameter
+                ),
                 "unrounded_diameter_mm": exact_diameter,
                 "diameter_increment_mm": diameter_increment,
                 "target_effective_length_mm": target_effective_length,
