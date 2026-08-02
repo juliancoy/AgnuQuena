@@ -16,6 +16,12 @@ SOURCE = ROOT / "EurasianSynergyFlute_logo_2color.png"
 OUTPUT_DIR = ROOT / "generated"
 
 
+def write_if_changed(output: Path, content: str) -> None:
+    if output.exists() and output.read_text(encoding="utf-8") == content:
+        return
+    output.write_text(content, encoding="utf-8")
+
+
 def artwork_masks(source: Path) -> tuple[np.ndarray, np.ndarray]:
     image = np.asarray(Image.open(source).convert("L"))
     ink = np.where(image < 128, 255, 0).astype(np.uint8)
@@ -79,7 +85,7 @@ def svg_for(mask: np.ndarray, output: Path, *, check: bool = False) -> tuple[int
         if not output.exists() or output.read_text(encoding="utf-8") != document:
             raise SystemExit(f"{output.relative_to(ROOT)} is stale; regenerate case logo vectors")
     else:
-        output.write_text(document, encoding="utf-8")
+        write_if_changed(output, document)
     return width, height
 
 
@@ -112,7 +118,7 @@ def main() -> None:
                 f"{dimensions_path.relative_to(ROOT)} is stale; regenerate case logo vectors"
             )
     else:
-        dimensions_path.write_text(dimensions, encoding="utf-8")
+        write_if_changed(dimensions_path, dimensions)
 
 
 if __name__ == "__main__":

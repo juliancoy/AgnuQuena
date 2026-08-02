@@ -1,7 +1,7 @@
 {
   "connectors": {
     "diametral_clearance_mm": 0.0,
-    "mouthpiece_overlap_mm": 22.0,
+    "mouthpiece_overlap_mm": 32.0,
     "outer_diameter_mm": 20.700000000000003,
     "radial_clearance_mm": 0.0,
     "tube_joint_overlap_mm": 7.0,
@@ -291,7 +291,7 @@
     {
       "length_mm": 30.0,
       "name": "mouthpiece",
-      "print_height_mm": 52.6
+      "print_height_mm": 62.6
     },
     {
       "length_mm": 222.5,
@@ -307,7 +307,7 @@
     }
   ],
   "schema_version": 1,
-  "spec_sha256": "55dfac2107cad61a9453b23b4b23e9d9ef3dd663b32248d6a0ce1b0ba2945141",
+  "spec_sha256": "ba2e20caecc561d344c5e5c3109a4064a47abe4fcf6a769e0278da03be1ad855",
   "tone_hole_profile": {
     "axial_scale": 1.0,
     "circumferential_scale": 1.0,

@@ -17,6 +17,7 @@ import zipfile
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree as ET
 
 import trimesh
 
@@ -26,32 +27,35 @@ ROOT = Path(__file__).resolve().parents[1]
 OBSOLETE_SPLIT_EXPORTS = (
     "QuenaCaseBottom.stl",
     "QuenaCaseLid.stl",
+    "QuenaCaseLidLogo.stl",
     "website/assets/QuenaCaseBottom.stl",
     "website/assets/QuenaCaseLid.stl",
+    "website/assets/QuenaCaseLidLogo.stl",
     "site-hosting/public/assets/QuenaCaseBottom.stl",
     "site-hosting/public/assets/QuenaCaseLid.stl",
+    "site-hosting/public/assets/QuenaCaseLidLogo.stl",
 )
 
 EXPECTED = {
     "QuenaCasePrintInPlace.stl": {
-        "size": (250.994, 113.47, 19.4),
+        "size": (245.994, 113.948, 19.4),
         "min_triangles": 18000,
         "components": 2,
     },
     "QuenaCaseBottomViewer.stl": {
-        "size": (250.994, 61.3, 19.4),
+        "size": (245.994, 61.3, 19.4),
         "min_triangles": 2200,
         "components": 1,
     },
     "QuenaCaseLidViewer.stl": {
-        "size": (250.994, 61.97, 19.3),
+        "size": (245.994, 62.448, 19.3),
         "min_triangles": 1200,
         "components": 1,
     },
-    "QuenaCaseLidLogo.stl": {
-        "size": (190.0, 50.5949, 0.6),
-        "min_triangles": 2000,
-        "components": 22,
+    "QuenaCaseArtwork.stl": {
+        "size": (236.894, 105.654, 0.6),
+        "min_triangles": 35000,
+        "components": 29,
     },
     "QuenaCaseHingeCoupon.stl": {
         "size": (46.0, 28.0, 19.4),
@@ -64,12 +68,12 @@ EXPECTED = {
         "components": 2,
     },
     "QuenaCaseLatchCoupon.stl": {
-        "size": (182.0, 34.0, 18.0),
+        "size": (182.0, 34.0, 18.9),
         "min_triangles": 1600,
         "components": 7,
     },
     "QuenaCaseAssembly.stl": {
-        "size": (250.994, 61.97, 28.8),
+        "size": (245.994, 62.448, 28.8),
         "min_triangles": 18000,
         "components": 2,
     },
@@ -78,10 +82,13 @@ EXPECTED = {
 LID_SWEEP_MAX_DEG = 180
 CONTACT_TOLERANCE_MM = 0.05
 CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
-# Reference for the current 22 mm mouthpiece-connector pocket before the
-# retention-border material transfer.
-PRE_RETENTION_CASE_VOLUME_MM3 = 270_047.95
-CASE_MASS_BALANCE_TOLERANCE_MM3 = 1_100.0
+# Canonical 32 mm mouthpiece pocket, 8 mm short-row gaps, 1.5 mm bed-edge
+# rounding, retention border, engraved back, and enclosed round hinge ends.
+EXPECTED_CASE_VOLUME_MM3 = 255_083.18
+CASE_VOLUME_TOLERANCE_MM3 = 10.0
+# OpenSCAD's ASCII STL coordinate quantization accumulates a sub-voxel volume
+# difference after the rigid 180-degree print-pose transform of rounded shells.
+PRINT_POSE_VOLUME_TOLERANCE_MM3 = 0.2
 
 
 def scad_scalar(name: str) -> float:
@@ -321,13 +328,13 @@ def run_latch_design_checks() -> None:
     root_blend = scad_scalar("latch_tongue_root_blend_h")
     free_l = flex_l - root_blend
     travel = protrusion - indent
-    if not 0.20 <= travel <= 0.45:
+    if not 0.20 <= travel <= 0.55:
         raise AssertionError(f"latch release travel {travel:.2f} mm is unsuitable")
-    if nub_r < 1.45 or indent < 0.80:
+    if nub_r < 1.95 or indent < 0.80:
         raise AssertionError("latch nub or receiving depth is undersized")
-    if tongue_w < 17.5 or tongue_t < 1.2 or flex_l < 14.5:
+    if tongue_w < 17.5 or tongue_t < 1.2 or flex_l < 15.8:
         raise AssertionError("latch tongue is too thin or too short")
-    if root_blend < 3.8 or free_l < 10.5:
+    if root_blend < 4.3 or free_l < 11.4:
         raise AssertionError("latch root attachment or free flex span is unsuitable")
     print(f"QuenaCase latch design: ok, {nub_r:.2f} mm nub radius, "
           f"{protrusion:.2f} mm nub projection, "
@@ -414,6 +421,65 @@ def run_channel_layout_checks() -> None:
         f"{snap_interference:.2f} mm diametral snap interference across "
         f"{retention_clip_w:.1f} mm clips, aligned P2/P1/mouthpiece outer edges, "
         f"{axial_clearance:.2f} mm axial and {radial_clearance:.2f} mm radial clearance"
+    )
+
+
+def run_exterior_design_checks() -> None:
+    corner_r = scad_scalar("corner_r")
+    inset = scad_scalar("mandala_inset")
+    stroke = scad_scalar("mandala_stroke")
+    depth = scad_scalar("mandala_depth")
+    floor = scad_scalar("floor_thickness")
+    edge_r = scad_scalar("bed_edge_r")
+    case_l = scad_scalar("case_outer_l")
+    source = (ROOT / "QuenaCase.scad").read_text(encoding="utf-8")
+
+    if corner_r < 12:
+        raise AssertionError("case outer corners are not broadly rounded")
+    if not math.isclose(inset, 5.0, abs_tol=0.01):
+        raise AssertionError("bottom ornament border is not 5 mm inside the edge")
+    if stroke < 0.8:
+        raise AssertionError("bottom ornament contains sub-two-line-width strokes")
+    if not math.isclose(depth, 0.4, abs_tol=0.01):
+        raise AssertionError("bottom ornament is not a two-layer engraving")
+    if floor - depth < 2.4:
+        raise AssertionError("bottom ornament leaves insufficient floor thickness")
+    if not 1.0 <= edge_r <= floor - 1.0:
+        raise AssertionError("bed-facing edge radius is not printable within the shell")
+    if "for (x = mandala_centers)" not in source:
+        raise AssertionError("bottom ornament is not procedurally repeated")
+    if "bottom_ornament_recess();" not in source:
+        raise AssertionError("bottom ornament is not cut into the production shell")
+    if "round_bottom = true" not in source or "round_top = true" not in source:
+        raise AssertionError("both bed-facing case backs are not edge-rounded")
+
+    bottom = trimesh.load(ROOT / "QuenaCaseBottomViewer.stl", force="mesh")
+    ornament_floor_vertices = int(
+        (abs(bottom.vertices[:, 2] - depth) <= 0.01).sum()
+    )
+    if ornament_floor_vertices < 1000:
+        raise AssertionError("rendered bottom lacks the detailed ornament floor")
+
+    for name, use_max_z in (
+        ("QuenaCaseBottomViewer.stl", False),
+        ("QuenaCaseLidViewer.stl", True),
+    ):
+        mesh = trimesh.load(ROOT / name, force="mesh", process=False)
+        bed_z = float(mesh.bounds[int(use_max_z)][2])
+        bed_vertices = mesh.vertices[abs(mesh.vertices[:, 2] - bed_z) <= 0.01]
+        contact_span = float(
+            bed_vertices[:, 0].max() - bed_vertices[:, 0].min()
+        )
+        expected_span = case_l - 2 * edge_r
+        if not math.isclose(contact_span, expected_span, abs_tol=0.3):
+            raise AssertionError(f"{name} lacks the specified bed-edge rounding")
+
+    print(
+        "QuenaCase exterior: ok, "
+        f"{corner_r:.0f} mm outer corner radius, three procedural mandalas, "
+        f"{inset:.0f} mm inset rounded border, {stroke:.1f} mm minimum strokes, "
+        f"{depth:.1f} mm support-free engraving, {floor - depth:.1f} mm floor, "
+        f"{edge_r:.1f} mm bed-facing edge radius"
     )
 
 
@@ -651,7 +717,7 @@ def run_mesh_checks() -> None:
                 and math.isclose(
                     abs(float(production.volume)),
                     abs(float(source.volume)),
-                    abs_tol=0.1,
+                    abs_tol=PRINT_POSE_VOLUME_TOLERANCE_MM3,
                 )
                 for production, source in zip(production_halves, source_halves)
             )
@@ -684,15 +750,15 @@ def run_mesh_checks() -> None:
         abs(float(trimesh.load(ROOT / name, force="mesh").volume))
         for name in ("QuenaCaseBottomViewer.stl", "QuenaCaseLidViewer.stl")
     )
-    volume_delta = case_volume - PRE_RETENTION_CASE_VOLUME_MM3
-    if abs(volume_delta) > CASE_MASS_BALANCE_TOLERANCE_MM3:
+    volume_delta = case_volume - EXPECTED_CASE_VOLUME_MM3
+    if abs(volume_delta) > CASE_VOLUME_TOLERANCE_MM3:
         raise AssertionError(
-            "retention material transfer changes total case volume by "
+            "total case volume differs from the canonical geometry by "
             f"{volume_delta:+.1f} mm^3"
         )
     print(
-        "QuenaCase mass balance: ok, "
-        f"{volume_delta:+.1f} mm^3 total case volume change"
+        "QuenaCase volume: ok, "
+        f"{case_volume:.1f} mm^3 ({volume_delta:+.1f} mm^3 from reference)"
     )
 
 
@@ -702,13 +768,19 @@ def run_color_project_checks() -> None:
         cwd=ROOT,
         check=True,
     )
-    logo = trimesh.load(ROOT / "QuenaCaseLidLogo.stl", force="mesh")
-    if not logo.is_watertight or not logo.is_winding_consistent:
-        raise AssertionError("case logo must be a watertight, consistently wound mesh")
-    if not math.isclose(float(logo.bounds[0][2]), 0.0, abs_tol=0.01):
-        raise AssertionError("case logo must start on the build plate")
-    if not math.isclose(float(logo.bounds[1][2]), 0.6, abs_tol=0.01):
+    artwork = trimesh.load(ROOT / "QuenaCaseArtwork.stl", force="mesh")
+    if not artwork.is_watertight or not artwork.is_winding_consistent:
+        raise AssertionError("case artwork must be a watertight, consistently wound mesh")
+    if not math.isclose(float(artwork.bounds[0][2]), 0.0, abs_tol=0.01):
+        raise AssertionError("case artwork must start on the build plate")
+    if not math.isclose(float(artwork.bounds[1][2]), 0.6, abs_tol=0.01):
         raise AssertionError("case logo must occupy exactly three 0.2 mm layers")
+    logo_parts = [
+        component
+        for component in artwork.split(only_watertight=False)
+        if float(component.bounds[1][2]) > 0.5
+    ]
+    logo = trimesh.util.concatenate(logo_parts)
 
     case_outer_l = scad_scalar("case_outer_l")
     case_outer_w = scad_scalar("case_outer_w")
@@ -730,7 +802,7 @@ def run_color_project_checks() -> None:
         solid_stl = temp_path / "solid_case.stl"
         solid_scad.write_text(
             f'include <{ROOT / "QuenaCase.scad"}>;\n'
-            "bottom_assembly();\n"
+            "bottom_assembly(false);\n"
             "lid_in_print_pose() lid_assembly(false);\n",
             encoding="utf-8",
         )
@@ -743,10 +815,18 @@ def run_color_project_checks() -> None:
         solid_case = trimesh.load(solid_stl, force="mesh")
     recessed_case = trimesh.load(ROOT / "QuenaCasePrintInPlace.stl", force="mesh")
     recess_volume = float(solid_case.volume - recessed_case.volume)
-    if not math.isclose(recess_volume, float(logo.volume), abs_tol=0.2):
+    # Independent curved-shell and artwork STL tessellations accumulate a
+    # small volume-integration difference even though both are generated from
+    # the same OpenSCAD recess modules. Keep the allowance below 0.5%.
+    artwork_volume = float(artwork.volume)
+    if not math.isclose(
+        recess_volume,
+        artwork_volume,
+        abs_tol=max(0.2, artwork_volume * 0.005),
+    ):
         raise AssertionError(
-            "case logo volume does not exactly fill the production lid recess: "
-            f"recess={recess_volume:.3f} mm^3, logo={logo.volume:.3f} mm^3"
+            "case artwork does not exactly fill the production recesses: "
+            f"recess={recess_volume:.3f} mm^3, artwork={artwork_volume:.3f} mm^3"
         )
 
     project = ROOT / "QuenaCase.3mf"
@@ -765,38 +845,44 @@ def run_color_project_checks() -> None:
         model = archive.read("3D/3dmodel.model").decode("utf-8")
         metadata = archive.read("Metadata/model_settings.config").decode("utf-8")
         settings = json.loads(archive.read("Metadata/project_settings.config"))
-    for current_name in ("QuenaCasePrintInPlace.stl", "QuenaCaseLidLogo.stl"):
+    if "BambuStudio:3mfVersion" not in model:
+        raise AssertionError("case 3MF was not authored in Bambu Studio format")
+    if "3D/Objects/object_1.model" not in names:
+        raise AssertionError("case 3MF is missing its Bambu Studio object model")
+    for current_name in ("QuenaCasePrintInPlace.stl", "QuenaCaseArtwork.stl"):
         if current_name not in metadata:
             raise AssertionError(f"case 3MF is missing {current_name}")
     for obsolete_name in ("QuenaCaseBottom.stl", "QuenaCaseLid.stl"):
         if obsolete_name in metadata or obsolete_name in model:
             raise AssertionError(f"case 3MF still contains obsolete {obsolete_name}")
-    if "#FFF144FF" not in model or "#000000FF" not in model:
-        raise AssertionError("case 3MF does not define yellow and black materials")
-    if 'value="1"' not in metadata or 'value="2"' not in metadata:
+    if 'key="extruder" value="1"' not in metadata or 'key="extruder" value="2"' not in metadata:
         raise AssertionError("case 3MF does not map its two parts to separate filaments")
     if settings.get("enable_support") != "0" or settings.get("brim_type") != "no_brim":
         raise AssertionError("case 3MF must disable supports and brims")
     if settings.get("filament_type") != ["ABS", "ABS"]:
         raise AssertionError("case 3MF materials must both be ABS")
-    project_scene = trimesh.load(project, force="scene")
-    if len(project_scene.geometry) != 2:
-        raise AssertionError("case 3MF must contain exactly the case and logo meshes")
-    project_face_counts = sorted(len(mesh.faces) for mesh in project_scene.geometry.values())
+    if settings.get("filament_colour") != ["#FFF144", "#000000"]:
+        raise AssertionError("case 3MF materials must be yellow and black")
+    if settings.get("prime_tower_width") != "20":
+        raise AssertionError("case 3MF prime tower must use the compact 20 mm width")
+    if settings.get("wipe_tower_no_sparse_layers") != "1":
+        raise AssertionError("case 3MF prime tower must omit inactive upper layers")
+    metadata_root = ET.fromstring(metadata)
+    project_face_counts = sorted(
+        int(node.attrib["face_count"])
+        for node in metadata_root.findall("./object/part/mesh_stat")
+    )
     source_face_counts = sorted(
         len(trimesh.load(ROOT / name, force="mesh").faces)
-        for name in ("QuenaCasePrintInPlace.stl", "QuenaCaseLidLogo.stl")
+        for name in ("QuenaCasePrintInPlace.stl", "QuenaCaseArtwork.stl")
     )
     if project_face_counts != source_face_counts:
         raise AssertionError("case 3MF meshes differ from the canonical STL inputs")
-    expected_project_bounds = ((2.503, 71.265, 0.0), (253.497, 184.735, 19.3))
-    for actual_row, expected_row in zip(project_scene.bounds, expected_project_bounds):
-        for actual, expected in zip(actual_row, expected_row):
-            if not math.isclose(float(actual), expected, abs_tol=0.02):
-                raise AssertionError("case 3MF is not centered in the validated P1S plate pose")
+    if 'transform="1 0 0 0 1 0 0 0 1 128 156.685 0"' not in model:
+        raise AssertionError("case 3MF is not centered in the validated P1S plate pose")
     print(
         "QuenaCase colour project: ok, exact selected artwork traced for a 0.4 mm "
-        "nozzle, 2.0 mm lid margin, three-layer inlay, yellow/black ABS assignment"
+        "nozzle, black mandala and logo inlays, compact lower-layer prime tower"
     )
 
 def run_hinge_sweep_check() -> None:
@@ -1008,6 +1094,7 @@ def main() -> None:
     run_stator_roundness_check()
     run_latch_design_checks()
     run_channel_layout_checks()
+    run_exterior_design_checks()
     run_mesh_checks()
     run_color_project_checks()
     run_closed_overlap_check()

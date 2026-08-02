@@ -19,13 +19,98 @@ const SPEC = {
   ],
 };
 
+function toneHolePadCenter(hole) {
+  const angle = THREE.MathUtils.degToRad(hole.angle);
+  const radius = SPEC.outerDiameter / 2 + 1;
+  return [radius * Math.cos(angle), radius * Math.sin(angle), hole.z];
+}
+
+function createHand(side, centerZ, fingerTargets) {
+  const fingerReach = [0.82, 1.0, 0.94, 0.76];
+  const fingers = fingerTargets.map((target, index) => {
+    const reach = fingerReach[index];
+    const hole = target.hole
+      ? SPEC.holes.find((candidate) => candidate.name === target.hole)
+      : null;
+    const tip = hole
+      ? toneHolePadCenter(hole)
+      : [SPEC.outerDiameter / 2 + 1, 0, target.z];
+    return {
+      holeName: hole?.name || null,
+      radii: [5.0, 4.5, 3.8],
+      points: [
+        [31, side * 29, tip[2]],
+        [25, side * (18 + 2 * (1 - reach)), tip[2]],
+        [16 + 3 * (1 - reach), side * 10, tip[2]],
+        tip,
+      ],
+    };
+  });
+  const thumb = {
+    radii: [6.2, 5.4, 4.6],
+    points: [
+      [39, side * 25, centerZ - 24],
+      [29, side * 13, centerZ - 35],
+      [18, side * 3, centerZ - 36],
+      [8, side * -5, centerZ - 29],
+    ],
+  };
+  return {
+    palm: { center: [35, side * 40, centerZ], radii: [17, 29, 43] },
+    fingers,
+    thumb,
+  };
+}
+
+const SOLVER_HANDS = [
+  createHand(1, 185, [
+    { hole: "F#" }, { hole: "E" }, { z: 193 }, { hole: "D" },
+  ]),
+  createHand(-1, 270, [
+    { hole: "C" }, { z: 258 }, { hole: "B" }, { hole: "A" },
+  ]),
+];
+
+function rotatePlayerPointIntoSolver(point) {
+  return [-point[0], -point[1], point[2]];
+}
+
+const PLAYER_HANDS = SOLVER_HANDS.map((hand) => ({
+  palm: {
+    center: rotatePlayerPointIntoSolver(hand.palm.center),
+    radii: hand.palm.radii,
+  },
+  fingers: hand.fingers.map((finger) => ({
+    holeName: finger.holeName,
+    radii: finger.radii,
+    points: finger.points.map(rotatePlayerPointIntoSolver),
+  })),
+  thumb: {
+    radii: hand.thumb.radii,
+    points: hand.thumb.points.map(rotatePlayerPointIntoSolver),
+  },
+}));
+
+const COVERED_TONE_HOLES = SOLVER_HANDS.flatMap((hand) => hand.fingers)
+  .filter((finger) => finger.holeName)
+  .map((finger) => finger.holeName)
+  .sort();
+const MAX_FINGER_PAD_OFFSET_MM = Math.max(...SOLVER_HANDS.flatMap((hand) => (
+  hand.fingers
+    .filter((finger) => finger.holeName)
+    .map((finger) => {
+      const hole = SPEC.holes.find((candidate) => candidate.name === finger.holeName);
+      const expected = toneHolePadCenter(hole);
+      return Math.hypot(...finger.points.at(-1).map((value, index) => value - expected[index]));
+    })
+)));
+
 const CELL_MM = 1.0;
 const CELL_M = CELL_MM / 1000;
 const NX = 48;
 const NY = 48;
 const NZ = 424;
 const Z_ORIGIN_MM = -12;
-const JET_ORIGIN_MM = [15.5, 0, -5.5];
 const CELL_COUNT = NX * NY * NZ;
 const simulationParameters = {
   airDensity: 1.204,
@@ -39,13 +124,36 @@ const simulationParameters = {
   speedScale: 15,
   vorticityScale: 8000,
   jetDeflectionGain: 200,
-  jetDirectionX: -0.718988,
-  jetDirectionY: 0,
-  jetDirectionZ: 0.695022,
+  jetEdgeDistance: 14.4,
+  jetAngleDegrees: 40,
   jetTargetX: 9.5,
   jetTargetY: 0,
   jetTargetZ: 0.3,
 };
+
+function mouthFromEdgeDirection() {
+  const angle = THREE.MathUtils.degToRad(simulationParameters.jetAngleDegrees);
+  return new THREE.Vector3(-Math.sin(angle), 0, -Math.cos(angle));
+}
+
+function jetOrigin() {
+  return new THREE.Vector3(
+    simulationParameters.jetTargetX,
+    simulationParameters.jetTargetY,
+    simulationParameters.jetTargetZ,
+  ).addScaledVector(mouthFromEdgeDirection(), simulationParameters.jetEdgeDistance);
+}
+
+function jetDirection() {
+  const direction = new THREE.Vector3(
+    simulationParameters.jetTargetX,
+    simulationParameters.jetTargetY,
+    simulationParameters.jetTargetZ,
+  ).sub(jetOrigin());
+  return direction.lengthSq() > 1e-8
+    ? direction.normalize()
+    : new THREE.Vector3(-0.718988, 0, 0.695022);
+}
 
 function timeStepSeconds() {
   return simulationParameters.courant * CELL_M
@@ -74,6 +182,9 @@ const ui = {
   holeProfile: document.querySelector("#holeProfileMetric"),
   timeStep: document.querySelector("#timeStepMetric"),
   oscillation: document.querySelector("#oscillationMetric"),
+  edgeScopeTrace: document.querySelector("#edgeScopeTrace"),
+  edgeSignalValue: document.querySelector("#edgeSignalValue"),
+  jetOriginReadout: document.querySelector("#jetOriginReadout"),
   toggle: document.querySelector("#toggleRun"),
   reset: document.querySelector("#resetSimulation"),
   speed: document.querySelector("#speed"),
@@ -92,11 +203,14 @@ let selectedHole = SPEC.holes[0];
 let playerBoundary = "none";
 let playerSolidCells = 0;
 let syncPlayerVisual = () => {};
+let syncMouthVisual = () => {};
 let updateJetPath = () => {};
 let jetSignalMinimum = Number.POSITIVE_INFINITY;
 let jetSignalMaximum = Number.NEGATIVE_INFINITY;
 let jetVisualMinimum = Number.POSITIVE_INFINITY;
 let jetVisualMaximum = Number.NEGATIVE_INFINITY;
+let jetSignalHistory = [];
+let jetSignalBaseline = null;
 let running = false;
 let stepCount = 0;
 let gpu = null;
@@ -108,6 +222,24 @@ let productionVolume = null;
 let volumeSampleLayout = null;
 let volumeReadPending = false;
 let lastVolumeSampleAt = 0;
+
+function updateEdgeScope(signal) {
+  jetSignalHistory.push(signal);
+  if (jetSignalHistory.length > 120) jetSignalHistory.shift();
+  const scale = Math.max(0.00001, ...jetSignalHistory.map((value) => Math.abs(value)));
+  const denominator = Math.max(1, jetSignalHistory.length - 1);
+  const points = jetSignalHistory.map((value, index) => {
+    const x = index / denominator * 300;
+    const y = 50 - value / scale * 42;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  ui.edgeScopeTrace.setAttribute("points", points.join(" "));
+  ui.edgeSignalValue.value = `${signal >= 0 ? "+" : ""}${signal.toExponential(2)}`;
+  if (window.__agnuquena3D) {
+    window.__agnuquena3D.edgeScopeSamples = jetSignalHistory.length;
+    window.__agnuquena3D.edgeScopeScale = scale;
+  }
+}
 
 function createVolumeSampleLayout() {
   const indices = [];
@@ -207,6 +339,9 @@ function initProductionViewer(assemblyBuffer) {
   assemblyGroup.rotation.x = Math.PI / 2;
   assemblyGroup.position.y = 0.20;
   scene.add(assemblyGroup);
+  const instrumentGroup = new THREE.Group();
+  instrumentGroup.rotation.z = Math.PI;
+  assemblyGroup.add(instrumentGroup);
   const fluteMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xa9d6c4,
     roughness: 0.28,
@@ -216,14 +351,14 @@ function initProductionViewer(assemblyBuffer) {
   });
   const mesh = new THREE.Mesh(geometry, fluteMaterial);
   mesh.renderOrder = 2;
-  assemblyGroup.add(mesh);
+  instrumentGroup.add(mesh);
 
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(geometry, 24),
     new THREE.LineBasicMaterial({ color: 0x09251f, transparent: true, opacity: 0.24 }),
   );
   edges.renderOrder = 3;
-  assemblyGroup.add(edges);
+  instrumentGroup.add(edges);
 
   const skinMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xd79a73,
@@ -232,6 +367,8 @@ function initProductionViewer(assemblyBuffer) {
     opacity: 0.34,
     depthWrite: false,
   });
+  const handMaterial = skinMaterial.clone();
+  handMaterial.opacity = 0.78;
   const clothingMaterial = new THREE.MeshPhysicalMaterial({
     color: 0x315d72,
     roughness: 0.82,
@@ -269,16 +406,70 @@ function initProductionViewer(assemblyBuffer) {
     return limb;
   }
 
-  addEllipsoid(playerGroup, [0.050, 0.066, 0.055], [0.048, 0, -0.022]);
-  addEllipsoid(playerGroup, [0.013, 0.018, 0.038], [0.012, -0.008, 0.185]);
-  addEllipsoid(playerGroup, [0.013, 0.018, 0.038], [0.012, 0.008, 0.270]);
+  function addHand(parent, hand) {
+    const handGroup = new THREE.Group();
+    parent.add(handGroup);
+    addEllipsoid(
+      handGroup,
+      hand.palm.radii.map((value) => value / 1000),
+      hand.palm.center.map((value) => value / 1000),
+      handMaterial,
+    );
+    for (const digit of [...hand.fingers, hand.thumb]) {
+      for (let index = 0; index < digit.points.length - 1; index += 1) {
+        addLimb(
+          handGroup,
+          digit.points[index].map((value) => value / 1000),
+          digit.points[index + 1].map((value) => value / 1000),
+          digit.radii[index] / 1000,
+          handMaterial,
+        );
+      }
+      const tip = digit.points.at(-1).map((value) => value / 1000);
+      addEllipsoid(handGroup, [0.004, 0.005, 0.006], tip, handMaterial);
+    }
+    return handGroup;
+  }
+
+  const playerHead = addEllipsoid(
+    playerGroup,
+    [0.050, 0.066, 0.055],
+    [0.048, 0, -0.022],
+  );
+  const mouthGroup = new THREE.Group();
+  const lipMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xb85f58,
+    roughness: 0.8,
+  });
+  const mouthOpening = new THREE.Mesh(
+    new THREE.SphereGeometry(1, 20, 12),
+    new THREE.MeshBasicMaterial({ color: 0x311716 }),
+  );
+  mouthOpening.scale.set(0.0011, 0.0055, 0.0028);
+  mouthGroup.add(mouthOpening);
+  const lips = new THREE.Mesh(new THREE.TorusGeometry(0.0042, 0.0012, 8, 24), lipMaterial);
+  lips.rotation.y = Math.PI / 2;
+  lips.scale.z = 0.62;
+  mouthGroup.add(lips);
+  playerGroup.add(mouthGroup);
+  syncMouthVisual = () => {
+    const originMm = jetOrigin();
+    const mouthVisualMm = rotatePlayerPointIntoSolver(originMm.toArray());
+    mouthGroup.position.fromArray(mouthVisualMm).multiplyScalar(0.001);
+    const headSolverMm = originMm.clone().add(new THREE.Vector3(-43.5, 0, -19));
+    const headVisualMm = rotatePlayerPointIntoSolver(headSolverMm.toArray());
+    playerHead.position.fromArray(headVisualMm).multiplyScalar(0.001);
+    ui.jetOriginReadout.value = `${originMm.x.toFixed(1)}, ${originMm.y.toFixed(1)}, ${originMm.z.toFixed(1)} mm`;
+  };
+  syncMouthVisual();
+  for (const hand of PLAYER_HANDS) addHand(playerGroup, hand);
   addEllipsoid(bodyGroup, [0.11, 0.15, 0.29], [0.10, 0, 0.31], clothingMaterial);
   addEllipsoid(bodyGroup, [0.055, 0.055, 0.30], [0.10, -0.07, 0.77], clothingMaterial);
   addEllipsoid(bodyGroup, [0.055, 0.055, 0.30], [0.10, 0.07, 0.77], clothingMaterial);
   addLimb(bodyGroup, [0.07, -0.13, 0.16], [0.05, -0.19, 0.24], 0.035);
-  addLimb(bodyGroup, [0.05, -0.19, 0.24], [0.012, -0.008, 0.270], 0.032);
+  addLimb(bodyGroup, [0.05, -0.19, 0.24], [0.035, -0.040, 0.270], 0.032);
   addLimb(bodyGroup, [0.07, 0.13, 0.16], [0.05, 0.19, 0.20], 0.035);
-  addLimb(bodyGroup, [0.05, 0.19, 0.20], [0.012, 0.008, 0.185], 0.032);
+  addLimb(bodyGroup, [0.05, 0.19, 0.20], [0.035, 0.040, 0.185], 0.032);
 
   syncPlayerVisual = () => {
     playerGroup.visible = playerBoundary !== "none";
@@ -305,22 +496,23 @@ function initProductionViewer(assemblyBuffer) {
     new THREE.LineBasicMaterial({ color: 0x7fffd4, transparent: true, opacity: 0.95 }),
   );
   jetLine.renderOrder = 6;
-  assemblyGroup.add(jetLine);
+  instrumentGroup.add(jetLine);
   const jetDots = new THREE.Points(
     jetGeometry,
     new THREE.PointsMaterial({ color: 0x7fffd4, size: 0.0032, sizeAttenuation: true }),
   );
   jetDots.renderOrder = 6;
-  assemblyGroup.add(jetDots);
+  instrumentGroup.add(jetDots);
   const targetMarker = new THREE.Mesh(
     new THREE.SphereGeometry(0.0038, 16, 10),
     new THREE.MeshBasicMaterial({ color: 0xffb55f }),
   );
   targetMarker.renderOrder = 7;
-  assemblyGroup.add(targetMarker);
+  instrumentGroup.add(targetMarker);
 
   updateJetPath = (oscillation = 0) => {
-    const origin = new THREE.Vector3(...JET_ORIGIN_MM).multiplyScalar(0.001);
+    syncMouthVisual();
+    const origin = jetOrigin().multiplyScalar(0.001);
     const target = new THREE.Vector3(
       simulationParameters.jetTargetX,
       simulationParameters.jetTargetY,
@@ -340,6 +532,23 @@ function initProductionViewer(assemblyBuffer) {
     }
     jetGeometry.attributes.position.needsUpdate = true;
     targetMarker.position.copy(target);
+    if (window.__agnuquena3D) {
+      const originWorld = instrumentGroup.localToWorld(origin.clone());
+      const targetWorld = instrumentGroup.localToWorld(target.clone());
+      const playerWorld = playerHead.localToWorld(new THREE.Vector3());
+      const mouthWorld = mouthGroup.localToWorld(new THREE.Vector3());
+      window.__agnuquena3D.jetOriginWorld = originWorld.toArray();
+      window.__agnuquena3D.mouthWorld = mouthWorld.toArray();
+      window.__agnuquena3D.playerHeadWorld = playerWorld.toArray();
+      window.__agnuquena3D.mouthJetOffsetMm = mouthWorld.distanceTo(originWorld) * 1000;
+      window.__agnuquena3D.jetOriginLocalMm = jetOrigin().toArray();
+      window.__agnuquena3D.jetEdgeDistanceMm = simulationParameters.jetEdgeDistance;
+      window.__agnuquena3D.jetAngleDegrees = simulationParameters.jetAngleDegrees;
+      window.__agnuquena3D.sharpEdgeWorld = targetWorld.toArray();
+      window.__agnuquena3D.jetOriginFacesPlayer = originWorld.clone().sub(targetWorld)
+        .dot(playerWorld.clone().sub(targetWorld)) > 0;
+      window.__agnuquena3D.mouthpieceOppositePlayer = Math.sign(targetWorld.x) !== Math.sign(playerWorld.x);
+    }
   };
   updateJetPath(0);
 
@@ -396,7 +605,7 @@ function initProductionViewer(assemblyBuffer) {
   const volumePoints = new THREE.Points(volumeGeometry, volumeMaterial);
   volumePoints.frustumCulled = false;
   volumePoints.renderOrder = 4;
-  assemblyGroup.add(volumePoints);
+  instrumentGroup.add(volumePoints);
   productionVolume = {
     points: volumePoints,
     colors: volumeColors,
@@ -405,10 +614,18 @@ function initProductionViewer(assemblyBuffer) {
     updates: 0,
   };
   assemblyGroup.updateWorldMatrix(true, false);
-  const boreOrigin = assemblyGroup.localToWorld(new THREE.Vector3(0, 0, 0));
-  const boreDirection = assemblyGroup.localToWorld(new THREE.Vector3(0, 0, 1))
+  const boreOrigin = instrumentGroup.localToWorld(new THREE.Vector3(0, 0, 0));
+  const boreDirection = instrumentGroup.localToWorld(new THREE.Vector3(0, 0, 1))
     .sub(boreOrigin)
     .normalize();
+  const jetOriginWorld = instrumentGroup.localToWorld(jetOrigin().multiplyScalar(0.001));
+  const sharpEdgeWorld = instrumentGroup.localToWorld(new THREE.Vector3(
+    simulationParameters.jetTargetX / 1000,
+    simulationParameters.jetTargetY / 1000,
+    simulationParameters.jetTargetZ / 1000,
+  ));
+  const playerHeadWorld = playerHead.localToWorld(new THREE.Vector3());
+  const mouthWorld = mouthGroup.localToWorld(new THREE.Vector3());
   window.__agnuquena3D = {
     ready: true,
     pointCount: volumeSampleLayout.indices.length,
@@ -416,6 +633,27 @@ function initProductionViewer(assemblyBuffer) {
     visible: true,
     orientation: "vertical",
     boreAxis: boreDirection.toArray(),
+    axialRotationDegrees: 180,
+    jetOriginWorld: jetOriginWorld.toArray(),
+    mouthWorld: mouthWorld.toArray(),
+    mouthJetOffsetMm: mouthWorld.distanceTo(jetOriginWorld) * 1000,
+    jetOriginLocalMm: jetOrigin().toArray(),
+    jetEdgeDistanceMm: simulationParameters.jetEdgeDistance,
+    jetAngleDegrees: simulationParameters.jetAngleDegrees,
+    sharpEdgeWorld: sharpEdgeWorld.toArray(),
+    playerHeadWorld: playerHeadWorld.toArray(),
+    jetOriginFacesPlayer: jetOriginWorld.clone().sub(sharpEdgeWorld)
+      .dot(playerHeadWorld.clone().sub(sharpEdgeWorld)) > 0,
+    mouthpieceOppositePlayer: Math.sign(sharpEdgeWorld.x) !== Math.sign(playerHeadWorld.x),
+    mouthModel: "visible lips and open airway",
+    handModel: "articulated anatomical proportions",
+    fingerWrapDirection: "palms outside, pads on tone-hole face",
+    coveredToneHoles: COVERED_TONE_HOLES,
+    maxFingerPadOffsetMm: MAX_FINGER_PAD_OFFSET_MM,
+    fingerSegments: PLAYER_HANDS.reduce(
+      (count, hand) => count + hand.fingers.length * 3 + 3,
+      0,
+    ),
     source: "actual solver field with live near-edge jet response",
   };
 
@@ -516,15 +754,54 @@ function ellipsoidContains(x, y, z, center, radii) {
     + ((z - center[2]) / radii[2]) ** 2 <= 1;
 }
 
-function playerBoundaryContains(x, y, z) {
+function capsuleContains(x, y, z, start, end, radius) {
+  const abx = end[0] - start[0];
+  const aby = end[1] - start[1];
+  const abz = end[2] - start[2];
+  const apx = x - start[0];
+  const apy = y - start[1];
+  const apz = z - start[2];
+  const lengthSq = abx ** 2 + aby ** 2 + abz ** 2;
+  const amount = lengthSq > 0
+    ? Math.min(1, Math.max(0, (apx * abx + apy * aby + apz * abz) / lengthSq))
+    : 0;
+  return (apx - amount * abx) ** 2
+    + (apy - amount * aby) ** 2
+    + (apz - amount * abz) ** 2 <= radius ** 2;
+}
+
+function handBoundaryContains(x, y, z) {
+  for (const hand of SOLVER_HANDS) {
+    if (Math.abs(z - hand.palm.center[2]) > 70) continue;
+    if (ellipsoidContains(x, y, z, hand.palm.center, hand.palm.radii)) return true;
+    for (const digit of [...hand.fingers, hand.thumb]) {
+      for (let index = 0; index < digit.points.length - 1; index += 1) {
+        if (capsuleContains(
+          x,
+          y,
+          z,
+          digit.points[index],
+          digit.points[index + 1],
+          digit.radii[index],
+        )) return true;
+      }
+    }
+  }
+  return false;
+}
+
+function playerBoundaryContains(x, y, z, mouth = jetOrigin()) {
   if (playerBoundary === "none") return false;
-  const mouthAirway = x >= 4 && x <= 24 && Math.abs(y) <= 10 && z >= -12 && z <= 18;
-  const head = ellipsoidContains(x, y, z, [48, 0, -22], [50, 66, 55]) && !mouthAirway;
-  const lowerHand = ellipsoidContains(x, y, z, [12, -8, 185], [13, 18, 38]);
-  const upperHand = ellipsoidContains(x, y, z, [12, 8, 270], [13, 18, 38]);
-  if (head || lowerHand || upperHand) return true;
+  const mouthAirway = x >= mouth.x - 20
+    && x <= mouth.x + 1
+    && Math.abs(y - mouth.y) <= 10
+    && z >= mouth.z - 9
+    && z <= mouth.z + 21;
+  const headCenter = [mouth.x - 43.5, mouth.y, mouth.z - 19];
+  const head = ellipsoidContains(x, y, z, headCenter, [50, 66, 55]) && !mouthAirway;
+  if (head || handBoundaryContains(x, y, z)) return true;
   return playerBoundary === "full"
-    && x <= -20
+    && x >= 20
     && Math.abs(y) <= 22
     && z >= 25
     && z <= 365;
@@ -539,6 +816,8 @@ function buildMask(activeHole, mode) {
   const activeIndex = SPEC.holes.findIndex((hole) => hole.name === activeHole.name);
   playerSolidCells = 0;
 
+  const inletDirection = jetDirection();
+  const inletOrigin = jetOrigin();
   for (let z = 0; z < NZ; z += 1) {
     const zMm = Z_ORIGIN_MM + (z + 0.5) * CELL_MM;
     for (let y = 0; y < NY; y += 1) {
@@ -608,18 +887,23 @@ function buildMask(activeHole, mode) {
           }
         }
 
-        const playerAtCell = material === 0 && playerBoundaryContains(xMm, yMm, zMm);
+        const playerAtCell = material === 0
+          && playerBoundaryContains(xMm, yMm, zMm, inletOrigin);
         if (playerAtCell) {
           material = 1;
           playerSolidCells += 1;
         }
 
-        if ((material === 0 || playerAtCell) && Math.abs(yMm) <= 4) {
-          const inletDx = xMm - 15.5;
-          const inletDz = zMm + 5.5;
-          const alongJet = inletDx * -0.74 + inletDz * 0.67;
-          const acrossJet = inletDx * -0.67 + inletDz * -0.74;
-          if (Math.abs(alongJet) <= 0.6 && Math.abs(acrossJet) <= 0.6) material = 2;
+        if (material === 0 || playerAtCell) {
+          const inletDx = xMm - inletOrigin.x;
+          const inletDy = yMm - inletOrigin.y;
+          const inletDz = zMm - inletOrigin.z;
+          const alongJet = inletDx * inletDirection.x
+            + inletDy * inletDirection.y
+            + inletDz * inletDirection.z;
+          const distanceSq = inletDx ** 2 + inletDy ** 2 + inletDz ** 2;
+          const acrossJetSq = Math.max(0, distanceSq - alongJet ** 2);
+          if (Math.abs(alongJet) <= 0.75 && acrossJetSq <= 0.75 ** 2) material = 2;
         }
 
         mask[cell] = material;
@@ -875,9 +1159,9 @@ function createParamsRaw() {
     simulationParameters.startupRampUs / 1e6,
   ], 20);
   f32.set([
-    simulationParameters.jetDirectionX,
-    simulationParameters.jetDirectionY,
-    simulationParameters.jetDirectionZ,
+    jetDirection().x,
+    jetDirection().y,
+    jetDirection().z,
     0,
   ], 24);
   return raw;
@@ -1045,11 +1329,7 @@ function colorVolumeSamples(samples) {
     simulationParameters.jetTargetY / 1000,
     simulationParameters.jetTargetZ / 1000,
   ];
-  const direction = new THREE.Vector3(
-    simulationParameters.jetDirectionX,
-    simulationParameters.jetDirectionY,
-    simulationParameters.jetDirectionZ,
-  ).normalize();
+  const direction = jetDirection();
   const lateral = new THREE.Vector3(0, 1, 0).cross(direction).normalize();
   let nearest = 0;
   let nearestDistance = Number.POSITIVE_INFINITY;
@@ -1074,10 +1354,16 @@ function colorVolumeSamples(samples) {
   );
   jetSignalMinimum = Math.min(jetSignalMinimum, jetSignal);
   jetSignalMaximum = Math.max(jetSignalMaximum, jetSignal);
-  const jetVisualSignal = Math.tanh(jetSignal * simulationParameters.jetDeflectionGain);
+  if (jetSignalBaseline === null) jetSignalBaseline = jetSignal;
+  jetSignalBaseline += (jetSignal - jetSignalBaseline) * 0.08;
+  const jetOscillation = jetSignal - jetSignalBaseline;
+  const jetVisualSignal = Math.tanh(
+    jetOscillation * simulationParameters.jetDeflectionGain,
+  );
   jetVisualMinimum = Math.min(jetVisualMinimum, jetVisualSignal);
   jetVisualMaximum = Math.max(jetVisualMaximum, jetVisualSignal);
   updateJetPath(jetVisualSignal);
+  updateEdgeScope(jetOscillation);
   productionVolume.points.geometry.attributes.color.needsUpdate = true;
   productionVolume.points.geometry.attributes.strength.needsUpdate = true;
   productionVolume.updates += 1;
@@ -1087,13 +1373,17 @@ function colorVolumeSamples(samples) {
   window.__agnuquena3D.maximum = maximum;
   window.__agnuquena3D.waveSpan = maximum - minimum;
   window.__agnuquena3D.jetSignal = jetSignal;
+  window.__agnuquena3D.jetSignalBaseline = jetSignalBaseline;
+  window.__agnuquena3D.jetOscillation = jetOscillation;
+  window.__agnuquena3D.edgeLateralVelocity = lateralVelocity;
+  window.__agnuquena3D.edgePressurePa = edgePressure;
   window.__agnuquena3D.jetSignalMinimum = jetSignalMinimum;
   window.__agnuquena3D.jetSignalMaximum = jetSignalMaximum;
   window.__agnuquena3D.jetSignalRange = jetSignalMaximum - jetSignalMinimum;
   window.__agnuquena3D.jetVisualSignal = jetVisualSignal;
   window.__agnuquena3D.jetVisualSignalRange = jetVisualMaximum - jetVisualMinimum;
   window.__agnuquena3D.jetTargetDistanceMm = Math.sqrt(nearestDistance) * 1000;
-  ui.oscillation.textContent = `${jetSignal >= 0 ? "+" : ""}${jetSignal.toExponential(2)} raw · ${jetVisualSignal.toFixed(2)} visible`;
+  ui.oscillation.textContent = `${jetOscillation >= 0 ? "+" : ""}${jetOscillation.toExponential(2)} AC · ${jetVisualSignal.toFixed(2)} visible`;
   ui.volumeStatus.textContent = (
     `${volumeSampleLayout.indices.length.toLocaleString()} live 3D ${mode} samples`
   );
@@ -1167,7 +1457,11 @@ function resetGPU() {
   jetSignalMaximum = Number.NEGATIVE_INFINITY;
   jetVisualMinimum = Number.POSITIVE_INFINITY;
   jetVisualMaximum = Number.NEGATIVE_INFINITY;
+  jetSignalHistory = [];
+  jetSignalBaseline = null;
   updateJetPath(0);
+  ui.edgeScopeTrace.setAttribute("points", "0,50 300,50");
+  ui.edgeSignalValue.value = "waiting";
   ui.oscillation.textContent = "waiting for steady jet";
   if (!gpu) return;
   const zeros = new Float32Array(CELL_COUNT * 4);
@@ -1256,8 +1550,8 @@ function publishSimulationParameters() {
 function updateParameterOutput(name) {
   const output = ui.parameterOutputs.find((candidate) => candidate.dataset.paramOutput === name);
   if (!output) return;
-  const digits = name.startsWith("jetDirection") ? 3 : 1;
-  output.value = Number(simulationParameters[name]).toFixed(digits);
+  const suffix = name === "jetAngleDegrees" ? "°" : "";
+  output.value = `${Number(simulationParameters[name]).toFixed(1)}${suffix}`;
 }
 
 function applySimulationParameter(input) {
@@ -1273,66 +1567,21 @@ function applySimulationParameter(input) {
   }
   input.value = String(value);
   simulationParameters[name] = value;
-  const targetNames = ["jetTargetX", "jetTargetY", "jetTargetZ"];
-  const directionNames = ["jetDirectionX", "jetDirectionY", "jetDirectionZ"];
-  if (targetNames.includes(name)) {
-    targetNames.forEach((field) => {
+  const pointNames = [
+    "jetEdgeDistance", "jetAngleDegrees",
+    "jetTargetX", "jetTargetY", "jetTargetZ",
+  ];
+  if (pointNames.includes(name)) {
+    pointNames.forEach((field) => {
       simulationParameters[field] = Number(
         ui.parameterInputs.find((candidate) => candidate.dataset.simParam === field).value,
       );
       updateParameterOutput(field);
     });
-    const direction = new THREE.Vector3(
-      simulationParameters.jetTargetX - JET_ORIGIN_MM[0],
-      simulationParameters.jetTargetY - JET_ORIGIN_MM[1],
-      simulationParameters.jetTargetZ - JET_ORIGIN_MM[2],
-    );
-    if (direction.lengthSq() > 1e-8) {
-      direction.normalize();
-      directionNames.forEach((field, index) => {
-        simulationParameters[field] = direction.getComponent(index);
-        ui.parameterInputs.find((candidate) => candidate.dataset.simParam === field).value
-          = direction.getComponent(index).toFixed(3);
-        updateParameterOutput(field);
-      });
-    }
-  } else if (directionNames.includes(name)) {
-    directionNames.forEach((field) => {
-      simulationParameters[field] = Number(
-        ui.parameterInputs.find((candidate) => candidate.dataset.simParam === field).value,
-      );
-    });
-    const direction = new THREE.Vector3(
-      simulationParameters.jetDirectionX,
-      simulationParameters.jetDirectionY,
-      simulationParameters.jetDirectionZ,
-    );
-    if (direction.lengthSq() > 1e-8) {
-      direction.normalize();
-      const currentTarget = new THREE.Vector3(
-        simulationParameters.jetTargetX,
-        simulationParameters.jetTargetY,
-        simulationParameters.jetTargetZ,
-      );
-      const origin = new THREE.Vector3(...JET_ORIGIN_MM);
-      const distance = Math.max(1, currentTarget.distanceTo(origin));
-      const target = origin.addScaledVector(direction, distance);
-      directionNames.forEach((field, index) => {
-        simulationParameters[field] = direction.getComponent(index);
-        ui.parameterInputs.find((candidate) => candidate.dataset.simParam === field).value
-          = direction.getComponent(index).toFixed(3);
-        updateParameterOutput(field);
-      });
-      targetNames.forEach((field, index) => {
-        simulationParameters[field] = target.getComponent(index);
-        ui.parameterInputs.find((candidate) => candidate.dataset.simParam === field).value
-          = target.getComponent(index).toFixed(1);
-        updateParameterOutput(field);
-      });
-    }
   }
   updateParameterOutput(name);
-  resetGPU();
+  if (pointNames.includes(name)) uploadMask();
+  else resetGPU();
   colorVolumeSamples(new Float32Array(volumeSampleLayout.indices.length * 4));
   updateJetReadouts();
   publishSimulationParameters();
@@ -1365,6 +1614,7 @@ function selectControlTab(tabName) {
     panel.hidden = panel.dataset.controlPanel !== tabName;
   }
   document.querySelector(".controls-scroll").scrollTop = 0;
+  if (tabName === "jet") document.querySelector('[data-production-view="mouth"]')?.click();
 }
 
 function wireControls() {

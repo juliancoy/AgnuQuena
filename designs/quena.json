@@ -13,7 +13,7 @@
     "tube_part_1_length_mm": 222.5
   },
   "connectors": {
-    "mouthpiece_overlap_mm": 22.0,
+    "mouthpiece_overlap_mm": 32.0,
     "tube_joint_overlap_mm": 7.0,
     "angled_transition_mm": 3.0,
     "accent_ring_mm": 0.0,

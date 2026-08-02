@@ -8,6 +8,8 @@ import filecmp
 import shutil
 import subprocess
 import tempfile
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from PIL import Image
@@ -18,6 +20,7 @@ SCAD = ROOT / "QuenaCase.scad"
 RENDERER = Path(__file__).resolve()
 LOGO_VECTORIZER = ROOT / "tools" / "vectorize_case_logo.py"
 PROJECT_BUILDER = ROOT / "tools" / "build_case_3mf.py"
+STL_WORKERS = 4
 
 STL_PARTS = [
     # Canonical production export: both exterior backs on the bed, with the
@@ -29,7 +32,7 @@ STL_PARTS = [
     # coordinates without undoing print transforms.
     ("bottom", ROOT / "QuenaCaseBottomViewer.stl", True),
     ("lid", ROOT / "QuenaCaseLidViewer.stl", True),
-    ("lid_logo_print", ROOT / "QuenaCaseLidLogo.stl", True),
+    ("case_artwork_print", ROOT / "QuenaCaseArtwork.stl", True),
     ("hinge_coupon", ROOT / "QuenaCaseHingeCoupon.stl", False),
     ("full_hinge_coupon", ROOT / "QuenaCaseFullHingeCoupon.stl", False),
     ("latch_coupon", ROOT / "QuenaCaseLatchCoupon.stl", False),
@@ -91,10 +94,14 @@ def render_stl(part: str, output: Path, *, force: bool = False) -> None:
         ROOT / "generated" / "case_logo_map.svg",
         ROOT / "generated" / "case_logo_dimensions.scad",
     )
-    dependencies = (SCAD, RENDERER) + (logo_inputs if "logo" in part or part in {"lid", "print_in_place", "assembly"} else ())
+    artwork_parts = {"case_artwork_print", "lid", "print_in_place", "assembly"}
+    dependencies = (SCAD, RENDERER) + (
+        logo_inputs if "logo" in part or part in artwork_parts else ()
+    )
     if not force and is_current(output, dependencies):
         print(f"Skipping current STL: {output.relative_to(ROOT)}")
         return
+    started = time.perf_counter()
     run([
         "openscad",
         "--export-format",
@@ -105,6 +112,20 @@ def render_stl(part: str, output: Path, *, force: bool = False) -> None:
         str(output),
         str(SCAD),
     ])
+    elapsed = time.perf_counter() - started
+    print(f"Rendered {output.relative_to(ROOT)} in {elapsed:.1f}s")
+
+
+def render_all_stls(*, force: bool = False) -> None:
+    worker_count = min(STL_WORKERS, len(STL_PARTS))
+    print(f"Rendering {len(STL_PARTS)} STLs with {worker_count} workers")
+    with ThreadPoolExecutor(max_workers=worker_count) as executor:
+        futures = [
+            executor.submit(render_stl, part, output, force=force)
+            for part, output, _ in STL_PARTS
+        ]
+        for future in futures:
+            future.result()
 
 
 def render_png(part: str, output: Path, camera: str) -> None:
@@ -204,8 +225,7 @@ def main() -> None:
 
     if render_stls:
         run(["python3", str(LOGO_VECTORIZER)])
-        for part, output, _ in STL_PARTS:
-            render_stl(part, output, force=args.force)
+        render_all_stls(force=args.force)
         copy_site_assets()
         run(["python3", str(PROJECT_BUILDER)])
 

@@ -1,36 +1,36 @@
 #!/usr/bin/env python3
-"""Build the aligned two-material P1S project for the print-in-place case."""
+"""Build the aligned two-material P1S project with Bambu Studio itself."""
 
 from __future__ import annotations
 
 import json
+import re
+import shutil
+import subprocess
+import tempfile
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
-import trimesh
-
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "QuenaCase.3mf"
+PROFILE_TEMPLATE = ROOT / "Quena.3mf"
 CASE_STL = ROOT / "QuenaCasePrintInPlace.stl"
-LOGO_STL = ROOT / "QuenaCaseLidLogo.stl"
-CORE = "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
-REL = "http://schemas.openxmlformats.org/package/2006/relationships"
-CONTENT = "http://schemas.openxmlformats.org/package/2006/content-types"
-ET.register_namespace("", CORE)
+ARTWORK_STL = ROOT / "QuenaCaseArtwork.stl"
+BAMBU_APP = "com.bambulab.BambuStudio"
+BAMBU_PROFILE_ROOT = "/app/share/BambuStudio/profiles/BBL"
+MACHINE_PROFILE = f"{BAMBU_PROFILE_ROOT}/machine/Bambu Lab P1S 0.4 nozzle.json"
+PROCESS_PROFILE = f"{BAMBU_PROFILE_ROOT}/process/0.20mm Strength @BBL X1C.json"
+FILAMENT_PROFILE = f"{BAMBU_PROFILE_ROOT}/filament/PolyLite ABS @BBL X1C.json"
+PLATE_TRANSFORM = "1 0 0 0 1 0 0 0 1 128 156.685 0"
 
 
 def project_settings() -> dict[str, object]:
-    settings: dict[str, object] = {}
-    if OUTPUT.exists():
-        try:
-            with zipfile.ZipFile(OUTPUT) as archive:
-                settings = json.loads(
-                    archive.read("Metadata/project_settings.config").decode("utf-8")
-                )
-        except (KeyError, json.JSONDecodeError, zipfile.BadZipFile):
-            settings = {}
+    with zipfile.ZipFile(PROFILE_TEMPLATE) as archive:
+        settings = json.loads(
+            archive.read("Metadata/project_settings.config").decode("utf-8")
+        )
     settings.update(
         {
             "name": "AgnuQuena two-colour print-in-place case",
@@ -52,6 +52,9 @@ def project_settings() -> dict[str, object]:
             "skirt_loops": "0",
             "single_extruder_multi_material": "1",
             "enable_prime_tower": "1",
+            "prime_tower_width": "20",
+            "prime_tower_brim_width": "1",
+            "wipe_tower_no_sparse_layers": "1",
             "filament_colour": ["#FFF144", "#000000"],
             "filament_type": ["ABS", "ABS"],
             "filament_settings_id": [
@@ -64,107 +67,135 @@ def project_settings() -> dict[str, object]:
     return settings
 
 
-def add_mesh(resources: ET.Element, object_id: int, path: Path, material: int) -> None:
-    mesh = trimesh.load(path, force="mesh", process=True)
-    obj = ET.SubElement(
-        resources,
-        f"{{{CORE}}}object",
-        {"id": str(object_id), "type": "model", "pid": "1", "pindex": str(material)},
+def bambu_skeleton(output: Path) -> None:
+    if shutil.which("flatpak") is None:
+        raise SystemExit("Flatpak is required to build the Bambu Studio project")
+    command = [
+        "flatpak",
+        "run",
+        BAMBU_APP,
+        "--debug",
+        "1",
+        "--assemble",
+        "--arrange",
+        "0",
+        "--orient",
+        "0",
+        "--skip-useless-pick",
+        "--load-settings",
+        f"{MACHINE_PROFILE};{PROCESS_PROFILE}",
+        "--load-filaments",
+        f"{FILAMENT_PROFILE};{FILAMENT_PROFILE}",
+        "--load-filament-ids",
+        "1,2",
+        "--export-3mf",
+        str(output),
+        str(CASE_STL),
+        str(ARTWORK_STL),
+    ]
+    completed = subprocess.run(
+        command,
+        cwd=output.parent,
+        capture_output=True,
+        text=True,
     )
-    geometry = ET.SubElement(obj, f"{{{CORE}}}mesh")
-    vertices = ET.SubElement(geometry, f"{{{CORE}}}vertices")
-    for x, y, z in mesh.vertices:
-        ET.SubElement(
-            vertices,
-            f"{{{CORE}}}vertex",
-            {"x": f"{x:.5f}", "y": f"{y:.5f}", "z": f"{z:.5f}"},
+    if completed.returncode != 0:
+        raise SystemExit(
+            "Bambu Studio could not build the project skeleton:\n"
+            f"{completed.stdout}{completed.stderr}"
         )
-    triangles = ET.SubElement(geometry, f"{{{CORE}}}triangles")
-    for v1, v2, v3 in mesh.faces:
-        ET.SubElement(
-            triangles,
-            f"{{{CORE}}}triangle",
-            {"v1": str(v1), "v2": str(v2), "v3": str(v3)},
-        )
+    if not output.exists():
+        raise SystemExit("Bambu Studio did not produce the case project")
 
 
-def model_xml() -> bytes:
-    model = ET.Element(f"{{{CORE}}}model", {"unit": "millimeter", "xml:lang": "en-US"})
-    ET.SubElement(model, f"{{{CORE}}}metadata", {"name": "Application"}).text = (
-        "AgnuQuena case project builder"
+def patched_model_xml(data: bytes) -> bytes:
+    source = data.decode("utf-8")
+    source, count = re.subn(
+        r'(<item\b[^>]*\btransform=")[^"]+("[^>]*\bprintable="1")',
+        rf"\g<1>{PLATE_TRANSFORM}\2",
+        source,
+        count=1,
     )
-    resources = ET.SubElement(model, f"{{{CORE}}}resources")
-    materials = ET.SubElement(resources, f"{{{CORE}}}basematerials", {"id": "1"})
-    ET.SubElement(materials, f"{{{CORE}}}base", {"name": "Yellow ABS case", "displaycolor": "#FFF144FF"})
-    ET.SubElement(materials, f"{{{CORE}}}base", {"name": "Black ABS logo", "displaycolor": "#000000FF"})
-    add_mesh(resources, 2, CASE_STL, 0)
-    add_mesh(resources, 3, LOGO_STL, 1)
-    assembly = ET.SubElement(resources, f"{{{CORE}}}object", {"id": "4", "type": "model"})
-    components = ET.SubElement(assembly, f"{{{CORE}}}components")
-    ET.SubElement(components, f"{{{CORE}}}component", {"objectid": "2"})
-    ET.SubElement(components, f"{{{CORE}}}component", {"objectid": "3"})
-    build = ET.SubElement(model, f"{{{CORE}}}build")
-    ET.SubElement(
-        build,
-        f"{{{CORE}}}item",
-        {
-            "objectid": "4",
-            "printable": "1",
-            "transform": "1 0 0 0 1 0 0 0 1 128 156.685 0",
-        },
-    )
-    return ET.tostring(model, encoding="utf-8", xml_declaration=True)
+    if count != 1:
+        raise ValueError("Bambu project has no printable build item to position")
+    return source.encode("utf-8")
 
 
-def model_settings_xml() -> bytes:
-    config = ET.Element("config")
-    obj = ET.SubElement(config, "object", {"id": "4"})
-    ET.SubElement(obj, "metadata", {"key": "name", "value": "AgnuQuena two-colour case"})
-    for part_id, name, extruder in (
-        (2, CASE_STL.name, "1"),
-        (3, LOGO_STL.name, "2"),
+def patched_model_settings(data: bytes) -> bytes:
+    root = ET.fromstring(data)
+    obj = root.find("object")
+    if obj is None:
+        raise ValueError("Bambu project has no assembled object")
+    object_id = obj.attrib["id"]
+    parts = obj.findall("part")
+    if len(parts) != 2:
+        raise ValueError("Bambu project must contain exactly the case and artwork parts")
+    for part, name, extruder in zip(
+        parts,
+        (CASE_STL.name, ARTWORK_STL.name),
+        ("1", "2"),
     ):
-        part = ET.SubElement(obj, "part", {"id": str(part_id), "subtype": "normal_part"})
-        ET.SubElement(part, "metadata", {"key": "name", "value": name})
-        ET.SubElement(part, "metadata", {"key": "extruder", "value": extruder})
-    plate = ET.SubElement(config, "plate")
-    ET.SubElement(plate, "metadata", {"key": "plater_id", "value": "1"})
-    ET.SubElement(plate, "metadata", {"key": "locked", "value": "true"})
-    ET.SubElement(plate, "metadata", {"key": "filament_map_mode", "value": "Manual"})
-    ET.SubElement(plate, "metadata", {"key": "filament_maps", "value": "1 2"})
-    instance = ET.SubElement(plate, "model_instance")
-    ET.SubElement(instance, "metadata", {"key": "object_id", "value": "4"})
-    ET.SubElement(instance, "metadata", {"key": "instance_id", "value": "0"})
-    return ET.tostring(config, encoding="utf-8", xml_declaration=True)
+        for metadata in part.findall("metadata"):
+            if metadata.attrib.get("key") == "name":
+                metadata.set("value", name)
+            elif metadata.attrib.get("key") == "extruder":
+                metadata.set("value", extruder)
 
-
-def package_files() -> dict[str, bytes]:
-    content_types = ET.Element(f"{{{CONTENT}}}Types")
-    ET.SubElement(content_types, f"{{{CONTENT}}}Default", {"Extension": "rels", "ContentType": "application/vnd.openxmlformats-package.relationships+xml"})
-    ET.SubElement(content_types, f"{{{CONTENT}}}Default", {"Extension": "model", "ContentType": "application/vnd.ms-package.3dmanufacturing-3dmodel+xml"})
-    relationships = ET.Element(f"{{{REL}}}Relationships")
-    ET.SubElement(relationships, f"{{{REL}}}Relationship", {"Target": "/3D/3dmodel.model", "Id": "rel-1", "Type": "http://schemas.microsoft.com/3dmanufacturing/2013/01/3dmodel"})
-    return {
-        "[Content_Types].xml": ET.tostring(content_types, encoding="utf-8", xml_declaration=True),
-        "_rels/.rels": ET.tostring(relationships, encoding="utf-8", xml_declaration=True),
-        "3D/3dmodel.model": model_xml(),
-        "Metadata/model_settings.config": model_settings_xml(),
-        "Metadata/project_settings.config": json.dumps(project_settings(), indent=2, sort_keys=True).encode("utf-8") + b"\n",
+    plate = root.find("plate")
+    if plate is None:
+        plate = ET.SubElement(root, "plate")
+    desired = {
+        "plater_id": "1",
+        "locked": "true",
+        "filament_map_mode": "Manual",
+        "filament_maps": "1 2",
     }
+    existing = {
+        node.attrib.get("key"): node for node in plate.findall("metadata")
+    }
+    for key, value in desired.items():
+        node = existing.get(key)
+        if node is None:
+            node = ET.SubElement(plate, "metadata", {"key": key})
+        node.set("value", value)
+    for node in plate.findall("model_instance"):
+        plate.remove(node)
+    instance = ET.SubElement(plate, "model_instance")
+    ET.SubElement(instance, "metadata", {"key": "object_id", "value": object_id})
+    ET.SubElement(instance, "metadata", {"key": "instance_id", "value": "0"})
+    ET.indent(root, space="  ")
+    return ET.tostring(root, encoding="utf-8", xml_declaration=True)
+
+
+def write_project(skeleton: Path) -> None:
+    with zipfile.ZipFile(skeleton) as archive:
+        files = {name: archive.read(name) for name in archive.namelist()}
+    files["3D/3dmodel.model"] = patched_model_xml(files["3D/3dmodel.model"])
+    files["Metadata/model_settings.config"] = patched_model_settings(
+        files["Metadata/model_settings.config"]
+    )
+    files["Metadata/project_settings.config"] = (
+        json.dumps(project_settings(), indent=2, sort_keys=True).encode("utf-8") + b"\n"
+    )
+    temporary = OUTPUT.with_suffix(".3mf.tmp")
+    with zipfile.ZipFile(
+        temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9
+    ) as archive:
+        for name in sorted(files):
+            info = zipfile.ZipInfo(name, (2026, 8, 2, 12, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            archive.writestr(info, files[name])
+    temporary.replace(OUTPUT)
 
 
 def main() -> None:
-    for path in (CASE_STL, LOGO_STL):
+    for path in (PROFILE_TEMPLATE, CASE_STL, ARTWORK_STL):
         if not path.exists():
             raise SystemExit(f"missing {path.name}; render case assets first")
-    files = package_files()
-    temporary = OUTPUT.with_suffix(".3mf.tmp")
-    with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as archive:
-        for name, data in files.items():
-            info = zipfile.ZipInfo(name, (2026, 8, 2, 12, 0, 0))
-            info.compress_type = zipfile.ZIP_DEFLATED
-            archive.writestr(info, data)
-    temporary.replace(OUTPUT)
+    with tempfile.TemporaryDirectory(prefix=".bambu_case_", dir=ROOT) as temp_dir:
+        skeleton = Path(temp_dir) / "QuenaCase.3mf"
+        bambu_skeleton(skeleton)
+        write_project(skeleton)
     print(OUTPUT.relative_to(ROOT))
 
 

@@ -42,12 +42,12 @@ def test_two_wall_shell_and_tight_connector_fit_are_explicit():
     assert manifest["connectors"]["diametral_clearance_mm"] == pytest.approx(0.0)
     assert manifest["connectors"]["outer_diameter_mm"] == pytest.approx(20.7)
     assert manifest["connectors"]["wall_width_mm"] == pytest.approx(0.8)
-    assert manifest["connectors"]["mouthpiece_overlap_mm"] == pytest.approx(22.0)
+    assert manifest["connectors"]["mouthpiece_overlap_mm"] == pytest.approx(32.0)
     assert manifest["connectors"]["tube_joint_overlap_mm"] == pytest.approx(7.0)
     mouthpiece = next(
         part for part in manifest["parts"] if part["name"] == "mouthpiece"
     )
-    assert mouthpiece["print_height_mm"] == pytest.approx(52.6)
+    assert mouthpiece["print_height_mm"] == pytest.approx(62.6)
 
 
 def test_negative_connector_clearance_is_rejected():

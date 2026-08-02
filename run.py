@@ -294,6 +294,7 @@ return {
   jetSliders: document.querySelectorAll('.vector-slider input[type="range"]').length,
   jetSliderOutputs: document.querySelectorAll("[data-param-output]").length,
   controlTabs: document.querySelectorAll('[role="tab"]').length,
+  edgeScope: Boolean(document.querySelector("#edgeScopeTrace")),
   documentScrollable: document.scrollingElement.scrollHeight > document.scrollingElement.clientHeight + 1,
   bodyOverflow: getComputedStyle(document.body).overflow,
   fingerings: document.querySelector("#noteSelect")?.options.length || 0,
@@ -344,10 +345,11 @@ def run_smoke_test(selenium_port: int, require_webgpu: bool) -> dict[str, Any]:
             or state.get("modelCanvases") != 1
             or state.get("fieldModes") != 3
             or state.get("playerModes") != 3
-            or state.get("parameterCount") != 17
-            or state.get("jetSliders") != 6
-            or state.get("jetSliderOutputs") != 6
-            or state.get("controlTabs") != 2
+            or state.get("parameterCount") != 16
+            or state.get("jetSliders") != 5
+            or state.get("jetSliderOutputs") != 5
+            or state.get("controlTabs") != 3
+            or not state.get("edgeScope")
             or state.get("documentScrollable")
             or state.get("bodyOverflow") != "hidden"
             or state.get("fingerings") != 6
@@ -357,8 +359,21 @@ def run_smoke_test(selenium_port: int, require_webgpu: bool) -> dict[str, Any]:
         if not isinstance(volume, dict) or not volume.get("ready") or volume.get("pointCount", 0) < 1000:
             raise LauncherError(f"The Three.js 3D CFD volume is unavailable: {state}")
         bore_axis = volume.get("boreAxis", [0, 0, 0])
-        if volume.get("orientation") != "vertical" or abs(float(bore_axis[1])) < 0.999:
-            raise LauncherError(f"The quena bore axis is not vertical: {volume}")
+        if (
+            volume.get("orientation") != "vertical"
+            or abs(float(bore_axis[1])) < 0.999
+            or volume.get("axialRotationDegrees") != 180
+            or not volume.get("jetOriginFacesPlayer")
+            or not volume.get("mouthpieceOppositePlayer")
+            or volume.get("mouthModel") != "visible lips and open airway"
+            or volume.get("mouthJetOffsetMm", 1) > 0.01
+            or volume.get("handModel") != "articulated anatomical proportions"
+            or volume.get("fingerWrapDirection") != "palms outside, pads on tone-hole face"
+            or volume.get("coveredToneHoles") != ["A", "B", "C", "D", "E", "F#"]
+            or volume.get("maxFingerPadOffsetMm", 1) > 0.01
+            or volume.get("fingerSegments") != 30
+        ):
+            raise LauncherError(f"The quena/player orientation is incorrect: {volume}")
 
         parameter_contract = execute_script(
             webdriver,
@@ -372,7 +387,7 @@ return window.__agnuquenaCFD?.configuration;
         )
         if (
             not isinstance(parameter_contract, dict)
-            or len(parameter_contract.get("parameters", {})) != 17
+            or len(parameter_contract.get("parameters", {})) != 16
             or parameter_contract.get("parameters", {}).get("airDensity") != 1.25
         ):
             raise LauncherError(f"The exposed solver parameters are not live: {parameter_contract}")
@@ -402,6 +417,35 @@ return {
         ):
             raise LauncherError(f"The viewport tabs do not own scrolling correctly: {tab_contract}")
         state["controlLayout"] = tab_contract
+        jet_tab_contract = execute_script(
+            webdriver,
+            session_id,
+            """
+document.querySelector("#jetTab").click();
+const jetPanel = document.querySelector("#jetControls");
+return {
+  selected: document.querySelector("#jetTab").getAttribute("aria-selected"),
+  visible: !jetPanel.hidden,
+  parametersHidden: document.querySelector("#parameterControls").hidden,
+  setupHidden: document.querySelector("#setupControls").hidden,
+  sliders: jetPanel.querySelectorAll('.vector-slider input[type="range"]').length,
+  scope: Boolean(jetPanel.querySelector("#edgeScopeTrace")),
+  documentScrollable: document.scrollingElement.scrollHeight > document.scrollingElement.clientHeight + 1,
+};
+""",
+        )
+        if (
+            not isinstance(jet_tab_contract, dict)
+            or jet_tab_contract.get("selected") != "true"
+            or not jet_tab_contract.get("visible")
+            or not jet_tab_contract.get("parametersHidden")
+            or not jet_tab_contract.get("setupHidden")
+            or jet_tab_contract.get("sliders") != 5
+            or not jet_tab_contract.get("scope")
+            or jet_tab_contract.get("documentScrollable")
+        ):
+            raise LauncherError(f"The Jet tab is incomplete: {jet_tab_contract}")
+        state["jetTab"] = jet_tab_contract
         jet_contract = execute_script(
             webdriver,
             session_id,
@@ -415,42 +459,68 @@ return window.__agnuquenaCFD?.configuration.parameters;
         if (
             not isinstance(jet_contract, dict)
             or jet_contract.get("jetTargetX") != 8.5
-            or jet_contract.get("jetDirectionX", 0) >= -0.7
+            or jet_contract.get("jetEdgeDistance") != 14.4
+            or jet_contract.get("jetAngleDegrees") != 40
+            or "jetDirectionX" in jet_contract
+            or "jetOriginX" in jet_contract
             or "acousticDrivePercent" in jet_contract
         ):
-            raise LauncherError(f"Jet target and direction controls are not synchronized: {jet_contract}")
+            raise LauncherError(f"Jet origin and target controls are not synchronized: {jet_contract}")
         state["jetParameters"] = jet_contract
-        direction_contract = execute_script(
+        origin_contract = execute_script(
             webdriver,
             session_id,
             """
-const input = document.querySelector('[data-sim-param="jetDirectionY"]');
-input.value = "0.2";
+const input = document.querySelector('[data-sim-param="jetAngleDegrees"]');
+const headBefore = window.__agnuquena3D?.playerHeadWorld || [];
+input.value = "30";
 input.dispatchEvent(new Event("input", {bubbles: true}));
-return window.__agnuquenaCFD?.configuration.parameters;
+const origin = window.__agnuquena3D?.jetOriginLocalMm || [];
+const target = window.__agnuquenaCFD?.configuration.parameters || {};
+const headAfter = window.__agnuquena3D?.playerHeadWorld || [];
+const dx = target.jetTargetX - origin[0];
+const dy = target.jetTargetY - origin[1];
+const dz = target.jetTargetZ - origin[2];
+return {
+  parameters: target,
+  inletCells: window.__agnuquenaCFD?.materialStatistics().inlet,
+  origin,
+  distance: window.__agnuquena3D?.jetEdgeDistanceMm,
+  angle: window.__agnuquena3D?.jetAngleDegrees,
+  derivedAngle: Math.atan2(Math.hypot(dx, dy), dz) * 180 / Math.PI,
+  headMovement: Math.hypot(...headAfter.map((value, index) => value - headBefore[index])),
+  mouthOffset: window.__agnuquena3D?.mouthJetOffsetMm,
+};
 """,
         )
-        direction_norm = 0.0
-        if isinstance(direction_contract, dict):
-            direction_norm = sum(
-                float(direction_contract.get(name, 0)) ** 2
-                for name in ("jetDirectionX", "jetDirectionY", "jetDirectionZ")
-            ) ** 0.5
+        origin_parameters = origin_contract.get("parameters", {}) if isinstance(origin_contract, dict) else {}
         if (
-            not isinstance(direction_contract, dict)
-            or abs(direction_norm - 1) > 0.001
-            or abs(direction_contract.get("jetTargetY", 0)) < 0.5
+            not isinstance(origin_contract, dict)
+            or origin_parameters.get("jetEdgeDistance") != 14.4
+            or origin_parameters.get("jetAngleDegrees") != 30
+            or origin_parameters.get("jetTargetY") != 0
+            or origin_contract.get("inletCells", 0) < 1
+            or origin_contract.get("distance") != 14.4
+            or origin_contract.get("angle") != 30
+            or abs(origin_contract.get("derivedAngle", 0) - 30) > 0.01
+            or origin_contract.get("headMovement", 0) < 0.001
+            or origin_contract.get("mouthOffset", 1) > 0.01
+            or len(origin_contract.get("origin", [])) != 3
         ):
-            raise LauncherError(f"Jet direction did not update its destination: {direction_contract}")
-        state["jetDirectionParameters"] = direction_contract
+            raise LauncherError(f"Blowing angle did not update the mouth and inlet: {origin_contract}")
+        state["jetOriginParameters"] = origin_contract
         execute_script(
             webdriver,
             session_id,
             """
-for (const [name, value] of Object.entries({jetTargetX: 9.5, jetTargetY: 0, jetTargetZ: 0.3})) {
+for (const [name, value] of Object.entries({
+  jetEdgeDistance: 14.4,
+  jetAngleDegrees: 40,
+  jetTargetX: 9.5, jetTargetY: 0, jetTargetZ: 0.3,
+})) {
   document.querySelector(`[data-sim-param="${name}"]`).value = String(value);
 }
-document.querySelector('[data-sim-param="jetTargetY"]')
+document.querySelector('[data-sim-param="jetAngleDegrees"]')
   .dispatchEvent(new Event("input", {bubbles: true}));
 return true;
 """,
@@ -543,6 +613,7 @@ return {
                     and volume.get("waveSpan", 0) > 0.001
                     and volume.get("jetSignalRange", 0) > 0.0001
                     and volume.get("jetVisualSignalRange", 0) > 0.1
+                    and volume.get("edgeScopeSamples", 0) > 2
                 ):
                     state["volume3d"] = volume
                     break
@@ -556,6 +627,9 @@ return {
             webdriver,
             session_id,
             """
+const player = document.querySelector("#playerBoundarySelect");
+player.value = "headHands";
+player.dispatchEvent(new Event("change", {bubbles: true}));
 document.querySelector('[data-production-view="mouth"]').click();
 document.querySelector(".production-shell").scrollIntoView({block: "center"});
 return true;

@@ -2,7 +2,7 @@
 // Source: designs/quena.json
 // Regenerate: python3 tools/generate_quena.py
 generated_design_id = "agnuquena-g";
-generated_spec_sha256 = "55dfac2107cad61a9453b23b4b23e9d9ef3dd663b32248d6a0ce1b0ba2945141";
+generated_spec_sha256 = "ba2e20caecc561d344c5e5c3109a4064a47abe4fcf6a769e0278da03be1ad855";
 
 quena_facet_count = 100.0;
 shell_width = 0.8;
@@ -22,7 +22,7 @@ zadj = -8.0;
 total_height = 404.69451663;
 angled_transition_z = 3.0;
 accent_ring_z = 0.0;
-mouthpiece_overlap = 22.0;
+mouthpiece_overlap = 32.0;
 tube_joint_overlap = 7.0;
 non_mouthpiece_acoustic_length = 374.69451663;
 tube_part_1_length = 222.5;

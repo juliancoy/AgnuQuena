@@ -8,9 +8,9 @@ $fn = 64;
 include <generated/quena_parameters.scad>
 include <generated/case_logo_dimensions.scad>
 
-// Select "bottom", "lid", "print_in_place", "lid_logo",
-// "lid_logo_print", "hinge_coupon", "full_hinge_coupon", "latch",
-// "latch_coupon", "assembly", "preview", or "none".
+// Select "bottom", "bottom_ornament", "lid", "print_in_place",
+// "lid_logo", "case_artwork_print", "hinge_coupon", "full_hinge_coupon",
+// "latch", "latch_coupon", "assembly", "preview", or "none".
 // Override from the CLI with:
 // openscad -D 'part="print_in_place"' -o QuenaCasePrintInPlace.stl QuenaCase.scad
 part = is_undef(part) ? "preview" : part;
@@ -32,7 +32,19 @@ bore_end_overlap = 0.08;
 wall = 3;
 floor_thickness = 2.8;
 lid_roof_thickness = 2.8;
-corner_r = 7;
+// A broad plan-view radius removes the formerly abrupt luggage-case corners
+// while leaving the straight hinge and latch lands unchanged.
+corner_r = 12;
+bed_edge_r = 1.5;
+
+// Shallow face-down engraving decorates the otherwise plain bottom exterior.
+// Every stroke is at least two 0.4 mm nozzle widths and the recess spans two
+// 0.20 mm layers, so it prints without support and leaves 2.4 mm of floor.
+mandala_inset = 5;
+mandala_stroke = 0.9;
+mandala_depth = 0.4;
+mandala_radius = 22;
+mandala_centers = [-78, 0, 78];
 
 // Three 0.2 mm layers form a flush, separately exported AMS inlay on the
 // exterior lid face. The matching recess remains in the primary lid mesh.
@@ -48,7 +60,7 @@ row_gap = 2.5;
 row_pitch = max_channel_d + row_gap;
 // The longer mouthpiece connector still leaves a generous land while keeping
 // the complete print-in-place case within the 256 mm target bed.
-short_row_min_gap = 13;
+short_row_min_gap = 8;
 channel_edge_land = 2.5;
 // The single interior bed rises just past the tube equator.  It replaces the
 // former deck, separate cradle blocks, and cantilever retention features.
@@ -224,18 +236,18 @@ latch_center_z = lid_closed_z + 1.0;
 // shallow recess in the bottom front wall.
 latch_tongue_w = 18.0;
 latch_tongue_t = 1.6;
-latch_tongue_flex_l = 15.0;
+latch_tongue_flex_l = 15.9;
 latch_tongue_y = case_outer_w / 2 - latch_tongue_t / 2;
-latch_nub_r = 1.5;
+latch_nub_r = 2.0;
 latch_nub_protrusion = 1.25;
 latch_indent_depth = 0.85;
 latch_release_deflection = latch_nub_protrusion - latch_indent_depth;
-latch_nub_z = case_outer_h - 1.55;
+latch_nub_z = case_outer_h - 2.05;
 latch_point_xs = [-72, 72];
 latch_point_count = 2;
 latch_tongue_tip_w = 15.5;
 latch_tongue_root_w = 24.0;
-latch_tongue_root_blend_h = 4.0;
+latch_tongue_root_blend_h = 4.4;
 thumb_grip_w = 30;
 thumb_grip_rib_h = 0.75;
 thumb_grip_rib_depth = 0.45;
@@ -338,11 +350,119 @@ module rounded_box(size, r) {
     }
 }
 
+module fully_rounded_box(size, r, edge_r = bed_edge_r) {
+    minkowski() {
+        translate([0, 0, edge_r])
+            linear_extrude(height = size[2] - 2 * edge_r)
+                rounded_rect_2d(
+                    [size[0] - 2 * edge_r, size[1] - 2 * edge_r],
+                    max(0.01, r - edge_r)
+                );
+        sphere(r = edge_r);
+    }
+}
+
+module bed_rounded_box(size, r, round_bottom = false, round_top = false) {
+    union() {
+        fully_rounded_box(size, r);
+        if (!round_bottom)
+            rounded_box([size[0], size[1], bed_edge_r], r);
+        if (!round_top)
+            translate([0, 0, size[2] - bed_edge_r])
+                rounded_box([size[0], size[1], bed_edge_r], r);
+    }
+}
+
 module rounded_rect_2d(size, r) {
     hull()
         for (x = [-size[0] / 2 + r, size[0] / 2 - r])
         for (y = [-size[1] / 2 + r, size[1] / 2 - r])
             translate([x, y]) circle(r = r);
+}
+
+module ring_2d(radius, stroke = mandala_stroke) {
+    difference() {
+        circle(r = radius + stroke / 2);
+        circle(r = max(0.01, radius - stroke / 2));
+    }
+}
+
+module radial_stroke_2d(y1, y2, stroke = mandala_stroke) {
+    hull()
+        for (y = [y1, y2])
+            translate([0, y]) circle(d = stroke);
+}
+
+module mandala_2d(radius = mandala_radius, petals = 12) {
+    // Concentric rings, orbiting halos, and alternating radial rays create a
+    // deterministic rosette with no imported artwork or fragile hairlines.
+    union() {
+        for (scale = [0.16, 0.34, 0.57, 0.80, 0.98])
+            ring_2d(radius * scale);
+        circle(d = mandala_stroke * 2.2);
+        for (angle = [0 : 360 / petals : 359])
+            rotate(angle) {
+                radial_stroke_2d(radius * 0.18, radius * 0.94);
+                translate([0, radius * 0.68])
+                    ring_2d(radius * 0.145, mandala_stroke * 0.82);
+            }
+        for (angle = [360 / petals / 2 : 360 / petals : 359])
+            rotate(angle)
+                radial_stroke_2d(
+                    radius * 0.38,
+                    radius * 0.75,
+                    mandala_stroke * 0.82
+                );
+    }
+}
+
+module bottom_ornament_2d() {
+    border_radius = corner_r - mandala_inset;
+    inner_margin = mandala_inset + mandala_stroke + 0.6;
+    union() {
+        // The frame centerline follows the case edge exactly 5 mm inward.
+        difference() {
+            rounded_rect_2d(
+                [
+                    case_outer_l - 2 * mandala_inset + mandala_stroke,
+                    case_outer_w - 2 * mandala_inset + mandala_stroke
+                ],
+                border_radius + mandala_stroke / 2
+            );
+            rounded_rect_2d(
+                [
+                    case_outer_l - 2 * mandala_inset - mandala_stroke,
+                    case_outer_w - 2 * mandala_inset - mandala_stroke
+                ],
+                border_radius - mandala_stroke / 2
+            );
+        }
+        intersection() {
+            for (x = mandala_centers)
+                translate([x, 0]) mandala_2d();
+            rounded_rect_2d(
+                [
+                    case_outer_l - 2 * inner_margin,
+                    case_outer_w - 2 * inner_margin
+                ],
+                max(0.01, corner_r - inner_margin)
+            );
+        }
+    }
+}
+
+module bottom_ornament_recess() {
+    translate([0, 0, -0.01])
+        linear_extrude(height = mandala_depth + 0.01)
+            bottom_ornament_2d();
+}
+
+module bottom_ornament_inlay() {
+    intersection() {
+        linear_extrude(height = mandala_depth)
+            bottom_ornament_2d();
+        bottom_assembly(false);
+    }
 }
 
 module lid_logo_2d() {
@@ -1134,12 +1254,16 @@ module lid_rim_socket() {
     }
 }
 
-module bottom_case_core() {
+module bottom_case_core(with_ornament_recess = true) {
     difference() {
         union() {
             difference() {
                 union() {
-                    rounded_box([case_outer_l, case_outer_w, case_outer_h], corner_r);
+                    bed_rounded_box(
+                        [case_outer_l, case_outer_w, case_outer_h],
+                        corner_r,
+                        round_bottom = true
+                    );
                 }
                 translate([0, 0, floor_thickness])
                     rounded_box([case_inner_l, case_inner_w, case_outer_h + 2], max(corner_r - wall, 1));
@@ -1152,17 +1276,18 @@ module bottom_case_core() {
         // assembled so neither the shell nor the raised channel bed can touch
         // the axle or its round end barrels.
         lid_hinge_relief();
+        if (with_ornament_recess) bottom_ornament_recess();
     }
 }
 
-module bottom_case() {
-    bottom_case_core();
+module bottom_case(with_ornament_recess = true) {
+    bottom_case_core(with_ornament_recess);
 }
 
-module bottom_assembly() {
+module bottom_assembly(with_ornament_recess = true) {
     difference() {
         union() {
-            bottom_case();
+            bottom_case(with_ornament_recess);
             bottom_hinge();
         }
         bottom_simple_latch_indent_cut();
@@ -1175,7 +1300,11 @@ module lid_case(with_logo_recess = true) {
     lid_h = lid_outer_h;
 
     difference() {
-        rounded_box([case_outer_l, case_outer_w, lid_h], corner_r);
+        bed_rounded_box(
+            [case_outer_l, case_outer_w, lid_h],
+            corner_r,
+            round_top = true
+        );
         translate([0, 0, -lid_closed_z])
             all_channel_cuts(4, false);
         lid_retention_relief();
@@ -1229,6 +1358,11 @@ module lid_in_print_pose() {
                 -hinge_axis_y,
                 -(hinge_axis_z - lid_closed_z)
             ]) children();
+}
+
+module case_artwork_in_print_pose() {
+    bottom_ornament_inlay();
+    lid_in_print_pose() lid_logo_inlay();
 }
 
 module print_in_place_case() {
@@ -1451,12 +1585,14 @@ module latch_coupon() {
 if (part == "none") {
 } else if (part == "bottom") {
     bottom_assembly();
+} else if (part == "bottom_ornament") {
+    bottom_ornament_2d();
 } else if (part == "lid") {
     lid_assembly();
 } else if (part == "lid_logo") {
     lid_logo_inlay();
-} else if (part == "lid_logo_print") {
-    lid_in_print_pose() lid_logo_inlay();
+} else if (part == "case_artwork_print") {
+    case_artwork_in_print_pose();
 } else if (part == "hinge_coupon") {
     print_in_place_hinge_coupon();
 } else if (part == "full_hinge_coupon") {
