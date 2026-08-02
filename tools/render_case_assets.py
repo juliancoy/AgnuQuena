@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import filecmp
 import shutil
 import subprocess
 import tempfile
@@ -17,14 +18,16 @@ SCAD = ROOT / "QuenaCase.scad"
 RENDERER = Path(__file__).resolve()
 
 STL_PARTS = [
-    # Canonical half exports are print-oriented for the project's P1S target.
-    ("bottom_p1s", ROOT / "QuenaCaseBottom.stl", True),
-    ("lid_p1s", ROOT / "QuenaCaseLid.stl", True),
-    # Browser mechanics uses model-space meshes so rendering and collision
-    # share the exact hinge coordinates without undoing print transforms.
+    # Canonical production export: both exterior backs on the bed, with the
+    # captive hinge already assembled at 180 degrees.
+    ("print_in_place", ROOT / "QuenaCasePrintInPlace.stl", True),
+    # Everything below is auxiliary validation/coupon output. The complete
+    # printable case itself remains the single STL above. Browser mechanics
+    # uses model-space meshes so rendering and collision share the exact hinge
+    # coordinates without undoing print transforms.
     ("bottom", ROOT / "QuenaCaseBottomViewer.stl", True),
     ("lid", ROOT / "QuenaCaseLidViewer.stl", True),
-    ("lid_logo_p1s", ROOT / "QuenaCaseLidLogo.stl", True),
+    ("lid_logo_print", ROOT / "QuenaCaseLidLogo.stl", True),
     ("hinge_coupon", ROOT / "QuenaCaseHingeCoupon.stl", False),
     ("full_hinge_coupon", ROOT / "QuenaCaseFullHingeCoupon.stl", False),
     ("latch_coupon", ROOT / "QuenaCaseLatchCoupon.stl", False),
@@ -33,7 +36,7 @@ STL_PARTS = [
 
 VIEW_SHEETS = [
     ("assembly", ROOT / "QuenaCaseAssembly_9views.png"),
-    ("bottom", ROOT / "QuenaCaseBottom_9views.png"),
+    ("print_in_place", ROOT / "QuenaCasePrintInPlace_9views.png"),
     ("lid_hinge_closeup", ROOT / "QuenaCaseLidHingeCloseup_9views.png"),
     ("hinge_coupon", ROOT / "QuenaCaseHingeCoupon_9views.png"),
     ("full_hinge_coupon", ROOT / "QuenaCaseFullHingeCoupon_9views.png"),
@@ -53,15 +56,15 @@ CAMERAS = [
 ]
 
 LID_HINGE_CLOSEUP_CAMERAS = [
-    "-40,-28.15,1.0,65,0,25,95",
-    "-40,-28.15,1.0,90,0,0,95",
-    "-40,-28.15,1.0,90,0,90,95",
-    "0,-28.15,1.0,65,0,25,210",
-    "0,-28.15,1.0,90,0,0,210",
-    "0,-28.15,1.0,0,0,0,210",
-    "40,-28.15,1.0,65,0,335,95",
-    "40,-28.15,1.0,90,0,180,95",
-    "40,-28.15,1.0,90,0,270,95",
+    "-40,-28.35,1.0,65,0,25,95",
+    "-40,-28.35,1.0,90,0,0,95",
+    "-40,-28.35,1.0,90,0,90,95",
+    "0,-28.35,1.0,65,0,25,210",
+    "0,-28.35,1.0,90,0,0,210",
+    "0,-28.35,1.0,0,0,0,210",
+    "40,-28.35,1.0,65,0,335,95",
+    "40,-28.35,1.0,90,0,180,95",
+    "40,-28.35,1.0,90,0,270,95",
 ]
 
 
@@ -80,7 +83,13 @@ def run(command: list[str]) -> None:
 
 
 def render_stl(part: str, output: Path, *, force: bool = False) -> None:
-    if not force and is_current(output, (SCAD, RENDERER)):
+    logo_inputs = (
+        ROOT / "EurasianSynergyFlute_logo_2color.png",
+        ROOT / "generated" / "case_logo_title.svg",
+        ROOT / "generated" / "case_logo_map.svg",
+    )
+    dependencies = (SCAD, RENDERER) + (logo_inputs if "logo" in part or part in {"lid", "print_in_place", "assembly"} else ())
+    if not force and is_current(output, dependencies):
         print(f"Skipping current STL: {output.relative_to(ROOT)}")
         return
     run([
@@ -171,11 +180,13 @@ def copy_site_assets() -> None:
         for _, output, copy_to_site in STL_PARTS:
             if copy_to_site:
                 target = asset_dir / output.name
-                if not is_current(target, (output,)):
+                if not target.exists() or not filecmp.cmp(
+                    output, target, shallow=False
+                ):
                     shutil.copy2(output, target)
                     print(target.relative_to(ROOT))
                 else:
-                    print(f"Skipping current site asset: {target.relative_to(ROOT)}")
+                    print(f"Skipping identical site asset: {target.relative_to(ROOT)}")
 
 
 def main() -> None:

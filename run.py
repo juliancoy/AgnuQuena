@@ -286,11 +286,14 @@ return {
   title: document.title,
   badge: badge ? badge.textContent.trim() : "",
   navigatorGpu: Boolean(navigator.gpu),
-  canvas: Boolean(document.querySelector("#pressureCanvas")),
+  modelCanvases: document.querySelectorAll("canvas").length,
+  modelCanvas: Boolean(document.querySelector("#productionCanvas")),
   fieldModes: document.querySelector("#fieldSelect")?.options.length || 0,
+  playerModes: document.querySelector("#playerBoundarySelect")?.options.length || 0,
+  parameterCount: document.querySelectorAll("[data-sim-param]").length,
   fingerings: document.querySelector("#noteSelect")?.options.length || 0,
-	  cfd: window.__agnuquenaCFD?.configuration || null,
-	  volume3d: window.__agnuquena3D || null,
+  cfd: window.__agnuquenaCFD?.configuration || null,
+  volume3d: window.__agnuquena3D || null,
 };
 """
     deadline = time.monotonic() + timeout
@@ -331,11 +334,83 @@ def run_smoke_test(selenium_port: int, require_webgpu: bool) -> dict[str, Any]:
         state = wait_for_lab(webdriver, session_id)
         if state.get("title") != "AgnuQuena Acoustic Lab":
             raise LauncherError(f"Unexpected page title: {state.get('title')!r}")
-        if not state.get("canvas") or state.get("fieldModes") != 3 or state.get("fingerings") != 6:
+        if (
+            not state.get("modelCanvas")
+            or state.get("modelCanvases") != 1
+            or state.get("fieldModes") != 3
+            or state.get("playerModes") != 3
+            or state.get("parameterCount") != 14
+            or state.get("fingerings") != 6
+        ):
             raise LauncherError(f"The CFD controls are incomplete: {state}")
         volume = state.get("volume3d")
         if not isinstance(volume, dict) or not volume.get("ready") or volume.get("pointCount", 0) < 1000:
             raise LauncherError(f"The Three.js 3D CFD volume is unavailable: {state}")
+        bore_axis = volume.get("boreAxis", [0, 0, 0])
+        if volume.get("orientation") != "vertical" or abs(float(bore_axis[1])) < 0.999:
+            raise LauncherError(f"The quena bore axis is not vertical: {volume}")
+
+        parameter_contract = execute_script(
+            webdriver,
+            session_id,
+            """
+const input = document.querySelector('[data-sim-param="airDensity"]');
+input.value = "1.25";
+input.dispatchEvent(new Event("change", {bubbles: true}));
+return window.__agnuquenaCFD?.configuration;
+""",
+        )
+        if (
+            not isinstance(parameter_contract, dict)
+            or len(parameter_contract.get("parameters", {})) != 14
+            or parameter_contract.get("parameters", {}).get("airDensity") != 1.25
+        ):
+            raise LauncherError(f"The exposed solver parameters are not live: {parameter_contract}")
+        state["parameters"] = parameter_contract.get("parameters")
+
+        head_hands = execute_script(
+            webdriver,
+            session_id,
+            """
+const select = document.querySelector("#playerBoundarySelect");
+select.value = "headHands";
+select.dispatchEvent(new Event("change", {bubbles: true}));
+return {
+  mode: window.__agnuquenaCFD?.playerBoundary,
+  cells: window.__agnuquenaCFD?.playerSolidCells,
+  visual: window.__agnuquena3D?.playerBoundary,
+};
+""",
+        )
+        full_player = execute_script(
+            webdriver,
+            session_id,
+            """
+const select = document.querySelector("#playerBoundarySelect");
+select.value = "full";
+select.dispatchEvent(new Event("change", {bubbles: true}));
+return {
+  mode: window.__agnuquenaCFD?.playerBoundary,
+  cells: window.__agnuquenaCFD?.playerSolidCells,
+  visual: window.__agnuquena3D?.playerBoundary,
+};
+""",
+        )
+        if (
+            not isinstance(head_hands, dict)
+            or head_hands.get("mode") != "headHands"
+            or head_hands.get("visual") != "headHands"
+            or head_hands.get("cells", 0) < 1000
+            or not isinstance(full_player, dict)
+            or full_player.get("mode") != "full"
+            or full_player.get("visual") != "full"
+            or full_player.get("cells", 0) <= head_hands.get("cells", 0)
+        ):
+            raise LauncherError(
+                f"Player boundary modes did not alter both the solver and 3D model: "
+                f"headHands={head_hands}, full={full_player}"
+            )
+        state["playerBoundaries"] = {"headHands": head_hands, "full": full_player}
 
         webgpu_active = state.get("badge") == "WebGPU 3D LES"
         if require_webgpu and not webgpu_active:
@@ -361,11 +436,11 @@ def run_smoke_test(selenium_port: int, require_webgpu: bool) -> dict[str, Any]:
                     simulated_ms = float(str(text).split()[0])
                 except (TypeError, ValueError):
                     simulated_ms = 0.0
-                if simulated_ms > 0:
+                if simulated_ms >= 0.01:
                     break
                 time.sleep(0.5)
-            if simulated_ms <= 0:
-                raise LauncherError("WebGPU initialized, but the CFD clock did not advance.")
+            if simulated_ms < 0.01:
+                raise LauncherError("WebGPU initialized, but the CFD clock did not advance far enough to drive a pressure wave.")
             state["simulatedMs"] = simulated_ms
             deadline = time.monotonic() + 15
             while time.monotonic() < deadline:
@@ -374,17 +449,29 @@ def run_smoke_test(selenium_port: int, require_webgpu: bool) -> dict[str, Any]:
                     session_id,
                     "return window.__agnuquena3D;",
                 )
-                if isinstance(volume, dict) and volume.get("updates", 0) > 0:
+                if (
+                    isinstance(volume, dict)
+                    and volume.get("updates", 0) > 1
+                    and volume.get("waveSpan", 0) > 0.001
+                ):
                     state["volume3d"] = volume
                     break
                 time.sleep(0.5)
             else:
-                raise LauncherError("The Three.js 3D CFD volume did not receive live solver samples.")
+                raise LauncherError("The 3D model did not receive a visible pressure-wave span from the solver.")
+            phase_before = float(state["volume3d"].get("visualPhase", 0))
+            time.sleep(0.3)
+            phase_after = float(
+                execute_script(webdriver, session_id, "return window.__agnuquena3D.visualPhase;")
+            )
+            if phase_after - phase_before < 1:
+                raise LauncherError("The pressure-wave phase is not visibly oscillating.")
+            state["phaseAdvance"] = phase_after - phase_before
 
         execute_script(
             webdriver,
             session_id,
-            'document.querySelector(".inspection-grid").scrollIntoView({block: "center"}); return true;',
+            'document.querySelector(".production-shell").scrollIntoView({block: "center"}); return true;',
         )
         time.sleep(1)
         state["screenshot"] = str(capture_screenshot(webdriver, session_id))

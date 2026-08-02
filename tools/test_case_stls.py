@@ -21,24 +21,28 @@ import trimesh
 
 ROOT = Path(__file__).resolve().parents[1]
 
+OBSOLETE_SPLIT_EXPORTS = (
+    "QuenaCaseBottom.stl",
+    "QuenaCaseLid.stl",
+    "website/assets/QuenaCaseBottom.stl",
+    "website/assets/QuenaCaseLid.stl",
+    "site-hosting/public/assets/QuenaCaseBottom.stl",
+    "site-hosting/public/assets/QuenaCaseLid.stl",
+)
+
 EXPECTED = {
-    "QuenaCaseBottom.stl": {
-        "size": (211.704, 211.704, 18.7),
-        "min_triangles": 2200,
-        "components": 1,
-    },
-    "QuenaCaseLid.stl": {
-        "size": (211.704, 211.704, 17.198),
-        "min_triangles": 1200,
-        "components": 1,
+    "QuenaCasePrintInPlace.stl": {
+        "size": (250.994, 113.47, 19.4),
+        "min_triangles": 28000,
+        "components": 2,
     },
     "QuenaCaseBottomViewer.stl": {
-        "size": (251.494, 59.553, 18.7),
+        "size": (250.994, 61.3, 19.4),
         "min_triangles": 2200,
         "components": 1,
     },
     "QuenaCaseLidViewer.stl": {
-        "size": (251.494, 59.17, 17.198),
+        "size": (250.994, 61.97, 19.3),
         "min_triangles": 1200,
         "components": 1,
     },
@@ -48,22 +52,22 @@ EXPECTED = {
         "components": 21,
     },
     "QuenaCaseHingeCoupon.stl": {
-        "size": (72.0, 54.1, 15.4),
-        "min_triangles": 3000,
+        "size": (46.0, 28.0, 19.4),
+        "min_triangles": 900,
         "components": 2,
     },
     "QuenaCaseFullHingeCoupon.stl": {
-        "size": (243.5, 57.153, 15.4),
-        "min_triangles": 2000,
+        "size": (243.5, 28.0, 19.4),
+        "min_triangles": 4500,
         "components": 2,
     },
     "QuenaCaseLatchCoupon.stl": {
-        "size": (180.0, 34.0, 14.0),
+        "size": (182.0, 34.0, 18.0),
         "min_triangles": 1600,
         "components": 7,
     },
     "QuenaCaseAssembly.stl": {
-        "size": (251.494, 60.223, 28.8),
+        "size": (250.994, 61.97, 28.8),
         "min_triangles": 4500,
         "components": 2,
     },
@@ -72,6 +76,10 @@ EXPECTED = {
 LID_SWEEP_MAX_DEG = 180
 CONTACT_TOLERANCE_MM = 0.05
 CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
+# Reference for the current 22 mm mouthpiece-connector pocket before the
+# retention-border material transfer.
+PRE_RETENTION_CASE_VOLUME_MM3 = 270_047.95
+CASE_MASS_BALANCE_TOLERANCE_MM3 = 1_100.0
 
 
 def scad_scalar(name: str) -> float:
@@ -145,60 +153,185 @@ def run_hinge_design_checks() -> None:
     bore_clearance = scad_scalar("hinge_bearing_clearance")
     bore_d = axle_d + bore_clearance
     outer_d = scad_scalar("hinge_bearing_outer_d")
-    snap_throat = scad_scalar("hinge_snap_throat")
     segment_w = scad_scalar("hinge_segment_w")
     segment_gap = scad_scalar("hinge_segment_gap")
     print_flat = scad_scalar("hinge_axle_print_flat")
+    bearing_starter_h = scad_scalar("hinge_bearing_starter_h")
+    print_shell_gap = scad_scalar("hinge_print_shell_gap")
     body_inset = scad_scalar("hinge_body_inset")
+    end_barrel_d = scad_scalar("hinge_end_barrel_d")
+    end_barrel_overhang = scad_scalar("hinge_end_barrel_overhang")
 
     bearing_wall = (outer_d - bore_d) / 2
-    snap_interference = axle_d - snap_throat
     rear_projection = outer_d - body_inset
+    evaluated_shell_gap = outer_d - 2 * body_inset
 
     if not 4.2 <= axle_d <= 5.0:
         raise AssertionError("integral hinge axle diameter is unsuitable")
-    if not 0.25 <= bore_clearance <= 0.45:
+    if not 0.50 <= bore_clearance <= 0.70:
         raise AssertionError(
-            f"hinge bore clearance {bore_clearance:.2f} mm is outside 0.25-0.45 mm"
+            f"hinge bore clearance {bore_clearance:.2f} mm is outside 0.50-0.70 mm"
         )
-    if bearing_wall < 1.3:
+    if bearing_wall < 1.5:
         raise AssertionError(f"hinge bearing wall is only {bearing_wall:.2f} mm")
-    if not 0.7 <= snap_interference <= 1.0:
-        raise AssertionError("hinge snap throat does not provide positive capture")
+    if bore_d > 6.0:
+        raise AssertionError("circular hinge bore exceeds the support-free bridge limit")
     if not 10.0 <= segment_w <= 18.0:
         raise AssertionError("hinge bearing segments are not independently compliant")
     if not 0.8 <= segment_gap <= 1.4:
         raise AssertionError("hinge segment gap is unsuitable for FDM assembly")
     if not 0.5 <= print_flat <= 0.8:
         raise AssertionError("hinge axle D-flat is unsuitable for support-free printing")
-    if not 4.0 <= body_inset <= 4.3:
+    if not 0.3 <= bearing_starter_h <= 0.5:
+        raise AssertionError("hinge bearing starter web is unsuitable")
+    if not 0.50 <= print_shell_gap <= 0.80:
+        raise AssertionError("print-in-place shell gap is unsuitable")
+    if not math.isclose(evaluated_shell_gap, print_shell_gap, abs_tol=0.01):
+        raise AssertionError("hinge axis does not produce the specified print shell gap")
+    if not 4.4 <= body_inset <= 4.8:
         raise AssertionError("hinge body inset must retain rotational clearance")
-    if rear_projection > 4.5:
+    if rear_projection > 5.5:
         raise AssertionError(f"hinge rear projection is {rear_projection:.2f} mm")
+    if not math.isclose(end_barrel_d, outer_d, abs_tol=0.01):
+        raise AssertionError("outer hinge barrels do not match the round bearing diameter")
+    if end_barrel_overhang < 1.0:
+        raise AssertionError("outer hinge barrels do not cover the axle end faces")
 
     print(
         "QuenaCase hinge design: ok, "
         f"{axle_d:.2f} mm integral D-flat axle, {bore_d:.2f} mm bearing bore, "
-        f"{bearing_wall:.2f} mm bearing wall, {snap_interference:.2f} mm "
-        f"snap interference, {segment_w:.1f} mm independent clips, "
+        f"{bearing_wall:.2f} mm concentric bearing wall, "
+        f"{bore_clearance / 2:.2f} mm "
+        f"radial print clearance, {segment_w:.1f} mm closed bearings, "
+        f"{print_shell_gap:.2f} mm bed gap, fully round bearing with starter web, "
+        f"{end_barrel_d:.2f} mm round outer end barrels, "
         f"{rear_projection:.2f} mm rear projection, web-captured ends, "
         "support-free exports"
+    )
+
+
+def run_hinge_end_roundness_check() -> None:
+    with tempfile.TemporaryDirectory(prefix="quena_hinge_end_roundness_") as temp_dir:
+        temp_path = Path(temp_dir)
+        probe_scad = temp_path / "round_end.scad"
+        probe_stl = temp_path / "round_end.stl"
+        probe_scad.write_text(
+            f'include <{ROOT / "QuenaCase.scad"}>;\n'
+            "lid_outer_end_barrels();\n",
+            encoding="utf-8",
+        )
+        subprocess.run(
+            [
+                "openscad",
+                "-D",
+                'part="none"',
+                "-o",
+                str(probe_stl),
+                str(probe_scad),
+            ],
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        mesh = trimesh.load(probe_stl, force="mesh")
+
+    end_d = scad_scalar("hinge_end_barrel_d")
+    overhang = scad_scalar("hinge_end_barrel_overhang")
+    x2 = scad_scalar("hinge_axle_x2")
+    section = mesh.section(
+        plane_origin=[x2 + overhang - 0.2, 0, 0],
+        plane_normal=[1, 0, 0],
+    )
+    if section is None:
+        raise AssertionError("outer hinge end has no round cross-section")
+    y_values = section.vertices[:, 1]
+    z_values = section.vertices[:, 2]
+    y_span = float(y_values.max() - y_values.min())
+    z_span = float(z_values.max() - z_values.min())
+    if not math.isclose(y_span, end_d, abs_tol=0.02):
+        raise AssertionError(f"outer hinge end Y diameter is {y_span:.3f} mm")
+    if not math.isclose(z_span, end_d, abs_tol=0.02):
+        raise AssertionError(f"outer hinge end Z diameter is {z_span:.3f} mm")
+    section_path, _ = section.to_2D()
+    if sum(entity.closed for entity in section_path.entities) != 1:
+        raise AssertionError("outer hinge end cross-section is not one closed circle")
+    print(f"QuenaCase outer hinge ends: ok, closed round {end_d:.2f} mm sections")
+
+
+def run_stator_roundness_check() -> None:
+    with tempfile.TemporaryDirectory(prefix="quena_stator_roundness_") as temp_dir:
+        temp_path = Path(temp_dir)
+        probe_scad = temp_path / "round_stator.scad"
+        probe_stl = temp_path / "round_stator.stl"
+        probe_scad.write_text(
+            f'include <{ROOT / "QuenaCase.scad"}>;\n'
+            "bottom_hinge();\n",
+            encoding="utf-8",
+        )
+        subprocess.run(
+            [
+                "openscad",
+                "-D",
+                'part="none"',
+                "-o",
+                str(probe_stl),
+                str(probe_scad),
+            ],
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        mesh = trimesh.load(probe_stl, force="mesh")
+
+    section = mesh.section(plane_origin=[0, 0, 0], plane_normal=[1, 0, 0])
+    if section is None:
+        raise AssertionError("central stator cross-section is missing")
+
+    axis_y, axis_z, _ = evaluated_hinge_pose()
+    outer_r = scad_scalar("hinge_bearing_outer_d") / 2
+    radial_distances = [
+        math.hypot(float(vertex[1]) - axis_y, float(vertex[2]) - axis_z)
+        for vertex in section.vertices
+    ]
+    max_radius = max(radial_distances)
+    # The 0.40 mm body-side starter web may project a fraction beyond the
+    # faceted cylinder at its tangent. It must not become a visible backer.
+    if max_radius > outer_r + 0.12:
+        raise AssertionError(
+            "hinge stator has a sharp backer outside its round envelope: "
+            f"radius {max_radius:.3f} mm, expected {outer_r:.3f} mm"
+        )
+    print(
+        "QuenaCase stators: ok, circular outer envelope, "
+        f"{outer_r * 2:.2f} mm diameter"
     )
 
 
 def run_latch_design_checks() -> None:
     protrusion = scad_scalar("latch_nub_protrusion")
     indent = scad_scalar("latch_indent_depth")
+    nub_r = scad_scalar("latch_nub_r")
+    tongue_w = scad_scalar("latch_tongue_w")
     tongue_t = scad_scalar("latch_tongue_t")
     flex_l = scad_scalar("latch_tongue_flex_l")
+    root_blend = scad_scalar("latch_tongue_root_blend_h")
+    free_l = flex_l - root_blend
     travel = protrusion - indent
     if not 0.20 <= travel <= 0.45:
         raise AssertionError(f"latch release travel {travel:.2f} mm is unsuitable")
-    if tongue_t < 1.2 or flex_l < 7.0:
+    if nub_r < 1.45 or indent < 0.80:
+        raise AssertionError("latch nub or receiving depth is undersized")
+    if tongue_w < 17.5 or tongue_t < 1.2 or flex_l < 14.5:
         raise AssertionError("latch tongue is too thin or too short")
-    print(f"QuenaCase latch design: ok, {protrusion:.2f} mm nub projection, "
+    if root_blend < 3.8 or free_l < 10.5:
+        raise AssertionError("latch root attachment or free flex span is unsuitable")
+    print(f"QuenaCase latch design: ok, {nub_r:.2f} mm nub radius, "
+          f"{protrusion:.2f} mm nub projection, "
           f"{indent:.2f} mm recess, {travel:.2f} mm release travel, "
-          f"{tongue_t:.2f} x {flex_l:.2f} mm flex section")
+          f"{tongue_w:.2f} x {tongue_t:.2f} x {flex_l:.2f} mm tongue, "
+          f"{root_blend:.2f} mm bonded root, {free_l:.2f} mm free span")
 
 
 def run_channel_layout_checks() -> None:
@@ -215,6 +348,12 @@ def run_channel_layout_checks() -> None:
     equator_pass = scad_scalar("equator_pass")
     axial_clearance = scad_scalar("axial_clearance")
     radial_clearance = scad_scalar("part_clearance")
+    retention_overrun = scad_scalar("retention_lip_overrun")
+    retention_clip_w = scad_scalar("retention_clip_w")
+    retention_root_overlap = scad_scalar("retention_clip_root_overlap")
+    retention_lid_clearance = scad_scalar("retention_lid_clearance")
+    slot_xs = [scad_scalar(f"slot_xs[{i}]") for i in range(3)]
+    profile_lengths = [scad_scalar(f"profile_lengths[{i}]") for i in range(3)]
 
     source = (ROOT / "QuenaCase.scad").read_text(encoding="utf-8")
     if "module cantilever_retainer" in source:
@@ -228,6 +367,24 @@ def run_channel_layout_checks() -> None:
     if radial_clearance > 0.4:
         raise AssertionError(f"radial clearance {radial_clearance:.2f} mm is too loose")
 
+    channel_r = channel_d / 2
+    part_r = tube_d / 2
+    opening_half_w = math.sqrt(channel_r**2 - retention_overrun**2)
+    snap_interference = 2 * (part_r - opening_half_w)
+    if not 0.15 <= snap_interference <= 0.40:
+        raise AssertionError(
+            f"retention border diametral interference {snap_interference:.2f} mm "
+            "is outside the light-snap range"
+        )
+    if retention_clip_w > 16:
+        raise AssertionError("retention clips are too long for a low-force snap fit")
+    if retention_root_overlap < 0.3:
+        raise AssertionError("retention clips lack a fused root overlap")
+    if retention_lid_clearance < 0.2:
+        raise AssertionError("lid retention relief lacks printable clearance")
+    if "lid_retention_relief();" not in source:
+        raise AssertionError("lid does not remove the transferred retention border")
+
     if horizontal_land < 8.0:
         raise AssertionError(
             f"horizontal channel land is only {horizontal_land:.2f} mm"
@@ -236,6 +393,15 @@ def run_channel_layout_checks() -> None:
         raise AssertionError(f"vertical channel land is only {vertical_land:.2f} mm")
     if edge_land < 2.5:
         raise AssertionError(f"channel perimeter land is only {edge_land:.2f} mm")
+
+    p1_left = slot_xs[0] - profile_lengths[0] / 2
+    p1_right = slot_xs[0] + profile_lengths[0] / 2
+    p2_left = slot_xs[1] - profile_lengths[1] / 2
+    mouth_right = slot_xs[2] + profile_lengths[2] / 2
+    if not math.isclose(p2_left, p1_left, abs_tol=0.01):
+        raise AssertionError("P2 and P1 left profile edges are not aligned")
+    if not math.isclose(mouth_right, p1_right, abs_tol=0.01):
+        raise AssertionError("mouthpiece and P1 right profile edges are not aligned")
     print(
         "QuenaCase channel layout: ok, "
         f"{horizontal_land:.1f} mm minimum horizontal distribution gap, "
@@ -243,6 +409,8 @@ def run_channel_layout_checks() -> None:
         f"{edge_land:.1f} mm perimeter land, "
         f"{deck_h:.2f} mm single raised bed, "
         f"{equator_pass:.2f} mm past equator, "
+        f"{snap_interference:.2f} mm diametral snap interference across "
+        f"{retention_clip_w:.1f} mm clips, aligned P2/P1/mouthpiece outer edges, "
         f"{axial_clearance:.2f} mm axial and {radial_clearance:.2f} mm radial clearance"
     )
 
@@ -425,6 +593,12 @@ intersection() {{
 
 
 def run_mesh_checks() -> None:
+    stale_exports = [name for name in OBSOLETE_SPLIT_EXPORTS if (ROOT / name).exists()]
+    if stale_exports:
+        raise AssertionError(
+            "obsolete C-bearing half exports remain: " + ", ".join(stale_exports)
+        )
+
     for name, expected in EXPECTED.items():
         path = ROOT / name
         if not path.exists():
@@ -451,11 +625,73 @@ def run_mesh_checks() -> None:
                 f"got {components}"
             )
 
+        if name == "QuenaCasePrintInPlace.stl":
+            print_mesh = trimesh.load(path, force="mesh")
+            moving_halves = print_mesh.split(only_watertight=False)
+            if len(moving_halves) != 2:
+                raise AssertionError("print-in-place export must contain two moving bodies")
+            if any(abs(float(half.bounds[0][2])) > 0.02 for half in moving_halves):
+                raise AssertionError("both print-in-place shell backs must touch Z=0")
+            if size[0] > 256 or size[1] > 256:
+                raise AssertionError("print-in-place export exceeds the 256 mm target bed")
+
+            # The production STL must contain both complete case halves, not a
+            # hinge-only assembly or cropped coupon. Rigid print-pose transforms
+            # preserve each source mesh's face count and enclosed volume.
+            source_halves = [
+                trimesh.load(ROOT / "QuenaCaseBottomViewer.stl", force="mesh"),
+                trimesh.load(ROOT / "QuenaCaseLidViewer.stl", force="mesh"),
+            ]
+            production_halves = sorted(moving_halves, key=lambda half: len(half.faces))
+            source_halves.sort(key=lambda half: len(half.faces))
+            complete = all(
+                len(production.faces) == len(source.faces)
+                and math.isclose(
+                    abs(float(production.volume)),
+                    abs(float(source.volume)),
+                    abs_tol=0.1,
+                )
+                for production, source in zip(production_halves, source_halves)
+            )
+            if not complete:
+                raise AssertionError(
+                    "print-in-place STL does not contain both complete case halves"
+                )
+
+        if name == "QuenaCaseBottomViewer.stl":
+            # At the center bearing, a complete print-in-place knuckle has an
+            # outer closed section and a second closed loop around its bore. A
+            # radial C-slot merges those loops and must never return.
+            bearing_section = trimesh.load(path, force="mesh").section(
+                plane_origin=[0, 0, 0], plane_normal=[1, 0, 0]
+            )
+            if bearing_section is None:
+                raise AssertionError("central hinge bearing section is missing")
+            bearing_path, _ = bearing_section.to_2D()
+            closed_loops = sum(entity.closed for entity in bearing_path.entities)
+            if closed_loops < 2:
+                raise AssertionError("central hinge bearing is radially C-shaped")
+
         print(
             f"{name}: ok, {len(triangles)} triangles, "
             f"{size[0]:.1f} x {size[1]:.1f} x {size[2]:.1f} mm, "
             f"{components} components"
         )
+
+    case_volume = sum(
+        abs(float(trimesh.load(ROOT / name, force="mesh").volume))
+        for name in ("QuenaCaseBottomViewer.stl", "QuenaCaseLidViewer.stl")
+    )
+    volume_delta = case_volume - PRE_RETENTION_CASE_VOLUME_MM3
+    if abs(volume_delta) > CASE_MASS_BALANCE_TOLERANCE_MM3:
+        raise AssertionError(
+            "retention material transfer changes total case volume by "
+            f"{volume_delta:+.1f} mm^3"
+        )
+    print(
+        "QuenaCase mass balance: ok, "
+        f"{volume_delta:+.1f} mm^3 total case volume change"
+    )
 
 
 def run_hinge_sweep_check() -> None:
@@ -663,6 +899,8 @@ def run_hinge_sweep_check() -> None:
 
 def main() -> None:
     run_hinge_design_checks()
+    run_hinge_end_roundness_check()
+    run_stator_roundness_check()
     run_latch_design_checks()
     run_channel_layout_checks()
     run_mesh_checks()

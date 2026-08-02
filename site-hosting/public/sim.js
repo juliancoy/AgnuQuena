@@ -6,10 +6,16 @@ import { MeshBVH } from "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.5/build
 const MM_TO_M = 0.001;
 const DEG = Math.PI / 180;
 const MAX_SWEEP_DEG = 180;
+const INITIAL_ANGLE_DEG = 118;
 
 const dims = {
-  hingeAxis: { x: 0, y: -28.15, z: 14.40 },
+  hingeAxis: { x: 0, y: -28.35, z: 14.40 },
   lidClosedZ: 14.55,
+  quenaSlots: [
+    { asset: "QuenaTube1.stl", x: 0, y: -11.9, z: 12.95, bodyX0: -115.05, rotationZ: 0, outwardRoll: 270, openingAxis: [0, -1, 0] },
+    { asset: "QuenaTube2.stl", x: -38.9527, y: 11.9, z: 12.95, bodyX0: -76.0973, rotationZ: 0, outwardRoll: 90, openingAxis: [0, 1, 0] },
+    { asset: "QuenaMouthpiece.stl", x: 88.75, y: 11.9, z: 12.95, bodyX0: -26.3, rotationZ: 180, outwardRoll: 180, openingAxis: [1, 0, 0] },
+  ],
 };
 
 const ui = {
@@ -24,9 +30,9 @@ const ui = {
 };
 
 let runningSweep = false;
-let manualMode = false;
-let targetAngle = 0;
-let sweepAngle = 0;
+let manualMode = true;
+let targetAngle = INITIAL_ANGLE_DEG;
+let sweepAngle = INITIAL_ANGLE_DEG;
 let firstCollision = null;
 let lastTime = performance.now();
 
@@ -37,11 +43,11 @@ const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-const camera = new THREE.PerspectiveCamera(45, 1, 0.01, 4);
-camera.position.set(0.24, -0.26, 0.16);
+const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 4);
+camera.position.set(0, 0.38, 0.28);
 
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0, 0.025);
+controls.target.set(0, -0.015, 0.035);
 controls.enableDamping = true;
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x6f7c82, 2.5));
@@ -51,12 +57,19 @@ scene.add(sun);
 
 const materialBottom = new THREE.MeshStandardMaterial({ color: 0x2f6f99, roughness: 0.64 });
 const materialLid = new THREE.MeshStandardMaterial({ color: 0x7fa7b8, roughness: 0.58 });
+const materialQuena = new THREE.MeshStandardMaterial({
+  color: 0xc98b3c,
+  roughness: 0.5,
+  metalness: 0.03,
+});
 
 const bottomMesh = new THREE.Group();
 const lidMesh = new THREE.Group();
-scene.add(bottomMesh, lidMesh);
+const quenaMesh = new THREE.Group();
+scene.add(bottomMesh, lidMesh, quenaMesh);
 let bottomStl;
 let lidStl;
+const quenaStls = [];
 
 function meters(value) {
   return value * MM_TO_M;
@@ -95,6 +108,22 @@ async function buildVisuals() {
   lidStl.position.copy(lidLocalHinge().multiplyScalar(-1));
   lidMesh.position.copy(hingeWorld());
   lidMesh.add(lidStl);
+
+  for (const slot of dims.quenaSlots) {
+    const part = await loadStl(`./assets/${slot.asset}`, materialQuena);
+    part.rotation.set(0, 90 * DEG, slot.rotationZ * DEG, "ZXY");
+    part.rotateOnAxis(new THREE.Vector3(0, 0, 1), slot.outwardRoll * DEG);
+    part.userData.openingAxis = slot.openingAxis;
+    part.position.set(
+      meters(slot.x + Math.cos(slot.rotationZ * DEG) * slot.bodyX0),
+      meters(slot.y + Math.sin(slot.rotationZ * DEG) * slot.bodyX0),
+      meters(slot.z),
+    );
+    quenaMesh.add(part);
+    quenaStls.push(part);
+  }
+
+  scene.updateMatrixWorld(true);
 }
 
 function setLidAngle(angleDeg, worldOffset = new THREE.Vector3()) {
@@ -159,6 +188,7 @@ function animate(now) {
 
 function wireControls() {
   ui.play.addEventListener("click", () => {
+    if (manualMode) sweepAngle = 0;
     manualMode = false;
     runningSweep = true;
     firstCollision = null;
@@ -186,7 +216,7 @@ function wireControls() {
 
 async function main() {
   await buildVisuals();
-  setLidAngle(0);
+  setLidAngle(INITIAL_ANGLE_DEG);
   wireControls();
   window.__agnuquenaCase = {
     setAngle(angle) {
@@ -204,10 +234,30 @@ async function main() {
       setLidAngle(0, new THREE.Vector3(0, 0, -0.004));
       const detectorProbeContacts = contactCount();
       setLidAngle(0);
+      scene.updateMatrixWorld(true);
+      const bottomBounds = new THREE.Box3().setFromObject(bottomStl);
+      const planTolerance = meters(0.1);
+      const quenaWithinCasePlan = quenaStls.every((part) => {
+        const bounds = new THREE.Box3().setFromObject(part);
+        return bounds.min.x >= bottomBounds.min.x - planTolerance
+          && bounds.max.x <= bottomBounds.max.x + planTolerance
+          && bounds.min.y >= bottomBounds.min.y - planTolerance
+          && bounds.max.y <= bottomBounds.max.y + planTolerance;
+      });
+      const quenaHolesFaceOutward = quenaStls.every((part) => {
+        const holeDirection = new THREE.Vector3(...part.userData.openingAxis)
+          .applyQuaternion(part.quaternion);
+        return holeDirection.z > 0.99;
+      });
       const result = {
-        pass: firstSweepCollision == null && detectorProbeContacts > 0,
+        pass: firstSweepCollision == null
+          && detectorProbeContacts > 0
+          && quenaWithinCasePlan
+          && quenaHolesFaceOutward,
         firstSweepCollision,
         detectorProbeContacts,
+        quenaWithinCasePlan,
+        quenaHolesFaceOutward,
       };
       document.body.dataset.caseSweepResult = JSON.stringify(result);
       return result;

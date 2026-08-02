@@ -26,36 +26,46 @@ const NY = 48;
 const NZ = 424;
 const Z_ORIGIN_MM = -12;
 const CELL_COUNT = NX * NY * NZ;
-const AIR_DENSITY = 1.204;
-const SOUND_SPEED = 343;
-const SOUND_SPEED2 = SOUND_SPEED ** 2;
-const KINEMATIC_VISCOSITY = 1.5e-5;
-const COURANT = 0.28;
-const DT_SECONDS = COURANT * CELL_M / (SOUND_SPEED + 20);
-const SMAGORINSKY = 0.17;
-const SPONGE_RATE = 16000;
+const simulationParameters = {
+  airDensity: 1.204,
+  soundSpeed: 343,
+  kinematicViscosity: 1.5e-5,
+  courant: 0.28,
+  smagorinsky: 0.17,
+  spongeRate: 16000,
+  acousticDrivePercent: 12,
+  startupRampUs: 5,
+  pressureScale: 120,
+  speedScale: 15,
+  vorticityScale: 8000,
+  visualPhaseHz: 1.2,
+  visualEnergySpan: 180,
+  visualEnergyCap: 0.72,
+};
+
+function timeStepSeconds() {
+  return simulationParameters.courant * CELL_M
+    / (simulationParameters.soundSpeed + Number(ui.jetSpeed?.value || 20));
+}
 
 const ui = {
   gpuBadge: document.querySelector("#gpuBadge"),
-  canvas: document.querySelector("#pressureCanvas"),
   productionCanvas: document.querySelector("#productionCanvas"),
   productionRevision: document.querySelector("#productionRevision"),
   productionProof: document.querySelector("#productionProof"),
   volumeStatus: document.querySelector("#volumeStatus"),
   volumeOverlayToggle: document.querySelector("#volumeOverlayToggle"),
-  pressureOverlayToggle: document.querySelector("#pressureOverlayToggle"),
   note: document.querySelector("#noteSelect"),
   field: document.querySelector("#fieldSelect"),
-  sliceAngle: document.querySelector("#sliceAngle"),
-  sliceAngleValue: document.querySelector("#sliceAngleValue"),
+  parameterInputs: [...document.querySelectorAll("[data-sim-param]")],
+  playerBoundary: document.querySelector("#playerBoundarySelect"),
+  playerMetric: document.querySelector("#playerMetric"),
   title: document.querySelector("#simulationTitle"),
-  profileTitle: document.querySelector("#profileTitle"),
   target: document.querySelector("#targetMetric"),
-  diameter: document.querySelector("#diameterMetric"),
-  profile: document.querySelector("#profileMetric"),
-  position: document.querySelector("#positionMetric"),
-  profileShape: document.querySelector("#profileShape"),
-  profileWidth: document.querySelector("#profileWidth"),
+  holeDiameter: document.querySelector("#holeDiameterMetric"),
+  holePosition: document.querySelector("#holePositionMetric"),
+  holeProfile: document.querySelector("#holeProfileMetric"),
+  timeStep: document.querySelector("#timeStepMetric"),
   toggle: document.querySelector("#toggleRun"),
   reset: document.querySelector("#resetSimulation"),
   speed: document.querySelector("#speed"),
@@ -71,20 +81,20 @@ const ui = {
 
 const boundaryMode = "exact";
 let selectedHole = SPEC.holes[0];
+let playerBoundary = "none";
+let playerSolidCells = 0;
+let syncPlayerVisual = () => {};
 let running = false;
 let stepCount = 0;
 let gpu = null;
 let gpuWorkPending = false;
-let renderDirty = true;
 let fallbackMask = null;
 let productionSolidMask = null;
 let productionMetadata = null;
-let productionPressurePlane = null;
 let productionVolume = null;
 let volumeSampleLayout = null;
 let volumeReadPending = false;
 let lastVolumeSampleAt = 0;
-let pressureTextureDirty = true;
 
 function createVolumeSampleLayout() {
   const indices = [];
@@ -161,10 +171,10 @@ function initProductionViewer(assemblyBuffer) {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(28, 1, 0.01, 3);
-  camera.position.set(0.024, -0.07, -0.28);
+  camera.position.set(-0.75, 0, -0.15);
 
   const controls = new OrbitControls(camera, ui.productionCanvas);
-  controls.target.set(0.024, 0, 0);
+  controls.target.set(0, 0, 0);
   controls.enableDamping = true;
   controls.minDistance = 0.06;
   controls.maxDistance = 1.4;
@@ -181,8 +191,8 @@ function initProductionViewer(assemblyBuffer) {
   geometry.computeVertexNormals();
   geometry.scale(0.001, 0.001, 0.001);
   const assemblyGroup = new THREE.Group();
-  assemblyGroup.rotation.y = Math.PI / 2;
-  assemblyGroup.position.x = -0.20235;
+  assemblyGroup.rotation.x = Math.PI / 2;
+  assemblyGroup.position.y = 0.20;
   scene.add(assemblyGroup);
   const fluteMaterial = new THREE.MeshPhysicalMaterial({
     color: 0xa9d6c4,
@@ -202,37 +212,76 @@ function initProductionViewer(assemblyBuffer) {
   edges.renderOrder = 3;
   assemblyGroup.add(edges);
 
-  const pressureTexture = new THREE.CanvasTexture(ui.canvas);
-  pressureTexture.colorSpace = THREE.SRGBColorSpace;
-  pressureTexture.minFilter = THREE.LinearFilter;
-  pressureTexture.magFilter = THREE.LinearFilter;
-  const planeGeometry = new THREE.BufferGeometry();
-  planeGeometry.setAttribute("position", new THREE.Float32BufferAttribute([
-    -0.024, 0, -0.012,
-     0.024, 0, -0.012,
-     0.024, 0,  0.412,
-    -0.024, 0,  0.412,
-  ], 3));
-  planeGeometry.setAttribute("uv", new THREE.Float32BufferAttribute([
-    0, 1,
-    0, 0,
-    1, 0,
-    1, 1,
-  ], 2));
-  planeGeometry.setIndex([0, 1, 2, 0, 2, 3]);
-  productionPressurePlane = new THREE.Mesh(
-    planeGeometry,
-    new THREE.MeshBasicMaterial({
-      map: pressureTexture,
-      transparent: true,
-      opacity: 0.92,
-      side: THREE.DoubleSide,
-      depthWrite: false,
-    }),
-  );
-  productionPressurePlane.renderOrder = 1;
-  productionPressurePlane.visible = false;
-  assemblyGroup.add(productionPressurePlane);
+  const skinMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0xd79a73,
+    roughness: 0.72,
+    transparent: true,
+    opacity: 0.34,
+    depthWrite: false,
+  });
+  const clothingMaterial = new THREE.MeshPhysicalMaterial({
+    color: 0x315d72,
+    roughness: 0.82,
+    transparent: true,
+    opacity: 0.28,
+    depthWrite: false,
+  });
+  const playerGroup = new THREE.Group();
+  const bodyGroup = new THREE.Group();
+  assemblyGroup.add(playerGroup);
+  playerGroup.add(bodyGroup);
+
+  function addEllipsoid(parent, radii, position, material = skinMaterial) {
+    const part = new THREE.Mesh(new THREE.SphereGeometry(1, 24, 16), material);
+    part.scale.set(...radii);
+    part.position.set(...position);
+    part.renderOrder = 1;
+    parent.add(part);
+    return part;
+  }
+
+  function addLimb(parent, start, end, radius, material = skinMaterial) {
+    const from = new THREE.Vector3(...start);
+    const to = new THREE.Vector3(...end);
+    const direction = to.clone().sub(from);
+    const length = direction.length();
+    const limb = new THREE.Mesh(
+      new THREE.CapsuleGeometry(radius, Math.max(0.001, length - 2 * radius), 8, 16),
+      material,
+    );
+    limb.position.copy(from).add(to).multiplyScalar(0.5);
+    limb.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+    limb.renderOrder = 1;
+    parent.add(limb);
+    return limb;
+  }
+
+  addEllipsoid(playerGroup, [0.050, 0.066, 0.055], [0.048, 0, -0.022]);
+  addEllipsoid(playerGroup, [0.013, 0.018, 0.038], [0.012, -0.008, 0.185]);
+  addEllipsoid(playerGroup, [0.013, 0.018, 0.038], [0.012, 0.008, 0.270]);
+  addEllipsoid(bodyGroup, [0.11, 0.15, 0.29], [0.10, 0, 0.31], clothingMaterial);
+  addEllipsoid(bodyGroup, [0.055, 0.055, 0.30], [0.10, -0.07, 0.77], clothingMaterial);
+  addEllipsoid(bodyGroup, [0.055, 0.055, 0.30], [0.10, 0.07, 0.77], clothingMaterial);
+  addLimb(bodyGroup, [0.07, -0.13, 0.16], [0.05, -0.19, 0.24], 0.035);
+  addLimb(bodyGroup, [0.05, -0.19, 0.24], [0.012, -0.008, 0.270], 0.032);
+  addLimb(bodyGroup, [0.07, 0.13, 0.16], [0.05, 0.19, 0.20], 0.035);
+  addLimb(bodyGroup, [0.05, 0.19, 0.20], [0.012, 0.008, 0.185], 0.032);
+
+  syncPlayerVisual = () => {
+    playerGroup.visible = playerBoundary !== "none";
+    bodyGroup.visible = playerBoundary === "full";
+    controls.maxDistance = playerBoundary === "full" ? 3 : 1.4;
+    if (playerBoundary === "full") {
+      camera.position.set(-2.2, -0.28, -0.30);
+      controls.target.set(0, -0.30, 0);
+    } else {
+      camera.position.set(-0.75, 0, -0.15);
+      controls.target.set(0, 0, 0);
+    }
+    controls.update();
+    if (window.__agnuquena3D) window.__agnuquena3D.playerBoundary = playerBoundary;
+  };
+  syncPlayerVisual();
 
   volumeSampleLayout = createVolumeSampleLayout();
   const volumeGeometry = new THREE.BufferGeometry();
@@ -242,32 +291,51 @@ function initProductionViewer(assemblyBuffer) {
   );
   const volumeColors = new Float32Array(volumeSampleLayout.indices.length * 3);
   const volumeStrengths = new Float32Array(volumeSampleLayout.indices.length);
+  const volumeFluid = new Float32Array(volumeSampleLayout.indices.length).fill(1);
   for (let i = 0; i < volumeStrengths.length; i += 1) {
-    volumeStrengths[i] = 0.035;
+    volumeStrengths[i] = 0;
     volumeColors[i * 3] = 0.12;
     volumeColors[i * 3 + 1] = 0.30;
     volumeColors[i * 3 + 2] = 0.25;
   }
   volumeGeometry.setAttribute("color", new THREE.BufferAttribute(volumeColors, 3));
   volumeGeometry.setAttribute("strength", new THREE.BufferAttribute(volumeStrengths, 1));
+  volumeGeometry.setAttribute("fluid", new THREE.BufferAttribute(volumeFluid, 1));
   const volumeMaterial = new THREE.ShaderMaterial({
     transparent: true,
     depthWrite: false,
     vertexColors: true,
     uniforms: {
       pixelRatio: { value: renderer.getPixelRatio() },
+      wavePhase: { value: 0 },
+      waveNumber: { value: 2 * Math.PI * selectedHole.target / simulationParameters.soundSpeed },
+      pressureMode: { value: 1 },
+      waveEnergy: { value: 0 },
     },
     vertexShader: `
       attribute float strength;
+      attribute float fluid;
       varying vec3 pointColor;
       varying float pointStrength;
       uniform float pixelRatio;
+      uniform float wavePhase;
+      uniform float waveNumber;
+      uniform float pressureMode;
+      uniform float waveEnergy;
       void main() {
-        pointColor = color;
-        pointStrength = strength;
+        float wave = sin(wavePhase - position.z * waveNumber);
+        float radialFalloff = exp(-length(position.xy) / 0.018);
+        vec3 lowPressure = vec3(0.12, 0.36, 1.0);
+        vec3 highPressure = vec3(1.0, 0.49, 0.20);
+        pointColor = pressureMode > 0.5
+          ? mix(lowPressure, highPressure, 0.5 + 0.5 * wave)
+          : color;
+        pointStrength = fluid * (pressureMode > 0.5
+          ? max(strength, waveEnergy * radialFalloff * (0.35 + 0.65 * abs(wave)))
+          : strength);
         vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
         gl_Position = projectionMatrix * viewPosition;
-        gl_PointSize = pixelRatio * (1.0 + 3.6 * strength);
+        gl_PointSize = pixelRatio * (1.5 + 5.5 * strength);
       }
     `,
     fragmentShader: `
@@ -275,9 +343,9 @@ function initProductionViewer(assemblyBuffer) {
       varying float pointStrength;
       void main() {
         float radius = length(gl_PointCoord - vec2(0.5));
-        if (radius > 0.5 || pointStrength < 0.025) discard;
+        if (radius > 0.5 || pointStrength < 0.015) discard;
         float edge = 1.0 - smoothstep(0.30, 0.50, radius);
-        gl_FragColor = vec4(pointColor, edge * (0.12 + 0.78 * pointStrength));
+        gl_FragColor = vec4(pointColor, edge * (0.20 + 0.80 * pointStrength));
       }
     `,
   });
@@ -289,38 +357,45 @@ function initProductionViewer(assemblyBuffer) {
     points: volumePoints,
     colors: volumeColors,
     strengths: volumeStrengths,
+    fluid: volumeFluid,
     updates: 0,
   };
+  assemblyGroup.updateWorldMatrix(true, false);
+  const boreOrigin = assemblyGroup.localToWorld(new THREE.Vector3(0, 0, 0));
+  const boreDirection = assemblyGroup.localToWorld(new THREE.Vector3(0, 0, 1))
+    .sub(boreOrigin)
+    .normalize();
   window.__agnuquena3D = {
     ready: true,
     pointCount: volumeSampleLayout.indices.length,
     updates: 0,
     visible: true,
-    source: "live WebGPU 3D solver state",
+    orientation: "vertical",
+    boreAxis: boreDirection.toArray(),
+    source: "live solver amplitude with slow-motion acoustic phase",
   };
 
   function syncFluteMaterial() {
     const showVolume = productionVolume.points.visible;
-    const showPlane = productionPressurePlane.visible;
-    fluteMaterial.transparent = showVolume || showPlane;
-    fluteMaterial.opacity = showVolume ? (showPlane ? 0.12 : 0.24) : (showPlane ? 0.30 : 1);
-    fluteMaterial.depthWrite = !(showVolume || showPlane);
+    fluteMaterial.transparent = showVolume;
+    fluteMaterial.opacity = showVolume ? 0.22 : 1;
+    fluteMaterial.depthWrite = !showVolume;
     fluteMaterial.needsUpdate = true;
   }
   syncFluteMaterial();
 
   const cameraViews = {
     full: {
-      position: new THREE.Vector3(0, -0.16, -0.68),
+      position: new THREE.Vector3(-0.75, 0, -0.15),
       target: new THREE.Vector3(0, 0, 0),
     },
     holes: {
-      position: new THREE.Vector3(0.024, -0.07, -0.28),
-      target: new THREE.Vector3(0.024, 0, 0),
+      position: new THREE.Vector3(-0.34, -0.05, -0.08),
+      target: new THREE.Vector3(0, -0.05, 0),
     },
     mouth: {
-      position: new THREE.Vector3(-0.184, -0.03, -0.13),
-      target: new THREE.Vector3(-0.184, 0, 0),
+      position: new THREE.Vector3(-0.25, 0.18, -0.05),
+      target: new THREE.Vector3(0, 0.19, 0),
     },
   };
   for (const button of document.querySelectorAll("[data-production-view]")) {
@@ -332,26 +407,17 @@ function initProductionViewer(assemblyBuffer) {
     });
   }
 
-  ui.pressureOverlayToggle.addEventListener("click", () => {
-    const showPressure = !productionPressurePlane.visible;
-    productionPressurePlane.visible = showPressure;
-    syncFluteMaterial();
-    ui.pressureOverlayToggle.textContent = showPressure
-      ? "Hide pressure plane"
-      : "Show pressure plane";
-  });
   ui.volumeOverlayToggle.addEventListener("click", () => {
     const showVolume = !productionVolume.points.visible;
     productionVolume.points.visible = showVolume;
     window.__agnuquena3D.visible = showVolume;
     syncFluteMaterial();
     ui.volumeOverlayToggle.textContent = showVolume
-      ? "Hide 3D flow"
-      : "Show 3D flow";
+      ? "Hide pressure waves"
+      : "Show pressure waves";
     if (showVolume) requestVolumeSample();
   });
 
-  let lastPressureTextureUpdate = 0;
   function renderProduction(now) {
     const width = Math.max(1, ui.productionCanvas.clientWidth);
     const height = Math.max(1, ui.productionCanvas.clientHeight);
@@ -362,15 +428,12 @@ function initProductionViewer(assemblyBuffer) {
       camera.updateProjectionMatrix();
       volumeMaterial.uniforms.pixelRatio.value = renderer.getPixelRatio();
     }
-    if (
-      pressureTextureDirty
-      && !gpuWorkPending
-      && now - lastPressureTextureUpdate >= 500
-    ) {
-      pressureTexture.needsUpdate = true;
-      pressureTextureDirty = false;
-      lastPressureTextureUpdate = now;
-    }
+    volumeMaterial.uniforms.wavePhase.value = now * 0.001 * Math.PI * 2
+      * simulationParameters.visualPhaseHz;
+    volumeMaterial.uniforms.waveNumber.value = 2 * Math.PI * selectedHole.target
+      / simulationParameters.soundSpeed;
+    volumeMaterial.uniforms.pressureMode.value = ui.field.value === "pressure" ? 1 : 0;
+    window.__agnuquena3D.visualPhase = volumeMaterial.uniforms.wavePhase.value;
     controls.update();
     renderer.render(scene, camera);
     requestAnimationFrame(renderProduction);
@@ -409,6 +472,26 @@ function notchContains(x, y, z) {
     && Math.hypot(perpendicular, y) <= SPEC.notch.radius;
 }
 
+function ellipsoidContains(x, y, z, center, radii) {
+  return ((x - center[0]) / radii[0]) ** 2
+    + ((y - center[1]) / radii[1]) ** 2
+    + ((z - center[2]) / radii[2]) ** 2 <= 1;
+}
+
+function playerBoundaryContains(x, y, z) {
+  if (playerBoundary === "none") return false;
+  const mouthAirway = x >= 4 && x <= 24 && Math.abs(y) <= 10 && z >= -12 && z <= 18;
+  const head = ellipsoidContains(x, y, z, [48, 0, -22], [50, 66, 55]) && !mouthAirway;
+  const lowerHand = ellipsoidContains(x, y, z, [12, -8, 185], [13, 18, 38]);
+  const upperHand = ellipsoidContains(x, y, z, [12, 8, 270], [13, 18, 38]);
+  if (head || lowerHand || upperHand) return true;
+  return playerBoundary === "full"
+    && x <= -20
+    && Math.abs(y) <= 22
+    && z >= 25
+    && z <= 365;
+}
+
 function buildMask(activeHole, mode) {
   const mask = new Uint32Array(CELL_COUNT);
   const boreR = SPEC.boreDiameter / 2;
@@ -416,6 +499,7 @@ function buildMask(activeHole, mode) {
   const centerX = (NX - 1) / 2;
   const centerY = (NY - 1) / 2;
   const activeIndex = SPEC.holes.findIndex((hole) => hole.name === activeHole.name);
+  playerSolidCells = 0;
 
   for (let z = 0; z < NZ; z += 1) {
     const zMm = Z_ORIGIN_MM + (z + 0.5) * CELL_MM;
@@ -486,7 +570,13 @@ function buildMask(activeHole, mode) {
           }
         }
 
-        if (material === 0 && Math.abs(yMm) <= 4) {
+        const playerAtCell = material === 0 && playerBoundaryContains(xMm, yMm, zMm);
+        if (playerAtCell) {
+          material = 1;
+          playerSolidCells += 1;
+        }
+
+        if ((material === 0 || playerAtCell) && Math.abs(yMm) <= 4) {
           const inletDx = xMm - 15.5;
           const inletDz = zMm + 5.5;
           const alongJet = inletDx * -0.74 + inletDz * 0.67;
@@ -543,12 +633,15 @@ fn samplePressure(p: vec3<i32>, center: f32) -> f32 {
 fn inletVelocity(p: vec3<f32>, time: f32) -> vec3<f32> {
   let speed = params.jet.x;
   let amount = params.jet.y;
-  let startup = smoothstep(0.0, 0.004, time);
+  let targetFrequency = params.jet.z;
+  let startup = smoothstep(0.0, params.display.w, time);
+  let acousticDrive = 1.0 + params.jet.w * sin(6.2831853 * targetFrequency * time);
   let phase0 = sin(171.0 * time + p.y * 1.73 + p.z * 0.39);
   let phase1 = sin(263.0 * time + p.x * 0.91 - p.y * 1.31);
   let phase2 = sin(389.0 * time + p.z * 0.77 + p.y * 2.17);
   let fluctuation = amount * vec3<f32>(phase0 * 0.35, phase1, phase2 * 0.55);
-  return startup * speed * normalize(vec3<f32>(-0.74, 0.0, 0.67) + fluctuation);
+  return startup * acousticDrive * speed
+    * normalize(vec3<f32>(-0.74, 0.0, 0.67) + fluctuation);
 }
 
 @compute @workgroup_size(4, 4, 4)
@@ -643,107 +736,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
   outputState[centerIndex] = vec4<f32>(velocity, pressure);
 }`;
 
-const renderShader = /* wgsl */ `
-struct Params {
-  dims: vec4<u32>,
-  physical0: vec4<f32>,
-  physical1: vec4<f32>,
-  jet: vec4<f32>,
-  view: vec4<u32>,
-  display: vec4<f32>,
-};
-
-@group(0) @binding(0) var<storage, read> state: array<vec4<f32>>;
-@group(0) @binding(1) var<storage, read> material: array<u32>;
-@group(0) @binding(2) var<uniform> params: Params;
-
-struct VertexOut {
-  @builtin(position) position: vec4<f32>,
-  @location(0) uv: vec2<f32>,
-};
-
-@vertex
-fn vertexMain(@builtin(vertex_index) vertexIndex: u32) -> VertexOut {
-  let positions = array<vec2<f32>, 6>(
-    vec2<f32>(-1.0, -1.0), vec2<f32>(1.0, -1.0), vec2<f32>(-1.0, 1.0),
-    vec2<f32>(-1.0, 1.0), vec2<f32>(1.0, -1.0), vec2<f32>(1.0, 1.0)
-  );
-  var out: VertexOut;
-  let p = positions[vertexIndex];
-  out.position = vec4<f32>(p, 0.0, 1.0);
-  out.uv = vec2<f32>((p.x + 1.0) * 0.5, 1.0 - (p.y + 1.0) * 0.5);
-  return out;
-}
-
-fn fieldIndex(x: u32, y: u32, z: u32) -> u32 {
-  return x + params.dims.x * (y + params.dims.y * z);
-}
-
-fn velocityAt(x: u32, y: u32, z: u32) -> vec3<f32> {
-  let cell = fieldIndex(x, y, z);
-  if (material[cell] == 1u) { return vec3<f32>(0.0); }
-  return state[cell].xyz;
-}
-
-fn sliceCoord(radial: f32, angle: f32) -> vec2<u32> {
-  let center = vec2<f32>(
-    0.5 * f32(params.dims.x - 1u),
-    0.5 * f32(params.dims.y - 1u)
-  );
-  let direction = vec2<f32>(cos(angle), sin(angle));
-  let maximum = vec2<f32>(f32(params.dims.x - 1u), f32(params.dims.y - 1u));
-  return vec2<u32>(clamp(round(center + radial * direction), vec2<f32>(0.0), maximum));
-}
-
-@fragment
-fn fragmentMain(in: VertexOut) -> @location(0) vec4<f32> {
-  let z = min(u32(in.uv.x * f32(params.dims.z)), params.dims.z - 1u);
-  let radial = (0.5 - in.uv.y) * f32(params.dims.x - 1u);
-  let angle = params.display.w;
-  let xy = sliceCoord(radial, angle);
-  let x = xy.x;
-  let y = xy.y;
-  let cell = fieldIndex(x, y, z);
-  let kind = material[cell];
-  if (kind == 1u) { return vec4<f32>(0.055, 0.16, 0.135, 1.0); }
-  if (kind == 2u) { return vec4<f32>(0.98, 0.63, 0.23, 1.0); }
-
-  let value = state[cell];
-  let neutral = vec3<f32>(0.008, 0.025, 0.023);
-  if (params.view.y == 1u) {
-    let speed = clamp(length(value.xyz) / params.display.y, 0.0, 1.0);
-    return vec4<f32>(mix(neutral, vec3<f32>(1.0, 0.54, 0.16), pow(speed, 0.55)), 1.0);
-  }
-  if (params.view.y == 2u) {
-    let radialMinus = sliceCoord(radial - 1.0, angle);
-    let radialPlus = sliceCoord(radial + 1.0, angle);
-    let zm = max(z, 1u) - 1u;
-    let zp = min(z + 1u, params.dims.z - 1u);
-    let dvdRadial = (
-      velocityAt(radialPlus.x, radialPlus.y, z)
-      - velocityAt(radialMinus.x, radialMinus.y, z)
-    ) * 0.5 * params.physical0.y;
-    let dvdz = (velocityAt(x, y, zp) - velocityAt(x, y, zm)) * 0.5 * params.physical0.y;
-    let radialDirection = vec2<f32>(cos(angle), sin(angle));
-    let omegaNormal = dot(dvdz.xy, radialDirection) - dvdRadial.z;
-    let signed = tanh(omegaNormal / params.display.z);
-    let color = select(
-      mix(neutral, vec3<f32>(0.15, 0.40, 1.0), -signed),
-      mix(neutral, vec3<f32>(1.0, 0.33, 0.12), signed),
-      signed >= 0.0
-    );
-    return vec4<f32>(color, 1.0);
-  }
-
-  let pressure = tanh(value.w / params.display.x);
-  let color = select(
-    mix(neutral, vec3<f32>(0.12, 0.36, 1.0), -pressure),
-    mix(neutral, vec3<f32>(1.0, 0.49, 0.20), pressure),
-    pressure >= 0.0
-  );
-  return vec4<f32>(color, 1.0);
-}`;
-
 const volumeSampleShader = /* wgsl */ `
 struct Params {
   dims: vec4<u32>,
@@ -819,19 +811,39 @@ function createParamsRaw() {
   const u32 = new Uint32Array(raw);
   const f32 = new Float32Array(raw);
   u32.set([NX, NY, NZ, 0], 0);
-  f32.set([DT_SECONDS, 1 / CELL_M, AIR_DENSITY, SOUND_SPEED2], 4);
-  f32.set([KINEMATIC_VISCOSITY, SMAGORINSKY, 0, SPONGE_RATE], 8);
-  f32.set([Number(ui.jetSpeed.value), Number(ui.turbulence.value) / 100, Z_ORIGIN_MM, CELL_MM], 12);
+  f32.set([
+    timeStepSeconds(),
+    1 / CELL_M,
+    simulationParameters.airDensity,
+    simulationParameters.soundSpeed ** 2,
+  ], 4);
+  f32.set([
+    simulationParameters.kinematicViscosity,
+    simulationParameters.smagorinsky,
+    0,
+    simulationParameters.spongeRate,
+  ], 8);
+  f32.set([
+    Number(ui.jetSpeed.value),
+    Number(ui.turbulence.value) / 100,
+    selectedHole.target,
+    simulationParameters.acousticDrivePercent / 100,
+  ], 12);
   const viewModes = { pressure: 0, speed: 1, vorticity: 2 };
   u32.set([Math.floor(NY / 2), viewModes[ui.field.value], 0, 0], 16);
-  f32.set([120, 15, 8000, Number(ui.sliceAngle.value) * Math.PI / 180], 20);
+  f32.set([
+    simulationParameters.pressureScale,
+    simulationParameters.speedScale,
+    simulationParameters.vorticityScale,
+    simulationParameters.startupRampUs / 1e6,
+  ], 20);
   return raw;
 }
 
 function updateParams() {
   if (!gpu) return;
   const raw = createParamsRaw();
-  new Float32Array(raw)[10] = stepCount * DT_SECONDS;
+  new Float32Array(raw)[10] = stepCount * timeStepSeconds();
   gpu.device.queue.writeBuffer(gpu.paramsBuffer, 0, raw);
 }
 
@@ -846,10 +858,6 @@ async function initWebGPU() {
   const device = await adapter.requestDevice({
     requiredLimits: { maxStorageBufferBindingSize: requiredBytes },
   });
-  const context = ui.canvas.getContext("webgpu");
-  const format = navigator.gpu.getPreferredCanvasFormat();
-  context.configure({ device, format, alphaMode: "opaque" });
-
   const stateBuffers = Array.from({ length: 2 }, () => device.createBuffer({
     size: requiredBytes,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC,
@@ -883,11 +891,9 @@ async function initWebGPU() {
   device.queue.writeBuffer(volumeSampleIndexBuffer, 0, volumeSampleLayout.indices);
 
   const computeModule = device.createShaderModule({ code: computeShader });
-  const renderModule = device.createShaderModule({ code: renderShader });
   const volumeSampleModule = device.createShaderModule({ code: volumeSampleShader });
   const compilation = await Promise.all([
     computeModule.getCompilationInfo(),
-    renderModule.getCompilationInfo(),
     volumeSampleModule.getCompilationInfo(),
   ]);
   const errors = compilation.flatMap((info) => info.messages.filter((message) => message.type === "error"));
@@ -896,12 +902,6 @@ async function initWebGPU() {
   const computePipeline = device.createComputePipeline({
     layout: "auto",
     compute: { module: computeModule, entryPoint: "main" },
-  });
-  const renderPipeline = device.createRenderPipeline({
-    layout: "auto",
-    vertex: { module: renderModule, entryPoint: "vertexMain" },
-    fragment: { module: renderModule, entryPoint: "fragmentMain", targets: [{ format }] },
-    primitive: { topology: "triangle-list" },
   });
   const volumeSamplePipeline = device.createComputePipeline({
     layout: "auto",
@@ -915,14 +915,6 @@ async function initWebGPU() {
       { binding: 1, resource: { buffer: stateBuffers[1 - index] } },
       { binding: 2, resource: { buffer: maskBuffer } },
       { binding: 3, resource: { buffer: paramsBuffer } },
-    ],
-  }));
-  const renderGroups = stateBuffers.map((buffer) => device.createBindGroup({
-    layout: renderPipeline.getBindGroupLayout(0),
-    entries: [
-      { binding: 0, resource: { buffer } },
-      { binding: 1, resource: { buffer: maskBuffer } },
-      { binding: 2, resource: { buffer: paramsBuffer } },
     ],
   }));
   const volumeSampleGroups = stateBuffers.map((buffer) => device.createBindGroup({
@@ -947,7 +939,6 @@ async function initWebGPU() {
 
   return {
     device,
-    context,
     stateBuffers,
     maskBuffer,
     paramsBuffer,
@@ -956,10 +947,8 @@ async function initWebGPU() {
     volumeSampleOutputBuffer,
     volumeSampleReadbackBuffer,
     computePipeline,
-    renderPipeline,
     volumeSamplePipeline,
     computeGroups,
-    renderGroups,
     volumeSampleGroups,
     state: 0,
   };
@@ -970,20 +959,24 @@ function colorVolumeSamples(samples) {
   const mode = ui.field.value;
   const colors = productionVolume.colors;
   const strengths = productionVolume.strengths;
+  let minimum = Number.POSITIVE_INFINITY;
+  let maximum = Number.NEGATIVE_INFINITY;
   for (let i = 0; i < strengths.length; i += 1) {
     const scalar = samples[i * 4 + 3];
+    minimum = Math.min(minimum, scalar);
+    maximum = Math.max(maximum, scalar);
     let strength;
     let negative = false;
     if (mode === "pressure") {
-      strength = Math.abs(Math.tanh(scalar / 120));
+      strength = Math.abs(Math.tanh(scalar / simulationParameters.pressureScale));
       negative = scalar < 0;
     } else if (mode === "speed") {
-      strength = Math.min(1, Math.max(0, scalar / 15));
+      strength = Math.min(1, Math.max(0, scalar / simulationParameters.speedScale));
     } else {
-      strength = Math.min(1, Math.max(0, scalar / 8000));
+      strength = Math.min(1, Math.max(0, scalar / simulationParameters.vorticityScale));
     }
     const fieldStrength = strength;
-    strength = 0.035 + 0.965 * strength;
+    strength = fieldStrength < 0.015 ? 0 : strength;
     strengths[i] = strength;
     const offset = i * 3;
     if (fieldStrength < 0.025) {
@@ -1009,6 +1002,17 @@ function colorVolumeSamples(samples) {
   productionVolume.updates += 1;
   window.__agnuquena3D.updates = productionVolume.updates;
   window.__agnuquena3D.field = mode;
+  window.__agnuquena3D.minimum = minimum;
+  window.__agnuquena3D.maximum = maximum;
+  window.__agnuquena3D.waveSpan = maximum - minimum;
+  const visualEnergy = mode === "pressure"
+    ? Math.min(
+      simulationParameters.visualEnergyCap,
+      Math.max(0, (maximum - minimum) / simulationParameters.visualEnergySpan),
+    )
+    : 0;
+  productionVolume.points.material.uniforms.waveEnergy.value = visualEnergy;
+  window.__agnuquena3D.visualEnergy = visualEnergy;
   ui.volumeStatus.textContent = (
     `${volumeSampleLayout.indices.length.toLocaleString()} live 3D ${mode} samples`
   );
@@ -1022,7 +1026,7 @@ function requestVolumeSample() {
     || volumeReadPending
   ) return;
   const now = performance.now();
-  if (now - lastVolumeSampleAt < 250) return;
+  if (now - lastVolumeSampleAt < 80) return;
   lastVolumeSampleAt = now;
   volumeReadPending = true;
   const encoder = gpu.device.createCommandEncoder();
@@ -1078,7 +1082,6 @@ function materialStatistics() {
 
 function resetGPU() {
   stepCount = 0;
-  renderDirty = true;
   if (!gpu) return;
   const zeros = new Float32Array(CELL_COUNT * 4);
   for (const buffer of gpu.stateBuffers) gpu.device.queue.writeBuffer(buffer, 0, zeros);
@@ -1086,26 +1089,24 @@ function resetGPU() {
   updateParams();
 }
 
-function uploadMask() {
-  fallbackMask = buildMask(selectedHole, boundaryMode);
-  if (gpu) gpu.device.queue.writeBuffer(gpu.maskBuffer, 0, fallbackMask);
-  resetGPU();
-  drawFallback();
+function updateVolumeFluidMask() {
+  if (!productionVolume || !fallbackMask) return;
+  let fluidSamples = 0;
+  for (let i = 0; i < volumeSampleLayout.indices.length; i += 1) {
+    const fluid = fallbackMask[volumeSampleLayout.indices[i]] === 1 ? 0 : 1;
+    productionVolume.fluid[i] = fluid;
+    fluidSamples += fluid;
+  }
+  productionVolume.points.geometry.attributes.fluid.needsUpdate = true;
+  window.__agnuquena3D.fluidPointCount = fluidSamples;
 }
 
-function encodeRender(encoder) {
-  const pass = encoder.beginRenderPass({
-    colorAttachments: [{
-      view: gpu.context.getCurrentTexture().createView(),
-      clearValue: { r: 0.005, g: 0.02, b: 0.018, a: 1 },
-      loadOp: "clear",
-      storeOp: "store",
-    }],
-  });
-  pass.setPipeline(gpu.renderPipeline);
-  pass.setBindGroup(0, gpu.renderGroups[gpu.state]);
-  pass.draw(6);
-  pass.end();
+function uploadMask() {
+  fallbackMask = buildMask(selectedHole, boundaryMode);
+  updateVolumeFluidMask();
+  if (gpu) gpu.device.queue.writeBuffer(gpu.maskBuffer, 0, fallbackMask);
+  resetGPU();
+  updatePlayerReadout();
 }
 
 function stepGPU(iterations) {
@@ -1121,150 +1122,76 @@ function stepGPU(iterations) {
     gpu.state = 1 - gpu.state;
     stepCount += 1;
   }
-  encodeRender(encoder);
-  renderDirty = false;
   gpuWorkPending = true;
   gpu.device.queue.submit([encoder.finish()]);
   gpu.device.queue.onSubmittedWorkDone().then(() => {
-    pressureTextureDirty = true;
     requestVolumeSample();
     gpuWorkPending = false;
   }).catch(() => {
     gpuWorkPending = false;
   });
-}
-
-function renderGPUOnly() {
-  if (gpuWorkPending || !renderDirty) return;
-  updateParams();
-  const encoder = gpu.device.createCommandEncoder();
-  encodeRender(encoder);
-  renderDirty = false;
-  gpuWorkPending = true;
-  gpu.device.queue.submit([encoder.finish()]);
-  gpu.device.queue.onSubmittedWorkDone().then(() => {
-    pressureTextureDirty = true;
-    requestVolumeSample();
-    gpuWorkPending = false;
-  }).catch(() => {
-    gpuWorkPending = false;
-  });
-}
-
-function drawFallback() {
-  if (gpu || !fallbackMask) return;
-  let ctx = ui.canvas.getContext("2d");
-  if (!ctx) {
-    const replacement = ui.canvas.cloneNode(false);
-    ui.canvas.replaceWith(replacement);
-    ui.canvas = replacement;
-    ctx = replacement.getContext("2d");
-  }
-  const width = ui.canvas.width;
-  const height = ui.canvas.height;
-  ctx.fillStyle = "#020b0a";
-  ctx.fillRect(0, 0, width, height);
-  const sliceY = Math.floor(NY / 2);
-  const cellW = width / NZ;
-  const cellH = height / NX;
-  for (let z = 0; z < NZ; z += 1) {
-    for (let x = 0; x < NX; x += 1) {
-      const kind = fallbackMask[index3(x, sliceY, z)];
-      ctx.fillStyle = kind === 1 ? "#173d34" : kind === 2 ? "#f0a13d" : "#061411";
-      ctx.fillRect(z * cellW, x * cellH, Math.ceil(cellW), Math.ceil(cellH));
-    }
-  }
-  ctx.fillStyle = "rgba(231,245,239,.72)";
-  ctx.font = "12px DM Mono, monospace";
-  ctx.fillText("3D CFD GEOMETRY · WEBGPU REQUIRED TO ADVANCE FLOW", 20, 34);
-}
-
-function drawGeometry() {
-  const canvas = ui.geometry;
-  const rect = canvas.getBoundingClientRect();
-  const ratio = Math.min(devicePixelRatio || 1, 2);
-  canvas.width = Math.max(600, Math.round(rect.width * ratio));
-  canvas.height = Math.max(280, Math.round(rect.height * ratio));
-  const ctx = canvas.getContext("2d");
-  ctx.scale(ratio, ratio);
-  const width = canvas.width / ratio;
-  const height = canvas.height / ratio;
-  ctx.clearRect(0, 0, width, height);
-  const left = 52;
-  const right = width - 24;
-  const axisY = height * 0.53;
-  const scale = (right - left) / SPEC.acousticLength;
-
-  ctx.strokeStyle = "rgba(146,194,175,.18)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.rect(left, axisY - 26, right - left, 52);
-  ctx.stroke();
-  ctx.fillStyle = "rgba(105,224,180,.06)";
-  ctx.fill();
-  ctx.strokeStyle = "rgba(145,170,161,.22)";
-  ctx.setLineDash([3, 5]);
-  for (let mm = 0; mm <= 400; mm += 50) {
-    const x = left + mm * scale;
-    ctx.beginPath();
-    ctx.moveTo(x, axisY - 52);
-    ctx.lineTo(x, axisY + 62);
-    ctx.stroke();
-    ctx.fillStyle = "#547068";
-    ctx.font = "9px DM Mono, monospace";
-    ctx.fillText(`${mm}`, x - 7, axisY + 82);
-  }
-  ctx.setLineDash([]);
-  for (const hole of SPEC.holes) {
-    const x = left + hole.z * scale;
-    const active = hole.name === selectedHole.name;
-    const size = 8 + hole.width * 0.85;
-    ctx.fillStyle = active ? "#ffb55f" : "#467b69";
-    ctx.strokeStyle = active ? "#ffd49e" : "#69a88f";
-    ctx.lineWidth = active ? 2 : 1;
-    ctx.beginPath();
-    ctx.roundRect(x - size / 2, axisY - size / 2, size, size, size * SPEC.cornerRatio);
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = active ? "#ffcf94" : "#79998d";
-    ctx.font = `${active ? "500 " : ""}10px DM Mono, monospace`;
-    ctx.fillText(hole.name, x - 5, axisY - 44);
-    if (active) {
-      ctx.fillStyle = "#ffb55f";
-      ctx.fillText(`${hole.z.toFixed(1)} mm`, x - 27, axisY + 50);
-    }
-  }
-  ctx.fillStyle = "#91aaa1";
-  ctx.font = "9px DM Mono, monospace";
-  ctx.fillText("NOTCH + JET", left, 25);
-  ctx.textAlign = "right";
-  ctx.fillText("OPEN FOOT", right, 25);
-  ctx.textAlign = "left";
-  ctx.fillText("AXIAL CENTER (MM)", left, axisY + 106);
 }
 
 function updateProfile() {
   ui.title.textContent = `${selectedHole.note} · Hole ${selectedHole.name}`;
-  ui.profileTitle.textContent = `Hole ${selectedHole.name} profile`;
   ui.target.textContent = `${selectedHole.target.toFixed(2)} Hz`;
-  ui.diameter.textContent = `${selectedHole.diameter.toFixed(2)} mm`;
-  ui.profile.textContent = `${selectedHole.width.toFixed(2)} mm`;
-  ui.position.textContent = `${selectedHole.z.toFixed(2)} mm`;
-  ui.profileWidth.textContent = `${selectedHole.width.toFixed(2)} mm`;
-  const visualSize = 112;
-  const x = 120 - visualSize / 2;
-  ui.profileShape.setAttribute("x", String(x));
-  ui.profileShape.setAttribute("y", String(x));
-  ui.profileShape.setAttribute("width", String(visualSize));
-  ui.profileShape.setAttribute("height", String(visualSize));
-  ui.profileShape.setAttribute("rx", String(visualSize * SPEC.cornerRatio));
+  ui.holeDiameter.textContent = `${selectedHole.diameter.toFixed(2)} mm · locked`;
+  ui.holePosition.textContent = `${selectedHole.z.toFixed(2)} mm · locked`;
+  ui.holeProfile.textContent = `${selectedHole.width.toFixed(2)} mm · ${selectedHole.angle}° · locked`;
+}
+
+function updatePlayerReadout() {
+  const labels = {
+    none: "not included",
+    headHands: "head + hands",
+    full: "full · local boundary",
+  };
+  ui.playerMetric.textContent = labels[playerBoundary];
+  if (playerBoundary === "none") {
+    ui.truth.textContent = "The visible mesh is the assembled, validated production STL. Its triangle surfaces are sampled onto the solver grid and form the solid boundary for pressure and all three velocity components.";
+  } else if (playerBoundary === "headHands") {
+    ui.truth.textContent = `The production STL remains exact. Anatomical head and hand ellipsoids add ${playerSolidCells.toLocaleString()} rigid player-boundary voxels inside the 1 mm acoustic domain.`;
+  } else {
+    ui.truth.textContent = `The production STL remains exact. Head, hands, and the torso surface add ${playerSolidCells.toLocaleString()} rigid voxels where the player intersects the local domain; anatomy outside the 48 mm cross-section is visual context, not room-scale CFD.`;
+  }
+  if (window.__agnuquenaCFD) {
+    window.__agnuquenaCFD.playerBoundary = playerBoundary;
+    window.__agnuquenaCFD.playerSolidCells = playerSolidCells;
+  }
+}
+
+function publishSimulationParameters() {
+  if (!window.__agnuquenaCFD) return;
+  window.__agnuquenaCFD.configuration.timeStepSeconds = timeStepSeconds();
+  window.__agnuquenaCFD.configuration.parameters = { ...simulationParameters };
+}
+
+function applySimulationParameter(input) {
+  const name = input.dataset.simParam;
+  const minimum = Number(input.min);
+  const maximum = Number(input.max);
+  const requested = Number(input.value);
+  const value = Math.min(maximum, Math.max(minimum, requested));
+  if (!Number.isFinite(value)) {
+    input.value = String(simulationParameters[name]);
+    return;
+  }
+  input.value = String(value);
+  simulationParameters[name] = value;
+  resetGPU();
+  colorVolumeSamples(new Float32Array(volumeSampleLayout.indices.length * 4));
+  updateJetReadouts();
+  publishSimulationParameters();
 }
 
 function updateJetReadouts() {
   const speed = Number(ui.jetSpeed.value);
   ui.jetSpeedValue.value = `${speed.toFixed(1)} m/s`;
   ui.turbulenceValue.value = `${ui.turbulence.value}%`;
-  ui.reynolds.textContent = Math.round(speed * SPEC.notch.width / 1000 / KINEMATIC_VISCOSITY).toLocaleString();
+  ui.reynolds.textContent = Math.round(
+    speed * SPEC.notch.width / 1000 / simulationParameters.kinematicViscosity,
+  ).toLocaleString();
+  ui.timeStep.textContent = `${(timeStepSeconds() * 1e6).toFixed(3)} µs · derived`;
   updateParams();
 }
 
@@ -1282,9 +1209,13 @@ function wireControls() {
   });
   ui.field.addEventListener("change", () => {
     updateParams();
-    renderDirty = true;
     lastVolumeSampleAt = 0;
-    if (gpu) renderGPUOnly();
+    requestVolumeSample();
+  });
+  ui.playerBoundary.addEventListener("change", () => {
+    playerBoundary = ui.playerBoundary.value;
+    syncPlayerVisual();
+    uploadMask();
   });
   ui.toggle.addEventListener("click", () => {
     if (!gpu) return;
@@ -1293,28 +1224,19 @@ function wireControls() {
   });
   ui.reset.addEventListener("click", () => {
     resetGPU();
-    if (gpu) renderGPUOnly();
+    colorVolumeSamples(new Float32Array(volumeSampleLayout.indices.length * 4));
   });
   ui.speed.addEventListener("input", () => { ui.speedValue.value = ui.speed.value; });
-  ui.sliceAngle.addEventListener("input", () => {
-    ui.sliceAngleValue.value = `${ui.sliceAngle.value}°`;
-    if (productionPressurePlane) {
-      productionPressurePlane.rotation.z = Number(ui.sliceAngle.value) * Math.PI / 180;
-    }
-    updateParams();
-    renderDirty = true;
-    if (gpu && !running) renderGPUOnly();
-  });
   ui.jetSpeed.addEventListener("input", updateJetReadouts);
   ui.turbulence.addEventListener("input", updateJetReadouts);
+  for (const input of ui.parameterInputs) {
+    input.addEventListener("change", () => applySimulationParameter(input));
+  }
 }
 
 function animate() {
-  if (gpu) {
-    if (running) stepGPU(Number(ui.speed.value));
-    else if (renderDirty) renderGPUOnly();
-  }
-  ui.simTime.textContent = `${(stepCount * DT_SECONDS * 1000).toFixed(3)} ms`;
+  if (gpu && running) stepGPU(Number(ui.speed.value));
+  ui.simTime.textContent = `${(stepCount * timeStepSeconds() * 1000).toFixed(3)} ms`;
   requestAnimationFrame(animate);
 }
 
@@ -1332,6 +1254,7 @@ async function start() {
   updateProfile();
   updateJetReadouts();
   fallbackMask = buildMask(selectedHole, boundaryMode);
+  updatePlayerReadout();
   try {
     gpu = await Promise.race([
       initWebGPU(),
@@ -1342,35 +1265,28 @@ async function start() {
     ui.gpuBadge.className = "status ready";
     ui.gpuBadge.innerHTML = "<span></span>WebGPU 3D LES";
     uploadMask();
-    renderGPUOnly();
     window.__agnuquenaCFD = {
       readProbe,
       materialStatistics,
-      setViewAngle(angleDegrees) {
-        const normalized = ((Number(angleDegrees) % 360) + 360) % 360;
-        ui.sliceAngle.value = String(Math.round(normalized));
-        ui.sliceAngle.dispatchEvent(new Event("input", { bubbles: true }));
-        return Number(ui.sliceAngle.value);
-      },
-      getViewAngle() {
-        return Number(ui.sliceAngle.value);
-      },
+      playerBoundary,
+      playerSolidCells,
       configuration: {
         grid: [NX, NY, NZ],
         voxelMm: CELL_MM,
-        timeStepSeconds: DT_SECONDS,
+        timeStepSeconds: timeStepSeconds(),
+        parameters: { ...simulationParameters },
         model: "weakly-compressible Navier-Stokes LES",
         geometrySource: productionMetadata.assembly.file,
         geometrySha256: productionMetadata.assembly.sha256,
         boundarySource: productionMetadata.solver_mask.derivation,
-        visualization: "orbitable production STL with independent 2D plane and live 3D solver volume",
+        visualization: "single orbitable production STL with live 3D pressure-wave samples",
       },
     };
   } catch (error) {
     console.error(error);
     ui.gpuBadge.className = "status fallback";
     ui.gpuBadge.innerHTML = "<span></span>Static fallback";
-    drawFallback();
+    ui.volumeStatus.textContent = "WebGPU unavailable · production STL only";
   }
   animate();
 }

@@ -1,39 +1,46 @@
 # Quena Case Engineering Notes
 
-## Segmented Snap-Over Hinge
+## Captive Print-in-Place Hinge
 
-The lid carries its own continuous printed axle. Seven short C-shaped bearings
-on the bottom snap radially over that axle, while eight interleaved lid webs
-support it. This replaces both the earlier short end nubs, which separated too
-easily, and the later filament pin, which required feeding, trimming, and heat
-staking a separate piece.
+The complete case prints as two already-assembled moving bodies. Both shell
+exteriors lie flat on the bed with the case opened exactly 180 degrees. The lid
+carries a continuous axle captured inside seven closed bottom bearings, while
+eight interleaved lid webs support the axle and limit axial travel. No pin
+insertion, snap assembly, support material, or post-print joining is required.
 
 Critical dimensions:
 
 - Hinge axis: centered on the case seam
 - Integral axle diameter: `4.6 mm`
 - Axle print flat: `0.60 mm`
-- Bearing bore: `4.95 mm`
-- Nominal diametral running clearance: `0.35 mm`
-- Bearing outside diameter: `8.4 mm`
-- Minimum bearing wall: `1.725 mm`
-- Snap throat: `3.8 mm` (`0.8 mm` diametral capture)
+- Bearing exterior: fully round with a `0.40 mm` body-side starter web
+- Outer axle ends: enclosed by solid, fully round `9.8 mm` lid barrels with
+  `1.2 mm` clean-face overhangs
+- Bearing bore: `5.20 mm`
+- Radial print-in-place clearance: `0.30 mm`
+- Bearing outside diameter: `9.8 mm`
+- Minimum concentric bearing wall: `2.30 mm`
+- Circular bore bridge span: `5.20 mm`
 - Independent bearing width: `14.5 mm`
 - Gap between alternating features: `1.0 mm`
-- Rear-shell inset: `4.1 mm`
-- Rear projection: `4.3 mm`
+- Rear-shell inset: `4.6 mm`
+- Rear projection: `5.2 mm`
+- Shell-edge gap in the print pose: `0.60 mm`
 
-For assembly, open the two halves, align the axle with the rear-facing bearing
-mouths, and press progressively from one end to the other until all seven
-bearings click home. The short clips flex independently, so assembly zips
-across the hinge instead of forcing one full-width socket open at once. The
-neighboring lid webs limit axial motion after installation.
-
-Both canonical halves remain support-free. The lid is exported exterior-down;
-the shallow D-flat therefore becomes the printer-facing bottom of the axle.
-Each unsupported axle interval is only one segment pitch (`15.5 mm`) and begins
-as a conventional bridge. The D-shaped axle remains entirely inside the round
-bearing bore throughout rotation.
+The axle retains its printer-facing flat inside the running bearings, while the
+bearing exterior and both visible end barrels are fully round. Each stator
+intersects the rear shell directly, without a rectangular backer that could
+break its circular silhouette. The solid end barrels replace the exposed
+D-flat axle stubs and tie directly into the outer
+lid webs. A shallow tangent web connects the bearing's first layers back to the
+body without entering the running bore. Each unsupported axle interval is only
+one segment pitch (`15.5 mm`). The fully circular `5.20 mm` bore closes over a
+short bridge span that remains below the validated `6.0 mm` support-free limit.
+The radial clearance is deliberately larger than an assembled running fit
+because the first motion must break minor extrusion wisps without welding the
+joint.
+Twist the two shell strips gently in opposite directions after cooling, then
+exercise the hinge through its full travel before operating the latch.
 
 
 ## Nub-and-Knuckle Clasp
@@ -45,10 +52,11 @@ recesses. Pulling at the centered textured thumb zone releases the two points
 progressively as the lid is opened.
 Critical dimensions:
 
-- Two `16 x 1.6 x 11 mm` lid cantilever tongues at `x=-72, +72 mm`,
-  with widened tapered root shoulders blended into the lid wall.
-- `1.3 mm` nub/dimple radius and `1.10 mm` nub projection.
-- `0.70 mm` bottom-wall recess depth.
+- Two `18 x 1.6 x 15 mm` lid cantilever tongues at `x=-72, +72 mm`,
+  with `4.0 mm` widened bonded root haunches continuing toward the bed-facing
+  lid back and an `11.0 mm` free flex span below them.
+- `1.5 mm` nub/dimple radius and `1.25 mm` nub projection.
+- `0.85 mm` bottom-wall recess depth.
 - `0.40 mm` required release travel.
 - Five low rounded grip ribs in a centered `30 mm` thumb zone.
 
@@ -59,32 +67,35 @@ retention, and release force.
 
 Run `python3 tools/model_latch_snap.py --material all` to screen actuation. For
 ABS, each tongue moves `0.40 mm`; the cantilever model predicts `0.79%` root
-strain, `8.9-17.7 N` release force per point, and `3.78x` strain margin. The
-conservative simultaneous two-point bound is `17.7-35.5 N`, though normal
+strain, `10.0-19.9 N` release force per point, and `3.78x` strain margin. The
+conservative simultaneous two-point bound is `19.9-39.9 N`, though normal
 opening should unzip the points progressively. All screened materials pass. The coupon
 remains useful because it includes the complete flex length and root, but the
 full case remains the final check for closing alignment and user access.
 
 ## Retention Features
 
-Tube retention uses localized ABS cantilever clips:
+Tube retention is built into five short curved sections of the bottom channel
+border: two on Tube 1, two on Tube 2, and one on the mouthpiece. Each section
+is `14 mm` long, rises `3.0 mm` above the stored-part centerline, and overlaps
+the continuous bed by `0.4 mm` so it exports as one structural body. The
+resulting normal-tube aperture has `0.34 mm` diametral interference: enough for
+a light positive snap without forcing the entire channel length over the part.
 
-- Each `10 x 1.2 x 15 mm` finger has a relieved back side, rounded root, and
-  shallow ramped hook with `0.35 mm` radial interference.
-- Clips are placed only on normal-radius tube sections.
-- Connector/sleeve bulges are left clear and should not be compressed.
-- Clip stations cannot overlap: Tube 1 uses four clips, Tube 2 uses three,
-  and the mouthpiece uses one centered clip on its
-  short normal-diameter section.
-- The lid channel is aligned to the same closed-position channel center as the
-bottom, reducing vertical dead space around the quena parts.
+The same border geometry, expanded by `0.25 mm`, is removed from the lid. This
+keeps the closed outside envelope unchanged and prevents the raised bottom
+features from loading the lid. Relative to the prior meshes, the bottom gains
+`667.8 mm3` while the lid loses `686.8 mm3`; at `1.04 g/cm3` ABS density the
+complete case changes by only `-0.02 g`.
+
+The later round hinge-end enclosure adds about `1.05 g` net relative to that
+pre-retention reference, keeping the complete case within `0.4%` of its former
+mass while eliminating the exposed axle ends.
 
 Run `python3 tools/simulate_case_inversion.py` for the inverted load screen.
 At the default `42 g` stored mass, the closed case passes a `10 g` load with a
-`7.4x` conservative latch-force margin. The tube can move `0.60 mm` before it
-contacts the lid channel. The cantilever model screens the ABS clips for open,
-inverted retention using their production interference, strain, and release
-force; physical performance still depends on layer bonding and print quality.
+`7.4x` conservative latch-force margin. Physical insertion force, release
+force, layer bonding, and fatigue still require a printed fit check.
 
 ## Channel Layout
 
@@ -98,10 +109,9 @@ asymmetric.
   distribution gaps. At the current case length, each gap is about `18.9 mm`.
 - Raised land between the two channel rows: `2.5 mm`.
 - Raised perimeter land around the channel field: `2.5 mm` minimum.
-- A single continuous `12.85 mm` bed forms the recesses and terminates `0.8 mm`
-  beyond the nominal tube equator. The flute centerline is depressed another
-  `0.5 mm`, so the bottom insert edges wrap over and grip it. There are no
-  separate cradles or cantilever clips.
+- A single continuous `11.45 mm` bed forms the recesses and terminates `0.8 mm`
+  beyond the nominal tube equator. The five localized snap-border sections
+  extend that wrap to `3.0 mm`; there are no separate cantilever parts.
 
 ## Validation
 
@@ -116,9 +126,12 @@ python3 tools/test_case_browser.py
 This checks:
 
 - STL bounds and connected-component counts.
-- Axle/bore clearance, bearing wall, snap capture, independent segment width,
-  rear projection, axial web capture, and support-free axle flat directly from
-  the OpenSCAD parameters.
+- Axle/bore clearance, concentric bearing wall, circular bridge span, alternating
+  segment width, shell-edge bed gap, rear projection, axial web capture, and
+  axle print flat, concentric bearing wall, starter web, and bed contact from the
+  OpenSCAD parameters.
+- The production STL contains exactly two watertight moving components, both
+  touch `Z=0`, and the complete footprint stays inside `256 x 256 mm`.
 - Closed clamshell solid overlap using OpenSCAD CSG intersection.
 - Empty-case hinge sweep from `0` to `180` degrees around the actual hinge axis.
 - Loaded hinge sweep over the same range using solid envelopes for all three
@@ -130,59 +143,66 @@ This checks:
 
 The OpenSCAD and browser checks are required because Bullet/pybullet can miss
 static concave mesh penetration and does not detect coplanar Z-fighting. The
-browser regression caught a real seven-point bearing-backer collision at
-`25 degrees`; the lid relief now covers each backer's complete swept radius.
+browser regression caught a real seven-point hinge collision at `25 degrees`;
+the lid relief now follows each stator's complete circular envelope.
 The loaded sweep is a deterministic rigid-envelope interference screen. It does
 not model flute bounce, elastic deformation, friction, wear, or latch failure;
 inverted and shock retention remain separate engineering checks.
 
 ## Print Practice
 
-`QuenaCaseBottom.stl` and `QuenaCaseLid.stl` are the single canonical half
-exports and are already oriented for the Bambu Lab P1S. The compact `251.5 mm` case length is still too large when
-aligned to one bed axis. These exports rotate each half `45 degrees`, producing
-a `211.70 x 211.70 mm` XY footprint. The bottom remains interior-up with its
-full floor on Z=0; the lid is flipped exterior-down so its full roof, rather
-than the latch tips, contacts Z=0. Both fit inside the nominal `256 x 256 mm`
-P1S build area, and also stays within a conservative `220 x 220 mm` usable
-square with about `4.1 mm` clearance per side when centered.
+`QuenaCasePrintInPlace.stl` is the canonical production export for the Bambu
+Lab P1S. It is already oriented with both exterior backs on `Z=0`, side by
+side, and the hinge captured at 180 degrees. Its `251.5 x 113.5 mm` footprint
+fits the nominal `256 x 256 mm` bed with only about `2.25 mm` of X margin per
+side when centered. Disable brims, skirts, and automatic support; confirm that
+the slicer's printer-specific exclusion zones do not reduce usable X below
+`251.5 mm` before starting the full print.
+
+The former `QuenaCaseBottom.stl` and `QuenaCaseLid.stl` snap-assembly exports
+are intentionally removed. They contained the obsolete open C-bearing and must
+not be used for this design; the model-space `*Viewer.stl` files are collision
+test inputs, not separately printable case halves.
+
+Use normal first-layer compensation rather than globally shrinking the hinge
+gap. Avoid elephant-foot expansion into the 0.60 mm shell separation. After
+the bed and part are fully cool, flex the two halves oppositely along the hinge
+line to break any wisps, then rotate progressively from the center toward both
+ends. Do not drive a blade or wire through the bearings.
 
 Print `QuenaCaseHingeCoupon.stl` before printing the full case. The coupon is a
-compact two-piece flat-on-bed test with the production axle profile, one
-C-bearing bracketed by two axle webs, bore clearance, wall thickness, snap
-throat, and lead-in. It requires no supports. Use it to confirm progressive snap
-installation, retention, free rotation, and removal force before printing the
-complete case.
+`46 x 28 mm` crop of the actual production assembly, not a parallel hinge
+approximation. It includes the same closed round bearing, axle flat,
+radial and axial clearances, shell backs, and first-layer gap. It requires no
+supports. Use it to confirm clean release and free rotation before committing
+to the complete case.
 
 `QuenaCaseFullHingeCoupon.stl` is the full-width hinge coupon. It uses the same
 alternating seven-bearing/eight-web layout and axial capture as the case.
 
-- `QuenaCaseHingeCoupon.stl`: `6188` triangles, `72.0 x 54.1 x 15.4 mm`,
+- `QuenaCasePrintInPlace.stl`: `31328` triangles,
+  `251.5 x 113.5 x 19.4 mm`, `2` connected components.
+- `QuenaCaseHingeCoupon.stl`: `1004` triangles, `46.0 x 28.0 x 19.4 mm`,
   `2` connected components.
-- `QuenaCaseFullHingeCoupon.stl`: `3876` triangles,
-  `243.5 x 57.2 x 15.4 mm`, `2` connected components.
+- `QuenaCaseFullHingeCoupon.stl`: `5084` triangles,
+  `243.5 x 28.0 x 19.4 mm`, `2` connected components.
 - `QuenaCaseFullHingeCoupon_9views.png`: `1500 x 1101 px`.
-- `QuenaCaseBottom.stl`: `6900` triangles, `211.7 x 211.7 x 18.7 mm`,
-  `1` connected component.
-- `QuenaCaseLid.stl`: `22680` triangles, `211.7 x 211.7 x 17.2 mm`,
-  `1` connected component.
-- `QuenaCaseBottomViewer.stl`: `6900` triangles,
-  `251.5 x 59.6 x 18.7 mm`, `1` connected component.
-- `QuenaCaseLidViewer.stl`: `22680` triangles,
-  `251.5 x 59.2 x 17.2 mm`, `1` connected component.
+- `QuenaCaseBottomViewer.stl`: `7792` triangles,
+  `251.5 x 61.3 x 19.4 mm`, `1` connected component.
+- `QuenaCaseLidViewer.stl`: `23536` triangles,
+  `251.5 x 59.4 x 17.6 mm`, `1` connected component.
 - `QuenaCaseLatch.stl`: `56.0 x 8.3 x 11.6 mm`.
-- `QuenaCaseLatchCoupon.stl`: `180.0 x 34.0 x 14.0 mm`.
-- `QuenaCaseAssembly.stl`: `251.5 x 60.2 x 28.8 mm`.
+- `QuenaCaseLatchCoupon.stl`: `182.0 x 34.0 x 18.0 mm`.
+- `QuenaCaseAssembly.stl`: `251.5 x 62.0 x 28.8 mm`.
 - Closed overlap check: empty intersection.
 - Hinge sweep check: passes from `0` to `180` degrees around
-  `(0.00, -28.45, 14.40)`.
+  `(0.00, -28.35, 14.40)`.
 - Loaded hinge sweep: passes all `18` clearance-limit poses for all `3` stored
   part envelopes from `0` to `180` degrees.
 
-Use the coupon to verify free rotation, low play, progressive installation,
-and positive radial retention. Do not enlarge the bearing mouths before
-testing the coupon; adjust the canonical throat or clearance instead of
-hand-fitting the production case.
+Use the coupon to verify first-motion release, free rotation, and acceptable
+play. If it fuses, adjust the canonical radial or axial clearance and rerender;
+do not hand-fit the full production case or add a hidden slicer-only gap.
 
 ## Nine-View Review
 
@@ -195,7 +215,7 @@ python3 tools/render_case_assets.py --views
 This regenerates:
 
 - `QuenaCaseAssembly_9views.png`
-- `QuenaCaseBottom_9views.png`
+- `QuenaCasePrintInPlace_9views.png`
 - `QuenaCaseLidHingeCloseup_9views.png`
 - `QuenaCaseHingeCoupon_9views.png`
 - `QuenaCaseFullHingeCoupon_9views.png`

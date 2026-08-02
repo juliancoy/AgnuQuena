@@ -43,6 +43,7 @@
         <button id="pause" type="button">Pause</button>
         <button id="reset" type="button">Reset</button>
       </div>
+      <p><a href="./assets/QuenaCasePrintInPlace.stl" download>Download print-in-place STL</a></p>
 
       <label class="slider">
         <span>Manual angle</span>
@@ -60,23 +61,29 @@
         </div>
         <div>
           <span>Hinge axis</span>
-          <strong>X @ y=-28.15, z=14.40 mm</strong>
+          <strong>X @ y=-28.35, z=14.40 mm</strong>
         </div>
         <div>
           <span>Physics</span>
-          <strong>Exact STL triangle BVH</strong>
+          <strong>Exact case triangle BVH</strong>
+        </div>
+        <div>
+          <span>Contents</span>
+          <strong>Three fitted quena sections</strong>
         </div>
       </div>
 
       <p class="note">
-        The simulation displays the generated STL meshes and drives the lid
-        around the integral snap-over hinge axis. The detector checks the same
-        model-space STL triangles shown on screen; the detector is not a
-        separate box approximation.
+        The simulation displays the generated case and quena STL meshes, with
+        all three instrument sections seated in their fitted channels. It
+        drives the lid around the captive print-in-place hinge axis. The
+        production STL lays both exterior backs on the bed at the 180-degree
+        pose. The hinge detector checks the displayed case-half triangles; it
+        is not a separate box approximation.
       </p>
     </aside>
   </main>
 
-  <script type="module" src="./sim.js?v=10"></script>
+  <script type="module" src="./sim.js?v=18"></script>
 </body>
 </html>

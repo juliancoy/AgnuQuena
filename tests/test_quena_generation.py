@@ -42,6 +42,12 @@ def test_two_wall_shell_and_tight_connector_fit_are_explicit():
     assert manifest["connectors"]["diametral_clearance_mm"] == pytest.approx(0.0)
     assert manifest["connectors"]["outer_diameter_mm"] == pytest.approx(20.7)
     assert manifest["connectors"]["wall_width_mm"] == pytest.approx(0.8)
+    assert manifest["connectors"]["mouthpiece_overlap_mm"] == pytest.approx(22.0)
+    assert manifest["connectors"]["tube_joint_overlap_mm"] == pytest.approx(7.0)
+    mouthpiece = next(
+        part for part in manifest["parts"] if part["name"] == "mouthpiece"
+    )
+    assert mouthpiece["print_height_mm"] == pytest.approx(52.6)
 
 
 def test_negative_connector_clearance_is_rejected():
@@ -57,21 +63,29 @@ def test_lower_hand_layout_spans_the_printable_section():
     holes = {hole["name"]: hole for hole in manifest["holes"]}
 
     assert holes["C"]["physical_z_mm"] == 242.0
-    assert holes["C"]["position"]["local_offset_mm"] == 20.0
-    assert holes["B"]["position"]["local_offset_mm"] == 50.0
-    assert holes["A"]["position"]["local_offset_mm"] == 80.0
-    assert holes["B"]["physical_z_mm"] - holes["C"]["physical_z_mm"] == 30.0
-    assert holes["A"]["physical_z_mm"] - holes["B"]["physical_z_mm"] == 30.0
+    assert holes["C"]["position"]["local_offset_mm"] == 19.5
+    assert holes["B"]["physical_z_mm"] == pytest.approx(273.154575)
+    assert holes["B"]["position"]["local_offset_mm"] == pytest.approx(50.654575)
+    assert holes["B"]["position"]["axial_adjust_mm"] == pytest.approx(1.154575)
+    assert holes["A"]["position"]["local_offset_mm"] == 79.5
+    assert holes["B"]["physical_z_mm"] - holes["C"]["physical_z_mm"] == pytest.approx(
+        31.154575
+    )
+    assert holes["A"]["physical_z_mm"] - holes["B"]["physical_z_mm"] == pytest.approx(
+        28.845425
+    )
     tube_1 = next(part for part in manifest["parts"] if part["name"] == "tube_1")
-    assert tube_1["length_mm"] == 222.0
+    assert tube_1["length_mm"] == 222.5
 
 
 def test_holes_honor_playable_minimums_as_equal_area_rounded_squares():
     _, manifest = generate(load_spec())
 
+    assert manifest["tone_hole_profile"]["corner_ratio"] == pytest.approx(0.4)
+
     expected_diameters = {
         "A": 10.1,
-        "B": 11.6,
+        "B": 10.5,
         "C": 9.75,
         "D": 10.5,
         "E": 11.1,

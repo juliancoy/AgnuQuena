@@ -71,17 +71,28 @@ module mouthpiece(){
     echo(mouthpiece_total_length);
     mouthpiece_actual_length = mouthpiece_total_length;
     difference() {
-        cylinder(h=mouthpiece_actual_length, d = od);
-        translate([0, 0, mouthpiece_actual_length-accent_ring_z]) cylinder(h = total_height, d = od * 1.1);    // top cut
-        translate([0,0,-e])cylinder(h=mouthpiece_actual_length+1, d = id); // inner cut
+        rounded_mouthpiece_body(mouthpiece_actual_length);
         end_blown_cut_round();
     }
 
     // connector
     difference() {
-        color("green") translate([0, 0, mouthpiece_actual_length-accent_ring_z]) sleve_wide_outer((mouthpiece_actual_length) / total_height, connector_radial_clearance, insert_z_tolerance);
+        color("green") translate([0, 0, mouthpiece_actual_length-accent_ring_z]) sleve_wide_outer((mouthpiece_actual_length) / total_height, mouthpiece_overlap, connector_radial_clearance, insert_z_tolerance);
         translate([0,0,-1])
         tube_negative();
+    }
+}
+
+// Give the exposed blowing end a fully rounded wall cross-section. The radius
+// is half the wall thickness, so the outer and inner fillets meet smoothly at
+// the lip without changing either the production bore or outer diameter.
+module rounded_mouthpiece_body(length) {
+    lip_r = shell_width / 2;
+    rotate_extrude(convexity = 10)
+    union() {
+        translate([id / 2 + lip_r, lip_r]) circle(r = lip_r);
+        translate([id / 2, lip_r])
+            square([shell_width, length - lip_r]);
     }
 }
 
@@ -108,11 +119,15 @@ module piece(pieceno, yfactor, z=0){
                 translate([0, 0, part_lengths[pieceno]-accent_ring_z]) cylinder(h = total_height, d = od * 1.1);    // top cut
             if(pieceno==len(part_lengths) - 1)
                 translate([0, 0, part_lengths[pieceno]]) cylinder(h = total_height, d = od * 1.1);    // top cut
-            translate([0,0,-e]) sleve_wide_outer(part_start[pieceno] / total_height, 0); // bottom insert
+            translate([0,0,-e]) sleve_wide_outer(
+                part_start[pieceno] / total_height,
+                pieceno == 0 ? mouthpiece_overlap : tube_joint_overlap,
+                0
+            ); // bottom insert
         }
         if(pieceno < len(part_lengths) - 1){ // top connector insert
             difference() {
-                color("green") translate([0, 0, part_lengths[pieceno]-accent_ring_z]) sleve_wide_outer((part_lengths[pieceno]) / total_height, connector_radial_clearance, insert_z_tolerance);
+                color("green") translate([0, 0, part_lengths[pieceno]-accent_ring_z]) sleve_wide_outer((part_lengths[pieceno]) / total_height, tube_joint_overlap, connector_radial_clearance, insert_z_tolerance);
                 tube_negative();
             }
         }
@@ -185,16 +200,15 @@ module inner_curve_ring(i=0){
 }
 
 // to keep a constant diameter across the part, this comes out
-module sleve_wide_outer(height_on_tube_normalized, radial_clearance=0, ztolerence=0) {
+module sleve_wide_outer(height_on_tube_normalized, overlap, radial_clearance=0, ztolerence=0) {
     odlb = od * (1 - height_on_tube_normalized) + odo * height_on_tube_normalized; // outer diameter linear interpolate bottom
-    odlt = od * (1 - (height_on_tube_normalized + ov/total_height)) + odo * (height_on_tube_normalized + ov/total_height); // outer diameter linear interpolate top
-    odltt = od * (1 - (height_on_tube_normalized + (ov+angled_transition_z)/total_height)) + odo * (height_on_tube_normalized + (ov+angled_transition_z)/total_height); // outer diameter linear interpolate top
+    odlt = od * (1 - (height_on_tube_normalized + overlap/total_height)) + odo * (height_on_tube_normalized + overlap/total_height); // outer diameter linear interpolate top
 
     translate([0,0,-2])
     difference(){
         union(){
             cylinder(
-                h = ov - ztolerence,
+                h = overlap - ztolerence,
                 d1 = odlb + (shell_width + radial_clearance)*2,
                 d2 = odlt + (shell_width + radial_clearance)*2
             );
@@ -204,7 +218,7 @@ module sleve_wide_outer(height_on_tube_normalized, radial_clearance=0, ztolerenc
                 d1 = odlb,
                 d2 = odlt + (shell_width + radial_clearance)*2
             );
-            translate([0,0,ov - ztolerence])
+            translate([0,0,overlap - ztolerence])
             cylinder(
                 h = angled_transition_z,
                 d1 = odlt + (shell_width + radial_clearance)*2,
@@ -212,7 +226,7 @@ module sleve_wide_outer(height_on_tube_normalized, radial_clearance=0, ztolerenc
             );
         }            
         cylinder(
-            h = angled_transition_z+ov - ztolerence,
+            h = angled_transition_z+overlap - ztolerence,
             d1 = odlb + radial_clearance*2,
             d2 = odlt + radial_clearance*2
         );

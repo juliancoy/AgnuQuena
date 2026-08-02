@@ -33,10 +33,14 @@ def scalar(name: str) -> float:
     return float(match.group(1))
 
 def geometry() -> dict[str, float]:
+    total_length = scalar("latch_tongue_flex_l")
+    root_blend = scalar("latch_tongue_root_blend_h")
     return {
         "protrusion": scalar("latch_nub_protrusion"),
         "indent": scalar("latch_indent_depth"),
-        "length": scalar("latch_tongue_flex_l"),
+        "length": total_length - root_blend,
+        "total_length": total_length,
+        "root_blend": root_blend,
         "thickness": scalar("latch_tongue_t"),
         "width": scalar("latch_tongue_w"),
         "count": scalar("latch_point_count"),
@@ -64,7 +68,8 @@ def main() -> None:
         raise SystemExit("nub has no positive retaining interference")
     print("AgnuQuena simple latch-tongue deformation model")
     print(f"geometry: nub projection {g['protrusion']:.2f} mm, recess {g['indent']:.2f} mm, "
-          f"tongue {g['width']:.2f} x {g['thickness']:.2f} x {g['length']:.2f} mm")
+          f"tongue {g['width']:.2f} x {g['thickness']:.2f} x {g['total_length']:.2f} mm, "
+          f"{g['root_blend']:.2f} mm bonded root, {g['length']:.2f} mm free span")
     print("actuation: pull the single lid tongue outward until its nub clears the recess")
     print(f"material  allowable  travel  strain  force/point  worst all-{int(g['count'])}  margin")
     keys = MATERIALS if args.material == "all" else [args.material]

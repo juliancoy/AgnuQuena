@@ -57,7 +57,7 @@ def section_properties(
     axial_scale: float,
     grid_mm: float,
     rounded_square: bool = False,
-    corner_ratio: float = 0.28,
+    corner_ratio: float = 0.4,
 ) -> tuple[float, float, float]:
     """Return area and section moduli for bending toward/away from the holes."""
     radius = OD_MM / 2

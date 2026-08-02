@@ -22,15 +22,12 @@ def test_pitch_reference_is_concert_a_440():
     assert note_frequency_12tet("G5") == 2.0 * note_frequency_12tet("G4")
 
 
-def test_lower_tube_holes_are_evenly_spaced_and_parsed():
+def test_lower_tube_holes_include_the_tuned_b_hole_adjustment():
     geometry = geometry_from_scad(REPO_ROOT / "Quena.scad")
 
     assert [hole.name for hole in geometry.holes] == ["A", "B", "C", "D", "E", "F#"]
     a_hole, b_hole, c_hole = geometry.holes[:3]
-    assert math.isclose(
-        a_hole.acoustic_mm - b_hole.acoustic_mm,
-        b_hole.acoustic_mm - c_hole.acoustic_mm,
-        abs_tol=1e-9,
-    )
-    assert a_hole.acoustic_mm - b_hole.acoustic_mm == 30.0
-    assert [hole.diameter_mm for hole in (a_hole, b_hole, c_hole)] == [10.1, 11.6, 9.75]
+    assert math.isclose(b_hole.acoustic_mm, 305.154575, abs_tol=1e-9)
+    assert math.isclose(a_hole.acoustic_mm - b_hole.acoustic_mm, 28.845425)
+    assert math.isclose(b_hole.acoustic_mm - c_hole.acoustic_mm, 31.154575)
+    assert [hole.diameter_mm for hole in (a_hole, b_hole, c_hole)] == [10.1, 10.5, 9.75]

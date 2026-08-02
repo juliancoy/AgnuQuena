@@ -1,17 +1,17 @@
 // AgnuQuena carrying case
 // Self-contained OpenSCAD model inspired by common hinged enclosure patterns:
-// rounded shell, snap-over axle hinge, snap clip, and fitted internal channels.
+// rounded shell, captive print-in-place hinge, snap clip, and fitted channels.
 
 $fn = 64;
 
 // Shared flute dimensions are generated from designs/quena.json.
 include <generated/quena_parameters.scad>
 
-// Select "bottom", "lid", "bottom_p1s", "lid_p1s", "lid_logo",
-// "lid_logo_p1s", "hinge_coupon", "full_hinge_coupon", "latch",
+// Select "bottom", "lid", "print_in_place", "lid_logo",
+// "lid_logo_print", "hinge_coupon", "full_hinge_coupon", "latch",
 // "latch_coupon", "assembly", "preview", or "none".
 // Override from the CLI with:
-// openscad -D 'part="bottom"' -o QuenaCaseBottom.stl QuenaCase.scad
+// openscad -D 'part="print_in_place"' -o QuenaCasePrintInPlace.stl QuenaCase.scad
 part = is_undef(part) ? "preview" : part;
 
 // Case fit and print parameters.
@@ -38,30 +38,48 @@ corner_r = 7;
 logo_inlay_depth = 0.6;
 logo_title_width = 190;
 logo_map_width = 84;
-logo_font = "Noto Serif Display:style=Bold";
+logo_title_source_size = [1129, 124];
+logo_map_source_size = [1194, 595];
+logo_vertical_scale = 0.84;
+logo_edge_margin = 2.0;
 
 // Compact lands retain enough material between channels while keeping the
 // diagonal P1S export inside a conservative 220 x 220 mm usable square.
 row_gap = 2.5;
 row_pitch = max_channel_d + row_gap;
-short_row_min_gap = 18;
+// The longer mouthpiece connector still leaves a generous land while keeping
+// the complete print-in-place case within the 256 mm target bed.
+short_row_min_gap = 13;
 channel_edge_land = 2.5;
 // The single interior bed rises just past the tube equator.  It replaces the
 // former deck, separate cradle blocks, and cantilever retention features.
 equator_pass = 0.8;
 flute_seat_depth = 0.5;
 channel_deck_h = max_channel_d / 2 + equator_pass;
+// Five short curved border sections rise farther around the stored parts than
+// the continuous cradle. Their aperture is slightly narrower than each flute
+// diameter, giving positive retention without turning the full channel length
+// into a high-force press fit. Matching, clearance-expanded material is
+// removed from the lid so the closed envelope and total case mass stay nearly
+// unchanged.
+retention_lip_overrun = 3.0;
+retention_clip_w = 14;
+retention_clip_border = 2.0;
+retention_clip_root_overlap = 0.4;
+retention_lid_clearance = 0.25;
 connector_backset = angled_transition_z + 2;
 connector_expand_start = 2;
-connector_expand_end = ov - insert_z_tolerance - 2;
-connector_extra_l = connector_expand_end + angled_transition_z;
 slot_lengths = [tube_part_1_length, tube_part_2_length, mouthpiece_total_length];
 slot_names = ["TUBE 1", "TUBE 2", "MOUTH"];
 slot_has_connector = [true, false, true];
+slot_connector_overlaps = [tube_joint_overlap, 0, mouthpiece_overlap];
+function connector_expand_end(i) =
+    slot_connector_overlaps[i] - insert_z_tolerance - 2;
+function connector_extra_l(i) = connector_expand_end(i) + angled_transition_z;
 profile_lengths = [
-    tube_part_1_length + connector_extra_l,
+    tube_part_1_length + connector_extra_l(0),
     tube_part_2_length,
-    mouthpiece_total_length + connector_extra_l
+    mouthpiece_total_length + connector_extra_l(2)
 ];
 profile_max_ds = [connector_channel_d, channel_d, connector_channel_d];
 // Each recess has only the specified total axial play, shared between its ends.
@@ -93,26 +111,26 @@ lid_z_clearance = 0.3;
 
 lid_closed_z = case_outer_h + lid_z_clearance;
 
-// The lid carries a continuous integral axle. Seven independent C-bearings on
-// the bottom snap radially over it, while eight interleaved lid webs support the
-// axle. Broad engagement replaces both the former short end nubs and the loose
-// filament-pin assembly.
+// Print-in-place hinge. In the production pose both shell exteriors lie on the
+// bed, opened 180 degrees. The lid carries a continuous axle captured inside
+// seven closed bottom bearings, with eight alternating lid webs tying the axle
+// back to the lid. No post-print pin or snap assembly is required.
 hinge_axle_d = 4.6;
-// The production lid is exported exterior-down, so its source-space axle top
-// becomes the printer-facing underside. This shallow D-flat starts each axle
-// span as a short bridge and avoids slicer-generated support.
+// The lid rotates 180 degrees into the print pose, so its source-space axle top
+// becomes printer-facing. The bearing remains fully round and starts from a
+// short body-side web rather than a visible flat.
 hinge_axle_print_flat = 0.60;
-hinge_bearing_clearance = 0.35;
+hinge_bearing_starter_h = 0.40;
+hinge_bearing_clearance = 0.60;
 hinge_bearing_bore_d = hinge_axle_d + hinge_bearing_clearance;
-hinge_bearing_outer_d = 8.4;
-hinge_snap_throat = 3.8;
-hinge_snap_lead = 1.2;
+hinge_bearing_outer_d = 9.8;
 hinge_segment_w = 14.5;
 hinge_segment_gap = 1.0;
 hinge_segment_pitch = hinge_segment_w + hinge_segment_gap;
-// Recess the barrel into the rear shell so it reads as an integrated hinge
-// boss while retaining enough external radius for the lid to rotate.
-hinge_body_inset = 4.1;
+// A 0.60 mm separation between the two rear shell edges prevents the halves
+// from fusing on the first layer in the side-by-side production pose.
+hinge_print_shell_gap = 0.60;
+hinge_body_inset = 4.6;
 hinge_axis_y = -case_outer_w / 2 - hinge_bearing_outer_d / 2 + hinge_body_inset;
 // Put the pivot on the center of the clearance plane between equal-height
 // halves.  This keeps the hinge neutral instead of biasing it toward the lid.
@@ -133,6 +151,11 @@ hinge_axle_x2 = hinge_axle_support_segments[
 ][1];
 hinge_span = hinge_axle_x2 - hinge_axle_x1;
 hinge_tab_t = 2.2;
+// Solid lid-owned barrels cover both exposed axle ends. Their cylindrical
+// exterior has no print flat; a short axial overhang leaves each visible end
+// as a complete round face rather than a D-shaped axle stub.
+hinge_end_barrel_d = hinge_bearing_outer_d;
+hinge_end_barrel_overhang = 1.2;
 
 front_pull_w = 48;
 front_pull_depth = 3.6;
@@ -200,20 +223,20 @@ latch_center_z = lid_closed_z + 1.0;
 
 // Final simple harmonica-case latch: one lid tongue, one shallow nub, and one
 // shallow recess in the bottom front wall.
-latch_tongue_w = 16.0;
+latch_tongue_w = 18.0;
 latch_tongue_t = 1.6;
-latch_tongue_flex_l = 11.0;
+latch_tongue_flex_l = 15.0;
 latch_tongue_y = case_outer_w / 2 - latch_tongue_t / 2;
-latch_nub_r = 1.3;
-latch_nub_protrusion = 1.10;
-latch_indent_depth = 0.70;
+latch_nub_r = 1.5;
+latch_nub_protrusion = 1.25;
+latch_indent_depth = 0.85;
 latch_release_deflection = latch_nub_protrusion - latch_indent_depth;
-latch_nub_z = case_outer_h - 1.35;
+latch_nub_z = case_outer_h - 1.55;
 latch_point_xs = [-72, 72];
 latch_point_count = 2;
-latch_tongue_tip_w = 13.5;
-latch_tongue_root_w = 22.0;
-latch_tongue_root_blend_h = 2.4;
+latch_tongue_tip_w = 15.5;
+latch_tongue_root_w = 24.0;
+latch_tongue_root_blend_h = 4.0;
 thumb_grip_w = 30;
 thumb_grip_rib_h = 0.75;
 thumb_grip_rib_depth = 0.45;
@@ -274,14 +297,12 @@ module lid_thumb_grip() {
         ], thumb_grip_rib_h / 2);
 }
 
-short_row_gap = (
-    case_inner_l - profile_cut_spans[1] - profile_cut_spans[2]
-) / 3;
-short_tube_cut_center = -case_inner_l / 2
-    + short_row_gap
+// Align the short-row outer profile edges with the long P1 profile. This makes
+// P2 begin exactly where P1 begins and the mouthpiece end exactly where P1
+// ends, while leaving the remaining space as a generous center separation.
+short_tube_cut_center = -profile_cut_spans[0] / 2
     + profile_cut_spans[1] / 2;
-mouth_cut_center = case_inner_l / 2
-    - short_row_gap
+mouth_cut_center = profile_cut_spans[0] / 2
     - profile_cut_spans[2] / 2;
 slot_xs = [
     // Keep the longest tube body centered axially.  Its connector and free-end
@@ -300,7 +321,14 @@ function profile_l(i) = profile_lengths[i];
 function profile_d(i) = profile_max_ds[i];
 function body_x0(i) = -profile_l(i) / 2;
 function body_x1(i) = body_x0(i) + slot_lengths[i];
-function connector_x1(i) = body_x1(i) + connector_extra_l;
+function connector_x1(i) = body_x1(i) + connector_extra_l(i);
+retention_clip_centers = [
+    [body_x0(0) + slot_lengths[0] * 0.28,
+     body_x0(0) + slot_lengths[0] * 0.72],
+    [body_x0(1) + slot_lengths[1] * 0.28,
+     body_x0(1) + slot_lengths[1] * 0.72],
+    [body_x0(2) + slot_lengths[2] * 0.5]
+];
 
 module rounded_box(size, r) {
     hull() {
@@ -311,39 +339,45 @@ module rounded_box(size, r) {
     }
 }
 
-module eurasia_silhouette_2d() {
-    // One connected, deliberately simplified Eurasian landmass. Detached
-    // islands and narrow coastal details are omitted for a 0.4 mm nozzle.
-    points = [
-        [42.0, 11.42], [24.89, 16.37], [18.74, 15.24], [17.75, 16.93],
-        [11.95, 17.08], [11.53, 18.77], [7.78, 19.9], [-2.69, 15.52],
-        [-5.3, 15.94], [-7.71, 13.68], [-19.37, 12.69], [-26.87, 15.52],
-        [-34.58, 9.58], [-33.66, 4.49], [-38.75, 1.66], [-38.25, -1.31],
-        [-41.58, -1.38], [-42.0, -4.56], [-38.54, -5.27], [-35.64, -1.66],
-        [-33.09, -1.17], [-27.29, -5.06], [-25.74, -3.08], [-24.11, -5.48],
-        [-20.65, -5.41], [-21.21, -8.94], [-16.26, -17.43], [-9.62, -14.6],
-        [-8.41, -10.78], [-5.02, -10.57], [-1.41, -13.26], [1.27, -19.9],
-        [3.18, -16.02], [8.2, -12.06], [16.76, -19.62], [18.88, -17.64],
-        [17.18, -13.75], [24.54, -9.93], [24.89, -3.99], [28.28, -5.34],
-        [28.14, -2.23], [32.6, 3.01], [31.39, 6.82]
-    ];
-    polygon(points);
+module rounded_rect_2d(size, r) {
+    hull()
+        for (x = [-size[0] / 2 + r, size[0] / 2 - r])
+        for (y = [-size[1] / 2 + r, size[1] / 2 - r])
+            translate([x, y]) circle(r = r);
 }
 
 module lid_logo_2d() {
-    union() {
-        translate([0, 20])
-            resize([logo_title_width, 0], auto = true)
-                text(
-                    "Eurasian Synergy Flute",
-                    size = 16,
-                    font = logo_font,
-                    halign = "center",
-                    valign = "center"
-                );
-        translate([0, -9])
-            resize([logo_map_width, 0], auto = true)
-                eurasia_silhouette_2d();
+    // These vectors are traced from the selected two-colour PNG. The vertical
+    // scale retains the long lid composition while leaving a real edge margin.
+    intersection() {
+        scale([1, logo_vertical_scale])
+            union() {
+                translate([0, 20])
+                    translate([
+                        -logo_title_width / 2,
+                        -logo_title_width
+                            * logo_title_source_size[1]
+                            / logo_title_source_size[0] / 2
+                    ])
+                        resize([logo_title_width, 0], auto = true)
+                            import("generated/case_logo_title.svg");
+                translate([0, -9])
+                    translate([
+                        -logo_map_width / 2,
+                        -logo_map_width
+                            * logo_map_source_size[1]
+                            / logo_map_source_size[0] / 2
+                    ])
+                        resize([logo_map_width, 0], auto = true)
+                            import("generated/case_logo_map.svg");
+            }
+        rounded_rect_2d(
+            [
+                case_outer_l - 2 * logo_edge_margin,
+                case_outer_w - 2 * logo_edge_margin
+            ],
+            max(0.01, corner_r - logo_edge_margin)
+        );
     }
 }
 
@@ -365,7 +399,12 @@ module profiled_segment(x1, x2, d1, d2) {
             cylinder(h = x2 - x1, d1 = d1, d2 = d2, center = true);
 }
 
-module profiled_channel_cut(i, extra_depth = 0, flat_relief = true) {
+module profiled_channel_cut(
+    i,
+    extra_depth = 0,
+    flat_relief = true,
+    diameter_offset = 0
+) {
     x0 = body_x0(i);
     x1 = body_x1(i);
     x2 = connector_x1(i);
@@ -376,43 +415,53 @@ module profiled_channel_cut(i, extra_depth = 0, flat_relief = true) {
         profiled_segment(
             cut_x0 - bore_end_overlap,
             x0,
-            channel_d,
-            channel_d
+            channel_d + diameter_offset,
+            channel_d + diameter_offset
         );
 
         if (slot_has_connector[i]) {
-            profiled_segment(x0, x1 - connector_backset, channel_d, channel_d);
+            profiled_segment(
+                x0,
+                x1 - connector_backset,
+                channel_d + diameter_offset,
+                channel_d + diameter_offset
+            );
             profiled_segment(
                 x1 - connector_backset,
                 x1 - connector_expand_start,
-                channel_d,
-                connector_channel_d
+                channel_d + diameter_offset,
+                connector_channel_d + diameter_offset
             );
             profiled_segment(
                 x1 - connector_expand_start,
-                x1 + connector_expand_end,
-                connector_channel_d,
-                connector_channel_d
+                x1 + connector_expand_end(i),
+                connector_channel_d + diameter_offset,
+                connector_channel_d + diameter_offset
             );
             profiled_segment(
-                x1 + connector_expand_end,
+                x1 + connector_expand_end(i),
                 x2,
-                connector_channel_d,
-                channel_d
+                connector_channel_d + diameter_offset,
+                channel_d + diameter_offset
             );
             profiled_segment(
                 x2,
                 cut_x1 + bore_end_overlap,
-                channel_d,
-                channel_d
+                channel_d + diameter_offset,
+                channel_d + diameter_offset
             );
         } else {
-            profiled_segment(x0, x1, channel_d, channel_d);
+            profiled_segment(
+                x0,
+                x1,
+                channel_d + diameter_offset,
+                channel_d + diameter_offset
+            );
             profiled_segment(
                 x1,
                 cut_x1 + bore_end_overlap,
-                channel_d,
-                channel_d
+                channel_d + diameter_offset,
+                channel_d + diameter_offset
             );
         }
 
@@ -429,7 +478,7 @@ module profiled_channel_cut(i, extra_depth = 0, flat_relief = true) {
             ])
                 cube([
                     cut_x1 - cut_x0,
-                    profile_d(i),
+                    profile_d(i) + diameter_offset,
                     relief_h
                 ], center = true);
         }
@@ -441,6 +490,37 @@ module all_channel_cuts(extra_depth = 0, flat_relief = true) {
         translate([slot_x(i), slot_y(i), slot_z])
             rotate([0, 0, slot_rot_z(i)])
                 profiled_channel_cut(i, extra_depth, flat_relief);
+}
+
+module retention_clip_local(i, cavity = false) {
+    clearance = cavity ? retention_lid_clearance : 0;
+    local_z0 = case_outer_h - slot_z - retention_clip_root_overlap - clearance;
+    local_z1 = retention_lip_overrun + clearance;
+    outer_w = profile_d(i) + 2 * (retention_clip_border + clearance);
+
+    for (xc = retention_clip_centers[i])
+        difference() {
+            translate([xc, 0, (local_z0 + local_z1) / 2])
+                cube([
+                    retention_clip_w + 2 * clearance,
+                    outer_w,
+                    local_z1 - local_z0
+                ], center = true);
+            // Reducing the channel diameter expands the receiving relief
+            // inward as well as outward, providing real FDM assembly clearance.
+            profiled_channel_cut(i, 0, false, -2 * clearance);
+        }
+}
+
+module retention_border(cavity = false) {
+    for (i = [0 : 2])
+        translate([slot_x(i), slot_y(i), slot_z])
+            rotate([0, 0, slot_rot_z(i)])
+                retention_clip_local(i, cavity);
+}
+
+module lid_retention_relief() {
+    translate([0, 0, -lid_closed_z]) retention_border(true);
 }
 
 // Nominal solid envelopes for collision and fit validation.  These follow the
@@ -462,12 +542,12 @@ module stored_part_proxy(i) {
             );
             profiled_segment(
                 x1 - connector_expand_start,
-                x1 + connector_expand_end,
+                x1 + connector_expand_end(i),
                 connector_d,
                 connector_d
             );
             profiled_segment(
-                x1 + connector_expand_end,
+                x1 + connector_expand_end(i),
                 x2,
                 connector_d,
                 od
@@ -520,13 +600,14 @@ module hinge_axle_at(
     local_y,
     local_z,
     d = hinge_axle_d,
-    flat_side = 0
+    flat_side = 0,
+    print_flat = hinge_axle_print_flat
 ) {
     if (flat_side == 0) {
         translate([0, local_y, local_z]) x_cylinder_between(x1, x2, d);
     } else {
         r = d / 2;
-        cutoff_z = local_z + flat_side * (r - hinge_axle_print_flat);
+        cutoff_z = local_z + flat_side * (r - print_flat);
         keep_h = d + 2;
         keep_center_z = flat_side > 0
             ? cutoff_z - keep_h / 2
@@ -540,66 +621,82 @@ module hinge_axle_at(
     }
 }
 
-module hinge_bearing_slot(x1, x2, local_y, local_z) {
-    outer_y = local_y - hinge_bearing_outer_d / 2 - 0.4;
-    inner_y = local_y - hinge_bearing_bore_d / 2 + 0.15;
-    hull() {
-        translate([(x1 + x2) / 2, outer_y, local_z])
-            cube([
-                x2 - x1 + 0.4,
-                0.3,
-                hinge_snap_throat + hinge_snap_lead * 2
-            ], center = true);
-        translate([(x1 + x2) / 2, inner_y, local_z])
-            cube([x2 - x1 + 0.4, 0.3, hinge_snap_throat], center = true);
-    }
+module hinge_bearing_bore_at(x1, x2, local_y, local_z) {
+    translate([0, local_y, local_z])
+        x_cylinder_between(x1, x2, hinge_bearing_bore_d);
 }
 
 module hinge_bearing_at(x1, x2, local_y, local_z) {
     difference() {
         translate([0, local_y, local_z])
             x_cylinder_between(x1, x2, hinge_bearing_outer_d);
-        translate([0, local_y, local_z])
-            x_cylinder_between(
-                x1 - 0.2,
-                x2 + 0.2,
-                hinge_bearing_bore_d
-            );
-        hinge_bearing_slot(x1, x2, local_y, local_z);
+        hinge_bearing_bore_at(
+            x1 - 0.2, x2 + 0.2, local_y, local_z
+        );
     }
 }
 
-module bottom_hinge_web(x1, x2, local_z) {
-    web_h = local_z - case_outer_h + hinge_bearing_outer_d / 2 + 0.35;
-    web_y = 4.2;
+module bottom_hinge_starter_web(x1, x2, local_z) {
+    // This shallow tangent web gives the first circular bearing layers a path
+    // back to the shell. It sits entirely below the running bore, so the
+    // encircling bearing surface remains visually and mechanically round.
+    bearing_bottom = local_z - hinge_bearing_outer_d / 2;
+    attach_y = -case_outer_w / 2 + 0.4;
+    web_w = x2 - x1;
 
-    translate([
-        (x1 + x2) / 2,
-        hinge_axis_y + web_y / 2,
-        case_outer_h - 0.25 + web_h / 2
-    ])
-        cube([x2 - x1, web_y, web_h], center = true);
+    hull() {
+        translate([
+            (x1 + x2) / 2,
+            hinge_axis_y,
+            bearing_bottom + hinge_bearing_starter_h / 2
+        ]) cube([web_w, 0.4, hinge_bearing_starter_h], center = true);
+        translate([
+            (x1 + x2) / 2,
+            attach_y,
+            bearing_bottom + 0.5
+        ]) cube([web_w, 0.4, 1.0], center = true);
+    }
 }
 
 module bottom_hinge() {
     for (segment = hinge_bearing_segments) {
         difference() {
             union() {
-                bottom_hinge_web(segment[0], segment[1], hinge_axis_z);
+                bottom_hinge_starter_web(
+                    segment[0], segment[1], hinge_axis_z
+                );
                 hinge_bearing_at(
                     segment[0], segment[1], hinge_axis_y, hinge_axis_z
                 );
             }
-            translate([0, hinge_axis_y, hinge_axis_z])
-                x_cylinder_between(
-                    segment[0] - 0.2,
-                    segment[1] + 0.2,
-                    hinge_bearing_bore_d
-                );
-            hinge_bearing_slot(
-                segment[0], segment[1], hinge_axis_y, hinge_axis_z
+            hinge_bearing_bore_at(
+                segment[0] - 0.2,
+                segment[1] + 0.2,
+                hinge_axis_y,
+                hinge_axis_z
             );
         }
+    }
+}
+
+module lid_outer_end_barrels(clearance = 0) {
+    first = hinge_axle_support_segments[0];
+    last = hinge_axle_support_segments[
+        len(hinge_axle_support_segments) - 1
+    ];
+    d = hinge_end_barrel_d + clearance * 2;
+
+    translate([0, hinge_axis_y, hinge_axis_z - lid_closed_z]) {
+        x_cylinder_between(
+            first[0] - hinge_end_barrel_overhang - clearance,
+            first[1] + clearance,
+            d
+        );
+        x_cylinder_between(
+            last[0] - clearance,
+            last[1] + hinge_end_barrel_overhang + clearance,
+            d
+        );
     }
 }
 
@@ -613,6 +710,7 @@ module lid_hinge() {
         hinge_axle_d,
         1
     );
+    lid_outer_end_barrels();
     for (segment = hinge_axle_support_segments)
         hinge_tab(segment[0], segment[1], local_axis_z, 1);
 }
@@ -620,9 +718,10 @@ module lid_hinge() {
 module lid_bottom_hinge_relief() {
     local_axis_z = hinge_axis_z - lid_closed_z;
     relief_clearance = 0.3;
-    // The fixed bearing backer is rectangular, so its far corner sweeps a
-    // larger radius than the bearing barrel itself as the lid rotates.
-    relief_d = hinge_bearing_outer_d + 4;
+    // Follow the fixed stator's round envelope. The bearing intersects the
+    // rear shell directly, so no square backer or oversized corner relief is
+    // needed behind it.
+    relief_d = hinge_bearing_outer_d + relief_clearance * 2;
 
     for (segment = hinge_bearing_segments)
         translate([0, hinge_axis_y, local_axis_z])
@@ -635,7 +734,7 @@ module lid_bottom_hinge_relief() {
     // Once the pivot is recessed, the rounded top-rear edge of the bottom
     // also sweeps through the lid between and beyond the bearing segments.
     // Clear that small radius continuously; the separate bearing pockets
-    // above remain responsible for the much larger knuckle backers.
+    // above remain responsible for the individual round stators.
     seam_sweep_r = sqrt(
         pow(-case_outer_w / 2 - hinge_axis_y, 2)
         + pow(case_outer_h - hinge_axis_z, 2)
@@ -670,6 +769,11 @@ module lid_hinge_relief() {
             relief_y,
             relief_h
         ], center = true);
+
+    // The two lid-owned end barrels replace the formerly exposed axle stubs.
+    // Clear their complete round exterior from the bottom rear wall.
+    translate([0, 0, lid_closed_z])
+        lid_outer_end_barrels(relief_clearance);
 }
 
 module front_pull(local_z = bottom_pull_z) {
@@ -1030,17 +1134,23 @@ module lid_rim_socket() {
 }
 
 module bottom_case_core() {
-    union() {
-        difference() {
-            union() {
-                rounded_box([case_outer_l, case_outer_w, case_outer_h], corner_r);
+    difference() {
+        union() {
+            difference() {
+                union() {
+                    rounded_box([case_outer_l, case_outer_w, case_outer_h], corner_r);
+                }
+                translate([0, 0, floor_thickness])
+                    rounded_box([case_inner_l, case_inner_w, case_outer_h + 2], max(corner_r - wall, 1));
+                all_channel_cuts(4);
             }
-            translate([0, 0, floor_thickness])
-                rounded_box([case_inner_l, case_inner_w, case_outer_h + 2], max(corner_r - wall, 1));
-            all_channel_cuts(4);
-            lid_hinge_relief();
+            bottom_channel_deck();
+            retention_border();
         }
-        bottom_channel_deck();
+        // Apply the moving lid envelope after the complete bottom interior is
+        // assembled so neither the shell nor the raised channel bed can touch
+        // the axle or its round end barrels.
+        lid_hinge_relief();
     }
 }
 
@@ -1067,6 +1177,7 @@ module lid_case() {
         rounded_box([case_outer_l, case_outer_w, lid_h], corner_r);
         translate([0, 0, -lid_closed_z])
             all_channel_cuts(4, false);
+        lid_retention_relief();
         lid_logo_recess();
     }
 }
@@ -1107,6 +1218,34 @@ module closed_assembly_case() {
     bottom_assembly();
     translate([0, 0, lid_closed_z])
         lid_assembly();
+}
+
+module lid_in_print_pose() {
+    translate([0, hinge_axis_y, hinge_axis_z])
+        rotate([180, 0, 0])
+            translate([
+                0,
+                -hinge_axis_y,
+                -(hinge_axis_z - lid_closed_z)
+            ]) children();
+}
+
+module print_in_place_case() {
+    // Rotate the closed lid exactly 180 degrees about the production hinge.
+    // This puts both exterior backs at Z=0 and leaves the two rear shell edges
+    // separated by hinge_print_shell_gap on the build plate.
+    bottom_assembly();
+    lid_in_print_pose() lid_assembly();
+}
+
+module print_in_place_hinge_coupon(span = 46) {
+    // Crop the actual production assembly rather than maintaining a parallel
+    // coupon approximation. Both moving components remain on the bed.
+    intersection() {
+        print_in_place_case();
+        translate([0, hinge_axis_y, 10])
+            cube([span, 28, 20], center = true);
+    }
 }
 
 module hinge_coupon() {
@@ -1313,28 +1452,22 @@ if (part == "none") {
     bottom_assembly();
 } else if (part == "lid") {
     lid_assembly();
-} else if (part == "bottom_p1s") {
-    rotate([0, 0, 45]) bottom_assembly();
-} else if (part == "lid_p1s") {
-    rotate([0, 0, 45])
-        translate([0, 0, lid_outer_h])
-            rotate([180, 0, 0]) lid_assembly();
 } else if (part == "lid_logo") {
     lid_logo_inlay();
-} else if (part == "lid_logo_p1s") {
-    rotate([0, 0, 45])
-        translate([0, 0, lid_outer_h])
-            rotate([180, 0, 0]) lid_logo_inlay();
+} else if (part == "lid_logo_print") {
+    lid_in_print_pose() lid_logo_inlay();
 } else if (part == "hinge_coupon") {
-    hinge_coupon();
+    print_in_place_hinge_coupon();
 } else if (part == "full_hinge_coupon") {
-    full_hinge_coupon();
+    print_in_place_hinge_coupon(hinge_span + 12);
 } else if (part == "latch") {
     lid_simple_latch();
 } else if (part == "latch_coupon") {
     latch_coupon();
 } else if (part == "assembly") {
     closed_assembly_case();
+} else if (part == "print_in_place") {
+    print_in_place_case();
 } else {
     color("steelblue") bottom_assembly();
     labels();

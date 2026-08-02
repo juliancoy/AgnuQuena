@@ -16,12 +16,14 @@ import trimesh
 ROOT = Path(__file__).resolve().parents[1]
 EXPORT_DIR = ROOT / "build" / "quena"
 ASSET_DIR = ROOT / "website" / "assets"
+HOSTING_ASSET_DIR = ROOT / "site-hosting" / "public" / "assets"
 EXPORT_MANIFEST = EXPORT_DIR / "production_export.json"
+GENERATED_MANIFEST = ROOT / "generated" / "quena_manifest.json"
 
 PARTS = (
-    ("QuenaMouthpiece.stl", 0.0, 0.0),
-    ("QuenaTube1.stl", 30.0, 90.0),
-    ("QuenaTube2.stl", 252.0, -90.0),
+    ("QuenaMouthpiece.stl", "mouthpiece", 0.0),
+    ("QuenaTube1.stl", "tube_1", 90.0),
+    ("QuenaTube2.stl", "tube_2", -90.0),
 )
 
 CELL_MM = 1.0
@@ -39,9 +41,17 @@ def sha256(path: Path) -> str:
 
 def checked_parts() -> list[tuple[Path, float, float, trimesh.Trimesh]]:
     manifest = json.loads(EXPORT_MANIFEST.read_text(encoding="utf-8"))
+    generated = json.loads(GENERATED_MANIFEST.read_text(encoding="utf-8"))
     expected = {part["file"]: part["sha256"] for part in manifest["parts"]}
+    lengths = {part["name"]: part["length_mm"] for part in generated["parts"]}
+    offsets = {
+        "mouthpiece": 0.0,
+        "tube_1": lengths["mouthpiece"],
+        "tube_2": lengths["mouthpiece"] + lengths["tube_1"],
+    }
     result: list[tuple[Path, float, float, trimesh.Trimesh]] = []
-    for filename, z_offset, rotation_z_degrees in PARTS:
+    for filename, part_name, rotation_z_degrees in PARTS:
+        z_offset = offsets[part_name]
         path = EXPORT_DIR / filename
         digest = sha256(path)
         if digest != expected.get(filename):
@@ -90,9 +100,17 @@ def build_surface_mask(meshes: list[trimesh.Trimesh]) -> np.ndarray:
 
 def main() -> int:
     ASSET_DIR.mkdir(parents=True, exist_ok=True)
+    HOSTING_ASSET_DIR.mkdir(parents=True, exist_ok=True)
     parts = checked_parts()
     meshes = [mesh for _, _, _, mesh in parts]
     assembly = trimesh.util.concatenate(meshes)
+    generated = json.loads(GENERATED_MANIFEST.read_text(encoding="utf-8"))
+    expected_length = sum(part["length_mm"] for part in generated["parts"])
+    if not math.isclose(float(assembly.extents[2]), expected_length, abs_tol=0.01):
+        raise RuntimeError(
+            f"assembled flute length {assembly.extents[2]:.3f} mm does not match "
+            f"canonical {expected_length:.3f} mm"
+        )
     assembly_path = ASSET_DIR / "QuenaProductionAssembly.stl"
     assembly.export(assembly_path)
 
@@ -138,6 +156,13 @@ def main() -> int:
     }
     metadata_path = ASSET_DIR / "QuenaProductionCFD.json"
     metadata_path.write_text(json.dumps(metadata, indent=2) + "\n", encoding="utf-8")
+    for source in (
+        *(ASSET_DIR / path.name for path, _, _, _ in parts),
+        assembly_path,
+        mask_path,
+        metadata_path,
+    ):
+        shutil.copy2(source, HOSTING_ASSET_DIR / source.name)
     print(json.dumps(metadata, indent=2))
     return 0
 

@@ -51,24 +51,34 @@
       <article class="simulation-card">
         <div class="card-heading">
           <div>
-            <p class="kicker">Longitudinal CFD slice</p>
+            <p class="kicker">Production STL · live 3D pressure field</p>
             <h2 id="simulationTitle">A4 · Hole A</h2>
           </div>
           <div class="live-readout">
             <span>flow time</span>
             <strong id="simTime">0.00 ms</strong>
+            <span id="productionRevision" class="revision">verifying STL hashes</span>
           </div>
         </div>
 
-        <div class="canvas-shell">
-          <canvas id="pressureCanvas" width="960" height="520"></canvas>
-          <div class="canvas-key">
+        <div class="production-shell">
+          <canvas id="productionCanvas" aria-label="Interactive 3D quena pressure simulation"></canvas>
+          <div class="wave-key">
             <span><i class="negative"></i> low pressure</span>
-            <span><i class="wall"></i> wall</span>
-            <span><i class="positive"></i> high pressure / fast flow</span>
+            <span><i class="positive"></i> high pressure</span>
           </div>
-          <div class="axis-label mouthpiece">mouthpiece</div>
-          <div class="axis-label foot">foot</div>
+          <div class="production-proof">
+            <strong id="productionProof">Loading validated mesh…</strong>
+            <span id="volumeStatus">3D solver volume ready · run CFD to populate</span>
+            <span>Solver amplitude · pressure phase slowed to 1.2 Hz so oscillation stays visible</span>
+            <span>Drag to orbit · scroll to zoom</span>
+            <div class="production-views">
+              <button type="button" data-production-view="full">Full flute</button>
+              <button type="button" data-production-view="holes">Tone holes</button>
+              <button type="button" data-production-view="mouth">Mouthpiece</button>
+            </div>
+            <button id="volumeOverlayToggle" type="button">Hide pressure waves</button>
+          </div>
         </div>
 
         <div class="transport">
@@ -104,9 +114,13 @@
           </select>
         </label>
 
-        <label class="range-field">
-          <span>Slice angle <output id="sliceAngleValue">0°</output></span>
-          <input id="sliceAngle" type="range" min="0" max="359" value="0" step="1">
+        <label class="field">
+          <span>Player boundary</span>
+          <select id="playerBoundarySelect">
+            <option value="none">Instrument only</option>
+            <option value="headHands">Head + hands</option>
+            <option value="full">Full player · local approximation</option>
+          </select>
         </label>
 
         <label class="range-field">
@@ -119,15 +133,36 @@
           <input id="turbulence" type="range" min="0" max="25" value="10" step="1">
         </label>
 
+        <details class="parameter-panel" open>
+          <summary>Solver parameters</summary>
+          <div class="parameter-grid">
+            <label><span>Air density <small>kg/m³</small></span><input data-sim-param="airDensity" type="number" min="0.5" max="2" step="0.001" value="1.204"></label>
+            <label><span>Sound speed <small>m/s</small></span><input data-sim-param="soundSpeed" type="number" min="250" max="450" step="1" value="343"></label>
+            <label><span>Kinematic viscosity <small>m²/s</small></span><input data-sim-param="kinematicViscosity" type="number" min="0.000001" max="0.001" step="0.000001" value="0.000015"></label>
+            <label><span>Courant number</span><input data-sim-param="courant" type="number" min="0.05" max="0.45" step="0.01" value="0.28"></label>
+            <label><span>Smagorinsky C<sub>s</sub></span><input data-sim-param="smagorinsky" type="number" min="0" max="0.4" step="0.01" value="0.17"></label>
+            <label><span>Sponge rate <small>s⁻¹</small></span><input data-sim-param="spongeRate" type="number" min="0" max="50000" step="100" value="16000"></label>
+            <label><span>Acoustic drive <small>%</small></span><input data-sim-param="acousticDrivePercent" type="number" min="0" max="50" step="1" value="12"></label>
+            <label><span>Startup ramp <small>µs</small></span><input data-sim-param="startupRampUs" type="number" min="1" max="10000" step="1" value="5"></label>
+            <label><span>Pressure scale <small>Pa</small></span><input data-sim-param="pressureScale" type="number" min="1" max="3000" step="1" value="120"></label>
+            <label><span>Speed scale <small>m/s</small></span><input data-sim-param="speedScale" type="number" min="1" max="60" step="1" value="15"></label>
+            <label><span>Vorticity scale <small>s⁻¹</small></span><input data-sim-param="vorticityScale" type="number" min="100" max="50000" step="100" value="8000"></label>
+            <label><span>Visible phase <small>Hz</small></span><input data-sim-param="visualPhaseHz" type="number" min="0.1" max="10" step="0.1" value="1.2"></label>
+            <label><span>Energy span <small>Pa</small></span><input data-sim-param="visualEnergySpan" type="number" min="1" max="3000" step="1" value="180"></label>
+            <label><span>Max opacity</span><input data-sim-param="visualEnergyCap" type="number" min="0.05" max="1" step="0.01" value="0.72"></label>
+          </div>
+        </details>
+
         <dl class="spec-list">
           <div>
             <dt>Grid</dt>
-            <dd id="gridMetric">424 × 48 × 48</dd>
+            <dd id="gridMetric">424 × 48 × 48 · locked</dd>
           </div>
           <div>
             <dt>Voxel</dt>
-            <dd>1.00 mm</dd>
+            <dd>1.00 mm · locked</dd>
           </div>
+          <div><dt>Time step</dt><dd id="timeStepMetric">0.771 µs · derived</dd></div>
           <div>
             <dt>Bore</dt>
             <dd>17.50 mm</dd>
@@ -136,7 +171,13 @@
             <dt>Wall</dt>
             <dd>0.80 mm</dd>
           </div>
+          <div><dt>Acoustic length</dt><dd>398.695 mm · locked</dd></div>
+          <div><dt>Notch</dt><dd>8 W × 4.8 R × 15 L mm · 45° · locked</dd></div>
+          <div><dt>Active hole Ø</dt><dd id="holeDiameterMetric">7.90 mm · locked</dd></div>
+          <div><dt>Hole center</dt><dd id="holePositionMetric">302.00 mm · locked</dd></div>
+          <div><dt>Hole profile</dt><dd id="holeProfileMetric">7.25 mm · −12° · locked</dd></div>
           <div><dt>Flow model</dt><dd>3D LES</dd></div>
+          <div><dt>Player</dt><dd id="playerMetric">not included</dd></div>
           <div><dt>Reynolds</dt><dd id="reynoldsMetric">6,400</dd></div>
           <div>
             <dt>Target</dt>
@@ -153,59 +194,6 @@
           </p>
         </div>
       </aside>
-    </section>
-
-    <section class="inspection-grid">
-      <article class="geometry-card">
-        <div class="card-heading">
-          <div>
-            <p class="kicker">Loaded production STL assembly</p>
-            <h2>Exact printable flute</h2>
-          </div>
-          <span id="productionRevision" class="revision">verifying STL hashes</span>
-        </div>
-        <div class="production-shell">
-          <canvas id="productionCanvas"></canvas>
-          <div class="production-proof">
-            <strong id="productionProof">Loading validated mesh…</strong>
-            <span id="volumeStatus">3D solver volume ready · run CFD to populate</span>
-            <span>Live 2D field plane + 3D solver samples · drag to orbit · scroll to zoom</span>
-            <div class="production-views">
-              <button type="button" data-production-view="full">Full flute</button>
-              <button type="button" data-production-view="holes">Tone holes</button>
-              <button type="button" data-production-view="mouth">Mouthpiece</button>
-            </div>
-            <button id="volumeOverlayToggle" type="button">Hide 3D flow</button>
-            <button id="pressureOverlayToggle" type="button">Show pressure plane</button>
-          </div>
-        </div>
-      </article>
-
-      <article class="profile-card">
-        <p class="kicker">Selected opening</p>
-        <h2 id="profileTitle">Hole A profile</h2>
-        <div class="profile-visual">
-          <svg id="profileSvg" viewBox="0 0 240 240" role="img"
-               aria-label="Rounded-square tone-hole profile">
-            <defs>
-              <pattern id="gridPattern" width="20" height="20" patternUnits="userSpaceOnUse">
-                <path d="M 20 0 L 0 0 0 20" fill="none" stroke="currentColor" stroke-width=".6"/>
-              </pattern>
-            </defs>
-            <rect x="12" y="12" width="216" height="216" rx="16" class="profile-grid"/>
-            <rect id="profileShape" x="75" y="75" width="90" height="90" rx="25"
-                  class="profile-shape"/>
-            <line x1="75" y1="184" x2="165" y2="184" class="dimension-line"/>
-            <text id="profileWidth" x="120" y="205" text-anchor="middle">7.27 mm</text>
-          </svg>
-        </div>
-        <dl class="profile-metrics">
-          <div><dt>Equivalent Ø</dt><dd id="diameterMetric">7.90 mm</dd></div>
-          <div><dt>Profile width</dt><dd id="profileMetric">7.27 mm</dd></div>
-          <div><dt>Corner ratio</dt><dd>0.28</dd></div>
-          <div><dt>Axial center</dt><dd id="positionMetric">302.00 mm</dd></div>
-        </dl>
-      </article>
     </section>
 
     <section class="model-notes">

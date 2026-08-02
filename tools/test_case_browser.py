@@ -18,6 +18,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB_ROOT = ROOT / "website"
+CASE_SCAD = ROOT / "QuenaCase.scad"
+SLOT_ASSETS = ("QuenaTube1.stl", "QuenaTube2.stl", "QuenaMouthpiece.stl")
+NUMBER = r"[-+]?\d+(?:\.\d+)?"
 
 
 class QuietHandler(SimpleHTTPRequestHandler):
@@ -30,15 +33,81 @@ def sha256(path: Path) -> str:
 
 
 def verify_viewer_assets() -> None:
-    for name in ("QuenaCaseBottomViewer.stl", "QuenaCaseLidViewer.stl"):
+    for name in (
+        "QuenaCaseBottomViewer.stl",
+        "QuenaCaseLidViewer.stl",
+        "QuenaTube1.stl",
+        "QuenaTube2.stl",
+        "QuenaMouthpiece.stl",
+    ):
+        canonical_dir = ROOT if name.startswith("QuenaCase") else ROOT / "build" / "quena"
         paths = (
-            ROOT / name,
+            canonical_dir / name,
             ROOT / "website" / "assets" / name,
             ROOT / "site-hosting" / "public" / "assets" / name,
         )
         hashes = {sha256(path) for path in paths}
         if len(hashes) != 1:
             raise AssertionError(f"{name}: canonical and site assets differ")
+    if (WEB_ROOT / "sim.js").read_bytes() != (
+        ROOT / "site-hosting" / "public" / "sim.js"
+    ).read_bytes():
+        raise AssertionError("website and production simulation sources differ")
+
+
+def evaluated_case_slots() -> dict[str, tuple[float, ...]]:
+    with tempfile.TemporaryDirectory(prefix="quena_case_browser_slots_") as temp_dir:
+        temp_path = Path(temp_dir)
+        probe_scad = temp_path / "slots.scad"
+        probe_stl = temp_path / "slots.stl"
+        probe_scad.write_text(
+            f"include <{CASE_SCAD}>;\n"
+            "for (i = [0:2]) echo(\"CASE_SLOT\", i, slot_x(i), slot_y(i), "
+            "slot_z, body_x0(i), slot_rot_z(i));\n"
+            "cube(1);\n",
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            ["openscad", "-D", 'part="none"', "-o", str(probe_stl), str(probe_scad)],
+            check=True,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+    matches = re.findall(
+        rf'ECHO:\s*"CASE_SLOT",\s*(\d+),\s*({NUMBER}),\s*({NUMBER}),\s*'
+        rf'({NUMBER}),\s*({NUMBER}),\s*({NUMBER})',
+        result.stdout,
+    )
+    if len(matches) != 3:
+        raise AssertionError("OpenSCAD did not report all three case slots")
+    return {
+        SLOT_ASSETS[int(index)]: tuple(float(value) for value in values)
+        for index, *values in matches
+    }
+
+
+def verify_browser_slot_alignment() -> None:
+    source = (WEB_ROOT / "sim.js").read_text(encoding="utf-8")
+    matches = re.findall(
+        rf'asset:\s*"([^"]+)",\s*x:\s*({NUMBER}),\s*y:\s*({NUMBER}),\s*'
+        rf'z:\s*({NUMBER}),\s*bodyX0:\s*({NUMBER}),\s*rotationZ:\s*({NUMBER})',
+        source,
+    )
+    browser = {
+        asset: tuple(float(value) for value in values)
+        for asset, *values in matches
+        if asset in SLOT_ASSETS
+    }
+    case = evaluated_case_slots()
+    if browser.keys() != case.keys():
+        raise AssertionError("browser simulation does not define all OpenSCAD case slots")
+    for asset in SLOT_ASSETS:
+        for actual, expected in zip(browser[asset], case[asset]):
+            if abs(actual - expected) > 0.001:
+                raise AssertionError(
+                    f"{asset}: browser slot {browser[asset]} differs from case {case[asset]}"
+                )
 
 
 def chrome_binary() -> str:
@@ -88,6 +157,7 @@ def run_browser_self_test() -> dict[str, object]:
 
 def main() -> None:
     verify_viewer_assets()
+    verify_browser_slot_alignment()
     result = run_browser_self_test()
     if result.get("firstSweepCollision") is not None:
         raise AssertionError(
@@ -96,11 +166,16 @@ def main() -> None:
     probe_contacts = int(result.get("detectorProbeContacts", 0))
     if probe_contacts <= 0:
         raise AssertionError("clearance detector missed the penetration probe")
+    if result.get("quenaWithinCasePlan") is not True:
+        raise AssertionError("one or more quena sections extend outside the case plan")
+    if result.get("quenaHolesFaceOutward") is not True:
+        raise AssertionError("one or more quena sections have holes facing into the case")
     if result.get("pass") is not True:
         raise AssertionError(f"case browser self-test failed: {result}")
     print(
         "QuenaCase browser sweep: ok, 0-180 deg exact-triangle clearance; "
-        f"penetration probe contacts={probe_contacts}"
+        f"penetration probe contacts={probe_contacts}; quena sections within case plan "
+        "with holes facing outward"
     )
 
 

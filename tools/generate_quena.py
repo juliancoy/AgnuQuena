@@ -213,7 +213,14 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
     if tube_part_2_length <= 0:
         raise DesignError("tube_part_1_length leaves no printable second tube")
 
-    overlap = positive(connectors["overlap_mm"], "connectors.overlap_mm")
+    mouthpiece_overlap = positive(
+        connectors["mouthpiece_overlap_mm"],
+        "connectors.mouthpiece_overlap_mm",
+    )
+    tube_joint_overlap = positive(
+        connectors["tube_joint_overlap_mm"],
+        "connectors.tube_joint_overlap_mm",
+    )
     transition = positive(
         connectors["angled_transition_mm"],
         "connectors.angled_transition_mm",
@@ -229,8 +236,10 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
         connectors["insert_z_tolerance_mm"],
         "connectors.insert_z_tolerance_mm",
     )
-    if not 0 <= insert_tolerance < overlap:
-        raise DesignError("insert_z_tolerance_mm must be in [0, overlap_mm)")
+    if not 0 <= insert_tolerance < min(mouthpiece_overlap, tube_joint_overlap):
+        raise DesignError(
+            "insert_z_tolerance_mm must be smaller than every connector overlap"
+        )
 
     axial_scale = positive(profile["axial_scale"], "tone_hole_profile.axial_scale")
     circumferential_scale = positive(
@@ -291,12 +300,17 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
             index = int(position_spec["index"])
             if index < 0:
                 raise DesignError(f"hole {name}: lower-hand index cannot be negative")
-            local_offset = first_offset + index * center_spacing
+            axial_adjust = number(
+                position_spec.get("axial_adjust_mm", 0.0),
+                f"hole {name} axial_adjust_mm",
+            )
+            local_offset = first_offset + index * center_spacing + axial_adjust
             physical_z = tube_part_1_length + local_offset
             position_detail: dict[str, Any] = {
                 "mode": position_mode,
                 "part": 2,
                 "local_offset_mm": local_offset,
+                "axial_adjust_mm": axial_adjust,
             }
         elif position_mode == "tuned_source":
             source_position = positive(
@@ -521,10 +535,12 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
                     f"{ligament:.3f} mm axial ligament"
                 )
 
-    connector_extra = overlap - insert_tolerance + transition - 2.0
+    def connector_extra(overlap: float) -> float:
+        return overlap - insert_tolerance + transition - 2.0
+
     print_heights = {
-        "mouthpiece": mouthpiece_total + connector_extra,
-        "tube_1": tube_part_1_length + connector_extra,
+        "mouthpiece": mouthpiece_total + connector_extra(mouthpiece_overlap),
+        "tube_1": tube_part_1_length + connector_extra(tube_joint_overlap),
         "tube_2": tube_part_2_length,
     }
     for part_name, height in print_heights.items():
@@ -559,7 +575,8 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
         "total_height": total_height,
         "angled_transition_z": transition,
         "accent_ring_z": accent_ring,
-        "ov": overlap,
+        "mouthpiece_overlap": mouthpiece_overlap,
+        "tube_joint_overlap": tube_joint_overlap,
         "non_mouthpiece_acoustic_length": non_mouthpiece_length,
         "tube_part_1_length": tube_part_1_length,
         "tube_part_2_length": tube_part_2_length,
@@ -602,6 +619,8 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
             "non_mouthpiece_length_mm": non_mouthpiece_length,
         },
         "connectors": {
+            "mouthpiece_overlap_mm": mouthpiece_overlap,
+            "tube_joint_overlap_mm": tube_joint_overlap,
             "radial_clearance_mm": radial_clearance,
             "diametral_clearance_mm": radial_clearance * 2.0,
             "outer_diameter_mm": outer_diameter
@@ -683,7 +702,8 @@ def render_scad(spec: dict[str, Any], params: dict[str, float]) -> str:
         "total_height",
         "angled_transition_z",
         "accent_ring_z",
-        "ov",
+        "mouthpiece_overlap",
+        "tube_joint_overlap",
         "non_mouthpiece_acoustic_length",
         "tube_part_1_length",
         "tube_part_2_length",

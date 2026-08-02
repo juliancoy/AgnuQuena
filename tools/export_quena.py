@@ -12,6 +12,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import numpy as np
 import trimesh
 
 
@@ -86,6 +87,24 @@ def validate_stl(path: Path, expected_components: int) -> dict[str, object]:
     }
 
 
+def validate_rounded_mouthpiece_lip(
+    path: Path,
+    bore_diameter_mm: float,
+    outer_diameter_mm: float,
+) -> float:
+    mesh = trimesh.load(path, force="mesh")
+    lip_vertices = mesh.vertices[np.abs(mesh.vertices[:, 2] - mesh.bounds[0, 2]) < 0.001]
+    if len(lip_vertices) < 16:
+        raise RuntimeError("mouthpiece blowing lip has too few terminal vertices")
+    radial = np.linalg.norm(lip_vertices[:, :2], axis=1)
+    expected_mid_radius = (bore_diameter_mm + outer_diameter_mm) / 4.0
+    # The angled notch creates a narrow band of tessellated terminal vertices;
+    # a flat annular rim would span the full 0.8 mm wall instead.
+    if np.ptp(radial) > 0.10 or abs(float(np.mean(radial)) - expected_mid_radius) > 0.03:
+        raise RuntimeError("mouthpiece blowing lip is not a continuous rounded wall")
+    return (outer_diameter_mm - bore_diameter_mm) / 4.0
+
+
 def atomic_write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
@@ -123,6 +142,13 @@ def main() -> int:
         export_stl(export_part, destination)
         expected_components = 3 if name == "layout" else 1
         result = validate_stl(destination, expected_components)
+        if name == "mouthpiece":
+            geometry = generated_manifest["geometry"]
+            result["blowing_lip_rounding_radius_mm"] = validate_rounded_mouthpiece_lip(
+                destination,
+                float(geometry["bore_id_mm"]),
+                float(geometry["outer_diameter_mm"]),
+            )
         result["part"] = name
         results.append(result)
         print(
