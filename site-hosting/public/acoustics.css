@@ -94,6 +94,31 @@ select {
   font-size: 10px;
 }
 
+.parameter-grid input[type="range"] {
+  height: 18px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--accent);
+}
+
+.vector-slider {
+  grid-column: 1 / -1;
+}
+
+.vector-slider > span {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.vector-slider output {
+  color: var(--ink);
+  font-family: "DM Mono", monospace;
+  font-size: 10px;
+}
+
 .site-header {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
@@ -783,5 +808,173 @@ footer {
 
   .parameter-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* Viewport application shell: the document never scrolls; panels own overflow. */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  display: grid;
+  grid-template-rows: 64px minmax(0, 1fr);
+}
+
+.site-header {
+  min-height: 0;
+  height: 64px;
+}
+
+nav a {
+  padding-top: 22px;
+  padding-bottom: 21px;
+}
+
+main {
+  width: 100%;
+  min-height: 0;
+  padding: 12px clamp(12px, 2vw, 28px);
+  overflow: hidden;
+}
+
+.lab-grid {
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  align-items: stretch;
+}
+
+.simulation-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: clamp(12px, 1.5vw, 20px);
+}
+
+.card-heading {
+  margin-bottom: 12px;
+}
+
+.production-shell,
+#productionCanvas {
+  min-height: 0;
+  height: 100%;
+}
+
+.transport {
+  padding-top: 12px;
+}
+
+.controls-card {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  gap: 12px;
+  padding: 16px;
+}
+
+.controls-heading .kicker {
+  margin-bottom: 5px;
+}
+
+.control-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.control-tabs button {
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.control-tabs button.active {
+  border-color: var(--accent);
+  background: rgba(255, 181, 95, 0.10);
+  color: var(--accent);
+}
+
+.controls-scroll {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 5px;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.parameter-panel {
+  border: 0;
+}
+
+.parameter-grid {
+  padding-bottom: 4px;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+@media (max-width: 980px) {
+  body {
+    grid-template-rows: 56px minmax(0, 1fr);
+  }
+
+  .site-header {
+    height: 56px;
+  }
+
+  .lab-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1.15fr) minmax(230px, 0.85fr);
+  }
+
+  .controls-card {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  main {
+    padding: 8px;
+  }
+
+  .lab-grid {
+    gap: 8px;
+    grid-template-rows: minmax(0, 1fr) minmax(220px, 0.8fr);
+  }
+
+  .simulation-card,
+  .controls-card {
+    padding: 10px;
+  }
+
+  .card-heading {
+    margin-bottom: 7px;
+  }
+
+  .production-proof > span:not(#volumeStatus) {
+    display: none;
+  }
+
+  .transport {
+    padding-top: 7px;
   }
 }

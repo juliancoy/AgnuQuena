@@ -16,6 +16,8 @@ from PIL import Image
 ROOT = Path(__file__).resolve().parents[1]
 SCAD = ROOT / "QuenaCase.scad"
 RENDERER = Path(__file__).resolve()
+LOGO_VECTORIZER = ROOT / "tools" / "vectorize_case_logo.py"
+PROJECT_BUILDER = ROOT / "tools" / "build_case_3mf.py"
 
 STL_PARTS = [
     # Canonical production export: both exterior backs on the bed, with the
@@ -87,6 +89,7 @@ def render_stl(part: str, output: Path, *, force: bool = False) -> None:
         ROOT / "EurasianSynergyFlute_logo_2color.png",
         ROOT / "generated" / "case_logo_title.svg",
         ROOT / "generated" / "case_logo_map.svg",
+        ROOT / "generated" / "case_logo_dimensions.scad",
     )
     dependencies = (SCAD, RENDERER) + (logo_inputs if "logo" in part or part in {"lid", "print_in_place", "assembly"} else ())
     if not force and is_current(output, dependencies):
@@ -200,9 +203,11 @@ def main() -> None:
     render_views = args.views or not args.stls
 
     if render_stls:
+        run(["python3", str(LOGO_VECTORIZER)])
         for part, output, _ in STL_PARTS:
             render_stl(part, output, force=args.force)
         copy_site_assets()
+        run(["python3", str(PROJECT_BUILDER)])
 
     if render_views:
         for part, output in VIEW_SHEETS:

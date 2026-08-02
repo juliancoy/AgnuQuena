@@ -8,10 +8,12 @@ source, so they catch render regressions before slicing.
 from __future__ import annotations
 
 import math
+import json
 import re
 import struct
 import subprocess
 import tempfile
+import zipfile
 from collections import defaultdict, deque
 from pathlib import Path
 from typing import Any
@@ -33,7 +35,7 @@ OBSOLETE_SPLIT_EXPORTS = (
 EXPECTED = {
     "QuenaCasePrintInPlace.stl": {
         "size": (250.994, 113.47, 19.4),
-        "min_triangles": 28000,
+        "min_triangles": 18000,
         "components": 2,
     },
     "QuenaCaseBottomViewer.stl": {
@@ -47,9 +49,9 @@ EXPECTED = {
         "components": 1,
     },
     "QuenaCaseLidLogo.stl": {
-        "size": (139.4049, 141.7288, 0.6),
-        "min_triangles": 5000,
-        "components": 21,
+        "size": (190.0, 50.5949, 0.6),
+        "min_triangles": 2000,
+        "components": 22,
     },
     "QuenaCaseHingeCoupon.stl": {
         "size": (46.0, 28.0, 19.4),
@@ -68,7 +70,7 @@ EXPECTED = {
     },
     "QuenaCaseAssembly.stl": {
         "size": (250.994, 61.97, 28.8),
-        "min_triangles": 4500,
+        "min_triangles": 18000,
         "components": 2,
     },
 }
@@ -694,6 +696,109 @@ def run_mesh_checks() -> None:
     )
 
 
+def run_color_project_checks() -> None:
+    subprocess.run(
+        ["python3", str(ROOT / "tools" / "vectorize_case_logo.py"), "--check"],
+        cwd=ROOT,
+        check=True,
+    )
+    logo = trimesh.load(ROOT / "QuenaCaseLidLogo.stl", force="mesh")
+    if not logo.is_watertight or not logo.is_winding_consistent:
+        raise AssertionError("case logo must be a watertight, consistently wound mesh")
+    if not math.isclose(float(logo.bounds[0][2]), 0.0, abs_tol=0.01):
+        raise AssertionError("case logo must start on the build plate")
+    if not math.isclose(float(logo.bounds[1][2]), 0.6, abs_tol=0.01):
+        raise AssertionError("case logo must occupy exactly three 0.2 mm layers")
+
+    case_outer_l = scad_scalar("case_outer_l")
+    case_outer_w = scad_scalar("case_outer_w")
+    hinge_axis_y = scad_scalar("hinge_axis_y")
+    shell_bounds = (
+        (-case_outer_l / 2, 2 * hinge_axis_y - case_outer_w / 2),
+        (case_outer_l / 2, 2 * hinge_axis_y + case_outer_w / 2),
+    )
+    edge_margin = scad_scalar("logo_edge_margin")
+    for axis in range(2):
+        low_margin = float(logo.bounds[0][axis]) - shell_bounds[0][axis]
+        high_margin = shell_bounds[1][axis] - float(logo.bounds[1][axis])
+        if min(low_margin, high_margin) < edge_margin - 0.05:
+            raise AssertionError("case logo does not maintain its specified lid-edge margin")
+
+    with tempfile.TemporaryDirectory(prefix="quena_logo_fit_") as temp_dir:
+        temp_path = Path(temp_dir)
+        solid_scad = temp_path / "solid_case.scad"
+        solid_stl = temp_path / "solid_case.stl"
+        solid_scad.write_text(
+            f'include <{ROOT / "QuenaCase.scad"}>;\n'
+            "bottom_assembly();\n"
+            "lid_in_print_pose() lid_assembly(false);\n",
+            encoding="utf-8",
+        )
+        subprocess.run(
+            ["openscad", "-D", 'part="none"', "-o", str(solid_stl), str(solid_scad)],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        solid_case = trimesh.load(solid_stl, force="mesh")
+    recessed_case = trimesh.load(ROOT / "QuenaCasePrintInPlace.stl", force="mesh")
+    recess_volume = float(solid_case.volume - recessed_case.volume)
+    if not math.isclose(recess_volume, float(logo.volume), abs_tol=0.2):
+        raise AssertionError(
+            "case logo volume does not exactly fill the production lid recess: "
+            f"recess={recess_volume:.3f} mm^3, logo={logo.volume:.3f} mm^3"
+        )
+
+    project = ROOT / "QuenaCase.3mf"
+    with zipfile.ZipFile(project) as archive:
+        corrupt_member = archive.testzip()
+        if corrupt_member is not None:
+            raise AssertionError(f"case 3MF has a corrupt member: {corrupt_member}")
+        names = set(archive.namelist())
+        required = {
+            "3D/3dmodel.model",
+            "Metadata/model_settings.config",
+            "Metadata/project_settings.config",
+        }
+        if not required <= names:
+            raise AssertionError("case 3MF is missing model or slicer metadata")
+        model = archive.read("3D/3dmodel.model").decode("utf-8")
+        metadata = archive.read("Metadata/model_settings.config").decode("utf-8")
+        settings = json.loads(archive.read("Metadata/project_settings.config"))
+    for current_name in ("QuenaCasePrintInPlace.stl", "QuenaCaseLidLogo.stl"):
+        if current_name not in metadata:
+            raise AssertionError(f"case 3MF is missing {current_name}")
+    for obsolete_name in ("QuenaCaseBottom.stl", "QuenaCaseLid.stl"):
+        if obsolete_name in metadata or obsolete_name in model:
+            raise AssertionError(f"case 3MF still contains obsolete {obsolete_name}")
+    if "#FFF144FF" not in model or "#000000FF" not in model:
+        raise AssertionError("case 3MF does not define yellow and black materials")
+    if 'value="1"' not in metadata or 'value="2"' not in metadata:
+        raise AssertionError("case 3MF does not map its two parts to separate filaments")
+    if settings.get("enable_support") != "0" or settings.get("brim_type") != "no_brim":
+        raise AssertionError("case 3MF must disable supports and brims")
+    if settings.get("filament_type") != ["ABS", "ABS"]:
+        raise AssertionError("case 3MF materials must both be ABS")
+    project_scene = trimesh.load(project, force="scene")
+    if len(project_scene.geometry) != 2:
+        raise AssertionError("case 3MF must contain exactly the case and logo meshes")
+    project_face_counts = sorted(len(mesh.faces) for mesh in project_scene.geometry.values())
+    source_face_counts = sorted(
+        len(trimesh.load(ROOT / name, force="mesh").faces)
+        for name in ("QuenaCasePrintInPlace.stl", "QuenaCaseLidLogo.stl")
+    )
+    if project_face_counts != source_face_counts:
+        raise AssertionError("case 3MF meshes differ from the canonical STL inputs")
+    expected_project_bounds = ((2.503, 71.265, 0.0), (253.497, 184.735, 19.3))
+    for actual_row, expected_row in zip(project_scene.bounds, expected_project_bounds):
+        for actual, expected in zip(actual_row, expected_row):
+            if not math.isclose(float(actual), expected, abs_tol=0.02):
+                raise AssertionError("case 3MF is not centered in the validated P1S plate pose")
+    print(
+        "QuenaCase colour project: ok, exact selected artwork traced for a 0.4 mm "
+        "nozzle, 2.0 mm lid margin, three-layer inlay, yellow/black ABS assignment"
+    )
+
 def run_hinge_sweep_check() -> None:
     try:
         import pybullet as p
@@ -904,6 +1009,7 @@ def main() -> None:
     run_latch_design_checks()
     run_channel_layout_checks()
     run_mesh_checks()
+    run_color_project_checks()
     run_closed_overlap_check()
     run_hinge_sweep_check()
 

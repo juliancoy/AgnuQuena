@@ -35,18 +35,6 @@
   </header>
 
   <main>
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Browser-native acoustic inspection</p>
-        <h1>See the geometry<br>the solver is testing.</h1>
-      </div>
-      <p class="hero-copy">
-        Drive a turbulent mouth jet across the production notch and watch it
-        couple to the bore, rounded-square tone holes, and surrounding air.
-        The three-dimensional flow field runs locally in your browser.
-      </p>
-    </section>
-
     <section class="lab-grid">
       <article class="simulation-card">
         <div class="card-heading">
@@ -70,12 +58,12 @@
           <div class="production-proof">
             <strong id="productionProof">Loading validated mesh…</strong>
             <span id="volumeStatus">3D solver volume ready · run CFD to populate</span>
-            <span>Solver amplitude · pressure phase slowed to 1.2 Hz so oscillation stays visible</span>
+            <span>Actual solver samples · jet ribbon bends from the live near-edge response</span>
             <span>Drag to orbit · scroll to zoom</span>
             <div class="production-views">
               <button type="button" data-production-view="full">Full flute</button>
               <button type="button" data-production-view="holes">Tone holes</button>
-              <button type="button" data-production-view="mouth">Mouthpiece</button>
+              <button type="button" data-production-view="mouth">Jet / edge</button>
             </div>
             <button id="volumeOverlayToggle" type="button">Hide pressure waves</button>
           </div>
@@ -95,17 +83,24 @@
       </article>
 
       <aside class="controls-card">
-        <div>
+        <div class="controls-heading">
           <p class="kicker">Test configuration</p>
           <h2>Boundary model</h2>
         </div>
 
-        <label class="field">
+        <div class="control-tabs" role="tablist" aria-label="Simulation controls">
+          <button id="setupTab" class="active" type="button" role="tab" aria-selected="true" aria-controls="setupControls" data-control-tab="setup">Setup</button>
+          <button id="parametersTab" type="button" role="tab" aria-selected="false" aria-controls="parameterControls" data-control-tab="parameters">Parameters</button>
+        </div>
+
+        <div class="controls-scroll">
+
+        <label class="field control-tab-content" data-control-panel="setup">
           <span>Active fingering</span>
           <select id="noteSelect"></select>
         </label>
 
-        <label class="field">
+        <label class="field control-tab-content" data-control-panel="setup">
           <span>Displayed field</span>
           <select id="fieldSelect">
             <option value="pressure">Acoustic pressure</option>
@@ -114,7 +109,7 @@
           </select>
         </label>
 
-        <label class="field">
+        <label class="field control-tab-content" data-control-panel="setup">
           <span>Player boundary</span>
           <select id="playerBoundarySelect">
             <option value="none">Instrument only</option>
@@ -123,18 +118,17 @@
           </select>
         </label>
 
-        <label class="range-field">
+        <label class="range-field control-tab-content" data-control-panel="setup">
           <span>Jet speed <output id="jetSpeedValue">12.0 m/s</output></span>
           <input id="jetSpeed" type="range" min="4" max="20" value="12" step="0.5">
         </label>
 
-        <label class="range-field">
+        <label class="range-field control-tab-content" data-control-panel="setup">
           <span>Inlet turbulence <output id="turbulenceValue">10%</output></span>
           <input id="turbulence" type="range" min="0" max="25" value="10" step="1">
         </label>
 
-        <details class="parameter-panel" open>
-          <summary>Solver parameters</summary>
+        <section id="parameterControls" class="parameter-panel control-tab-content" data-control-panel="parameters" role="tabpanel" aria-labelledby="parametersTab" hidden>
           <div class="parameter-grid">
             <label><span>Air density <small>kg/m³</small></span><input data-sim-param="airDensity" type="number" min="0.5" max="2" step="0.001" value="1.204"></label>
             <label><span>Sound speed <small>m/s</small></span><input data-sim-param="soundSpeed" type="number" min="250" max="450" step="1" value="343"></label>
@@ -142,18 +136,21 @@
             <label><span>Courant number</span><input data-sim-param="courant" type="number" min="0.05" max="0.45" step="0.01" value="0.28"></label>
             <label><span>Smagorinsky C<sub>s</sub></span><input data-sim-param="smagorinsky" type="number" min="0" max="0.4" step="0.01" value="0.17"></label>
             <label><span>Sponge rate <small>s⁻¹</small></span><input data-sim-param="spongeRate" type="number" min="0" max="50000" step="100" value="16000"></label>
-            <label><span>Acoustic drive <small>%</small></span><input data-sim-param="acousticDrivePercent" type="number" min="0" max="50" step="1" value="12"></label>
             <label><span>Startup ramp <small>µs</small></span><input data-sim-param="startupRampUs" type="number" min="1" max="10000" step="1" value="5"></label>
             <label><span>Pressure scale <small>Pa</small></span><input data-sim-param="pressureScale" type="number" min="1" max="3000" step="1" value="120"></label>
             <label><span>Speed scale <small>m/s</small></span><input data-sim-param="speedScale" type="number" min="1" max="60" step="1" value="15"></label>
             <label><span>Vorticity scale <small>s⁻¹</small></span><input data-sim-param="vorticityScale" type="number" min="100" max="50000" step="100" value="8000"></label>
-            <label><span>Visible phase <small>Hz</small></span><input data-sim-param="visualPhaseHz" type="number" min="0.1" max="10" step="0.1" value="1.2"></label>
-            <label><span>Energy span <small>Pa</small></span><input data-sim-param="visualEnergySpan" type="number" min="1" max="3000" step="1" value="180"></label>
-            <label><span>Max opacity</span><input data-sim-param="visualEnergyCap" type="number" min="0.05" max="1" step="0.01" value="0.72"></label>
+            <label><span>Jet deflection gain</span><input data-sim-param="jetDeflectionGain" type="number" min="1" max="10000" step="10" value="200"></label>
+            <label class="vector-slider"><span>Jet direction X <output data-param-output="jetDirectionX">−0.719</output></span><input data-sim-param="jetDirectionX" type="range" min="-1" max="1" step="0.001" value="-0.719"></label>
+            <label class="vector-slider"><span>Jet direction Y <output data-param-output="jetDirectionY">0.000</output></span><input data-sim-param="jetDirectionY" type="range" min="-1" max="1" step="0.001" value="0"></label>
+            <label class="vector-slider"><span>Jet direction Z <output data-param-output="jetDirectionZ">0.695</output></span><input data-sim-param="jetDirectionZ" type="range" min="-1" max="1" step="0.001" value="0.695"></label>
+            <label class="vector-slider"><span>Jet target X <small>mm</small> <output data-param-output="jetTargetX">9.5</output></span><input data-sim-param="jetTargetX" type="range" min="-24" max="24" step="0.1" value="9.5"></label>
+            <label class="vector-slider"><span>Jet target Y <small>mm</small> <output data-param-output="jetTargetY">0.0</output></span><input data-sim-param="jetTargetY" type="range" min="-24" max="24" step="0.1" value="0"></label>
+            <label class="vector-slider"><span>Jet target Z <small>mm</small> <output data-param-output="jetTargetZ">0.3</output></span><input data-sim-param="jetTargetZ" type="range" min="-12" max="412" step="0.1" value="0.3"></label>
           </div>
-        </details>
+        </section>
 
-        <dl class="spec-list">
+        <dl id="setupControls" class="spec-list control-tab-content" data-control-panel="setup" role="tabpanel" aria-labelledby="setupTab">
           <div>
             <dt>Grid</dt>
             <dd id="gridMetric">424 × 48 × 48 · locked</dd>
@@ -177,6 +174,7 @@
           <div><dt>Hole center</dt><dd id="holePositionMetric">302.00 mm · locked</dd></div>
           <div><dt>Hole profile</dt><dd id="holeProfileMetric">7.25 mm · −12° · locked</dd></div>
           <div><dt>Flow model</dt><dd>3D LES</dd></div>
+          <div><dt>Edge oscillation</dt><dd id="oscillationMetric">waiting for steady jet</dd></div>
           <div><dt>Player</dt><dd id="playerMetric">not included</dd></div>
           <div><dt>Reynolds</dt><dd id="reynoldsMetric">6,400</dd></div>
           <div>
@@ -185,7 +183,7 @@
           </div>
         </dl>
 
-        <div class="truth-note">
+        <div class="truth-note control-tab-content" data-control-panel="setup">
           <span>What is exact here?</span>
           <p id="truthText">
             The visible mesh is the assembled, validated production STL. Its
@@ -193,47 +191,10 @@
             solid boundary for pressure and all three velocity components.
           </p>
         </div>
+        </div>
       </aside>
     </section>
-
-    <section class="model-notes">
-      <p class="eyebrow">Read the model honestly</p>
-      <div class="notes-grid">
-        <article>
-          <span>01</span>
-          <h3>Production solid boundary</h3>
-          <p>
-            The three validated print STLs are assembled at their production
-            offsets. Their sampled triangle surfaces—not duplicated tube
-            dimensions—define the 1 mm no-slip CFD boundary.
-          </p>
-        </article>
-        <article>
-          <span>02</span>
-          <h3>Exterior compressible LES</h3>
-          <p>
-            The solver advances all three velocity components and acoustic
-            pressure through the bore and exterior air. A Smagorinsky subgrid
-            viscosity dissipates unresolved turbulent eddies.
-          </p>
-        </article>
-        <article>
-          <span>03</span>
-          <h3>Resolved scale and limits</h3>
-          <p>
-            This is a browser-scale 1 mm large-eddy simulation, not micrometre
-            direct numerical simulation. The mouth jet and exterior radiation
-            are simulated, while eddies below one voxel are modeled.
-          </p>
-        </article>
-      </div>
-    </section>
   </main>
-
-  <footer>
-    <span>AgnuQuena acoustic workbench</span>
-    <span>Current generated geometry · July 2026</span>
-  </footer>
 
   <script type="module" src="./acoustics.js"></script>
 </body>

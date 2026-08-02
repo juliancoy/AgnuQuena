@@ -149,10 +149,46 @@ The loaded sweep is a deterministic rigid-envelope interference screen. It does
 not model flute bounce, elastic deformation, friction, wear, or latch failure;
 inverted and shock retention remain separate engineering checks.
 
+## Two-Colour Front Artwork
+
+`EurasianSynergyFlute_logo_2color.png` is the artwork source of truth. Running
+`python3 tools/vectorize_case_logo.py` separates its original title and Eurasian
+silhouette, removes details narrower than a `0.4 mm` nozzle, and deterministically
+generates `generated/case_logo_title.svg`, `generated/case_logo_map.svg`, and
+their measured source dimensions. The lid uses those traced vectors rather than
+a substituted font or a hand-redrawn map.
+
+The title remains `190 mm` wide and the map `84 mm` wide. A `0.84` vertical
+scale fits the composition inside the long lid face while retaining at least a
+`2.0 mm` rounded-edge margin. The inlay is `0.60 mm` deep: exactly three layers
+at the project's `0.20 mm` layer height. Its top meets the recess floor exactly,
+so the black and yellow ABS fuse across a full planar interface.
+
+The inlay and lid share the same `lid_in_print_pose()` transform. The exported
+logo is therefore already mirrored, translated, and aligned with the face-down
+lid in `QuenaCasePrintInPlace.stl`; no slicer positioning is required.
+
+`QuenaCase.3mf` is the canonical two-colour P1S project. It contains one locked
+assembly with:
+
+- `QuenaCasePrintInPlace.stl` assigned to yellow ABS / AMS slot 1.
+- `QuenaCaseLidLogo.stl` assigned to black ABS / AMS slot 2.
+- `0.20 mm` layers, three walls, `10%` grid infill, and `0.15 mm`
+  elephant-foot compensation.
+- Supports, brims, and skirts disabled; a prime tower remains enabled.
+
+The project places the complete assembly at `X=2.503..253.497 mm` and
+`Y=71.265..184.735 mm`, clear of the P1S front-left exclusion region and with
+the prime-tower area behind it. Inspect the first three sliced layers before
+printing: only the artwork should be black, every artwork island must contact
+the yellow case at layer four, and the `0.60 mm` hinge shell gap must remain
+open.
+
 ## Print Practice
 
-`QuenaCasePrintInPlace.stl` is the canonical production export for the Bambu
-Lab P1S. It is already oriented with both exterior backs on `Z=0`, side by
+`QuenaCasePrintInPlace.stl` is the canonical production geometry for the Bambu
+Lab P1S; use `QuenaCase.3mf` for the complete two-colour job. The STL is already
+oriented with both exterior backs on `Z=0`, side by
 side, and the hinge captured at 180 degrees. Its `251.5 x 113.5 mm` footprint
 fits the nominal `256 x 256 mm` bed with only about `2.25 mm` of X margin per
 side when centered. Disable brims, skirts, and automatic support; confirm that
@@ -180,20 +216,22 @@ to the complete case.
 `QuenaCaseFullHingeCoupon.stl` is the full-width hinge coupon. It uses the same
 alternating seven-bearing/eight-web layout and axial capture as the case.
 
-- `QuenaCasePrintInPlace.stl`: `31328` triangles,
-  `251.5 x 113.5 x 19.4 mm`, `2` connected components.
-- `QuenaCaseHingeCoupon.stl`: `1004` triangles, `46.0 x 28.0 x 19.4 mm`,
+- `QuenaCasePrintInPlace.stl`: `21052` triangles,
+  `251.0 x 113.5 x 19.3 mm`, `2` connected components.
+- `QuenaCaseLidLogo.stl`: `4424` triangles, `190.0 x 50.6 x 0.6 mm`,
+  `22` connected artwork components.
+- `QuenaCaseHingeCoupon.stl`: `1208` triangles, `46.0 x 28.0 x 19.3 mm`,
   `2` connected components.
-- `QuenaCaseFullHingeCoupon.stl`: `5084` triangles,
-  `243.5 x 28.0 x 19.4 mm`, `2` connected components.
+- `QuenaCaseFullHingeCoupon.stl`: `6328` triangles,
+  `243.5 x 28.0 x 19.3 mm`, `2` connected components.
 - `QuenaCaseFullHingeCoupon_9views.png`: `1500 x 1101 px`.
-- `QuenaCaseBottomViewer.stl`: `7792` triangles,
-  `251.5 x 61.3 x 19.4 mm`, `1` connected component.
-- `QuenaCaseLidViewer.stl`: `23536` triangles,
-  `251.5 x 59.4 x 17.6 mm`, `1` connected component.
+- `QuenaCaseBottomViewer.stl`: `8500` triangles,
+  `251.0 x 61.3 x 19.3 mm`, `1` connected component.
+- `QuenaCaseLidViewer.stl`: `12552` triangles,
+  `251.0 x 62.0 x 19.3 mm`, `1` connected component.
 - `QuenaCaseLatch.stl`: `56.0 x 8.3 x 11.6 mm`.
 - `QuenaCaseLatchCoupon.stl`: `182.0 x 34.0 x 18.0 mm`.
-- `QuenaCaseAssembly.stl`: `251.5 x 62.0 x 28.8 mm`.
+- `QuenaCaseAssembly.stl`: `21052` triangles, `251.0 x 62.0 x 28.8 mm`.
 - Closed overlap check: empty intersection.
 - Hinge sweep check: passes from `0` to `180` degrees around
   `(0.00, -28.35, 14.40)`.

@@ -291,6 +291,11 @@ return {
   fieldModes: document.querySelector("#fieldSelect")?.options.length || 0,
   playerModes: document.querySelector("#playerBoundarySelect")?.options.length || 0,
   parameterCount: document.querySelectorAll("[data-sim-param]").length,
+  jetSliders: document.querySelectorAll('.vector-slider input[type="range"]').length,
+  jetSliderOutputs: document.querySelectorAll("[data-param-output]").length,
+  controlTabs: document.querySelectorAll('[role="tab"]').length,
+  documentScrollable: document.scrollingElement.scrollHeight > document.scrollingElement.clientHeight + 1,
+  bodyOverflow: getComputedStyle(document.body).overflow,
   fingerings: document.querySelector("#noteSelect")?.options.length || 0,
   cfd: window.__agnuquenaCFD?.configuration || null,
   volume3d: window.__agnuquena3D || null,
@@ -339,7 +344,12 @@ def run_smoke_test(selenium_port: int, require_webgpu: bool) -> dict[str, Any]:
             or state.get("modelCanvases") != 1
             or state.get("fieldModes") != 3
             or state.get("playerModes") != 3
-            or state.get("parameterCount") != 14
+            or state.get("parameterCount") != 17
+            or state.get("jetSliders") != 6
+            or state.get("jetSliderOutputs") != 6
+            or state.get("controlTabs") != 2
+            or state.get("documentScrollable")
+            or state.get("bodyOverflow") != "hidden"
             or state.get("fingerings") != 6
         ):
             raise LauncherError(f"The CFD controls are incomplete: {state}")
@@ -362,11 +372,89 @@ return window.__agnuquenaCFD?.configuration;
         )
         if (
             not isinstance(parameter_contract, dict)
-            or len(parameter_contract.get("parameters", {})) != 14
+            or len(parameter_contract.get("parameters", {})) != 17
             or parameter_contract.get("parameters", {}).get("airDensity") != 1.25
         ):
             raise LauncherError(f"The exposed solver parameters are not live: {parameter_contract}")
         state["parameters"] = parameter_contract.get("parameters")
+        tab_contract = execute_script(
+            webdriver,
+            session_id,
+            """
+document.querySelector("#parametersTab").click();
+const scroller = document.querySelector(".controls-scroll");
+return {
+  selected: document.querySelector("#parametersTab").getAttribute("aria-selected"),
+  parametersVisible: !document.querySelector("#parameterControls").hidden,
+  setupHidden: document.querySelector("#setupControls").hidden,
+  overflowY: getComputedStyle(scroller).overflowY,
+  documentScrollable: document.scrollingElement.scrollHeight > document.scrollingElement.clientHeight + 1,
+};
+""",
+        )
+        if (
+            not isinstance(tab_contract, dict)
+            or tab_contract.get("selected") != "true"
+            or not tab_contract.get("parametersVisible")
+            or not tab_contract.get("setupHidden")
+            or tab_contract.get("overflowY") != "auto"
+            or tab_contract.get("documentScrollable")
+        ):
+            raise LauncherError(f"The viewport tabs do not own scrolling correctly: {tab_contract}")
+        state["controlLayout"] = tab_contract
+        jet_contract = execute_script(
+            webdriver,
+            session_id,
+            """
+const input = document.querySelector('[data-sim-param="jetTargetX"]');
+input.value = "8.5";
+input.dispatchEvent(new Event("input", {bubbles: true}));
+return window.__agnuquenaCFD?.configuration.parameters;
+""",
+        )
+        if (
+            not isinstance(jet_contract, dict)
+            or jet_contract.get("jetTargetX") != 8.5
+            or jet_contract.get("jetDirectionX", 0) >= -0.7
+            or "acousticDrivePercent" in jet_contract
+        ):
+            raise LauncherError(f"Jet target and direction controls are not synchronized: {jet_contract}")
+        state["jetParameters"] = jet_contract
+        direction_contract = execute_script(
+            webdriver,
+            session_id,
+            """
+const input = document.querySelector('[data-sim-param="jetDirectionY"]');
+input.value = "0.2";
+input.dispatchEvent(new Event("input", {bubbles: true}));
+return window.__agnuquenaCFD?.configuration.parameters;
+""",
+        )
+        direction_norm = 0.0
+        if isinstance(direction_contract, dict):
+            direction_norm = sum(
+                float(direction_contract.get(name, 0)) ** 2
+                for name in ("jetDirectionX", "jetDirectionY", "jetDirectionZ")
+            ) ** 0.5
+        if (
+            not isinstance(direction_contract, dict)
+            or abs(direction_norm - 1) > 0.001
+            or abs(direction_contract.get("jetTargetY", 0)) < 0.5
+        ):
+            raise LauncherError(f"Jet direction did not update its destination: {direction_contract}")
+        state["jetDirectionParameters"] = direction_contract
+        execute_script(
+            webdriver,
+            session_id,
+            """
+for (const [name, value] of Object.entries({jetTargetX: 9.5, jetTargetY: 0, jetTargetZ: 0.3})) {
+  document.querySelector(`[data-sim-param="${name}"]`).value = String(value);
+}
+document.querySelector('[data-sim-param="jetTargetY"]')
+  .dispatchEvent(new Event("input", {bubbles: true}));
+return true;
+""",
+        )
 
         head_hands = execute_script(
             webdriver,
@@ -453,25 +541,25 @@ return {
                     isinstance(volume, dict)
                     and volume.get("updates", 0) > 1
                     and volume.get("waveSpan", 0) > 0.001
+                    and volume.get("jetSignalRange", 0) > 0.0001
+                    and volume.get("jetVisualSignalRange", 0) > 0.1
                 ):
                     state["volume3d"] = volume
                     break
                 time.sleep(0.5)
             else:
-                raise LauncherError("The 3D model did not receive a visible pressure-wave span from the solver.")
-            phase_before = float(state["volume3d"].get("visualPhase", 0))
-            time.sleep(0.3)
-            phase_after = float(
-                execute_script(webdriver, session_id, "return window.__agnuquena3D.visualPhase;")
-            )
-            if phase_after - phase_before < 1:
-                raise LauncherError("The pressure-wave phase is not visibly oscillating.")
-            state["phaseAdvance"] = phase_after - phase_before
+                raise LauncherError(
+                    "The actual solver field did not produce a varying near-edge jet response."
+                )
 
         execute_script(
             webdriver,
             session_id,
-            'document.querySelector(".production-shell").scrollIntoView({block: "center"}); return true;',
+            """
+document.querySelector('[data-production-view="mouth"]').click();
+document.querySelector(".production-shell").scrollIntoView({block: "center"});
+return true;
+""",
         )
         time.sleep(1)
         state["screenshot"] = str(capture_screenshot(webdriver, session_id))

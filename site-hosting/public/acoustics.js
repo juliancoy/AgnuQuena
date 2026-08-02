@@ -25,6 +25,7 @@ const NX = 48;
 const NY = 48;
 const NZ = 424;
 const Z_ORIGIN_MM = -12;
+const JET_ORIGIN_MM = [15.5, 0, -5.5];
 const CELL_COUNT = NX * NY * NZ;
 const simulationParameters = {
   airDensity: 1.204,
@@ -33,14 +34,17 @@ const simulationParameters = {
   courant: 0.28,
   smagorinsky: 0.17,
   spongeRate: 16000,
-  acousticDrivePercent: 12,
   startupRampUs: 5,
   pressureScale: 120,
   speedScale: 15,
   vorticityScale: 8000,
-  visualPhaseHz: 1.2,
-  visualEnergySpan: 180,
-  visualEnergyCap: 0.72,
+  jetDeflectionGain: 200,
+  jetDirectionX: -0.718988,
+  jetDirectionY: 0,
+  jetDirectionZ: 0.695022,
+  jetTargetX: 9.5,
+  jetTargetY: 0,
+  jetTargetZ: 0.3,
 };
 
 function timeStepSeconds() {
@@ -57,7 +61,10 @@ const ui = {
   volumeOverlayToggle: document.querySelector("#volumeOverlayToggle"),
   note: document.querySelector("#noteSelect"),
   field: document.querySelector("#fieldSelect"),
+  controlTabButtons: [...document.querySelectorAll("[data-control-tab]")],
+  controlPanels: [...document.querySelectorAll("[data-control-panel]")],
   parameterInputs: [...document.querySelectorAll("[data-sim-param]")],
+  parameterOutputs: [...document.querySelectorAll("[data-param-output]")],
   playerBoundary: document.querySelector("#playerBoundarySelect"),
   playerMetric: document.querySelector("#playerMetric"),
   title: document.querySelector("#simulationTitle"),
@@ -66,6 +73,7 @@ const ui = {
   holePosition: document.querySelector("#holePositionMetric"),
   holeProfile: document.querySelector("#holeProfileMetric"),
   timeStep: document.querySelector("#timeStepMetric"),
+  oscillation: document.querySelector("#oscillationMetric"),
   toggle: document.querySelector("#toggleRun"),
   reset: document.querySelector("#resetSimulation"),
   speed: document.querySelector("#speed"),
@@ -84,6 +92,11 @@ let selectedHole = SPEC.holes[0];
 let playerBoundary = "none";
 let playerSolidCells = 0;
 let syncPlayerVisual = () => {};
+let updateJetPath = () => {};
+let jetSignalMinimum = Number.POSITIVE_INFINITY;
+let jetSignalMaximum = Number.NEGATIVE_INFINITY;
+let jetVisualMinimum = Number.POSITIVE_INFINITY;
+let jetVisualMaximum = Number.NEGATIVE_INFINITY;
 let running = false;
 let stepCount = 0;
 let gpu = null;
@@ -283,6 +296,53 @@ function initProductionViewer(assemblyBuffer) {
   };
   syncPlayerVisual();
 
+  const jetPointCount = 25;
+  const jetPositions = new Float32Array(jetPointCount * 3);
+  const jetGeometry = new THREE.BufferGeometry();
+  jetGeometry.setAttribute("position", new THREE.BufferAttribute(jetPositions, 3));
+  const jetLine = new THREE.Line(
+    jetGeometry,
+    new THREE.LineBasicMaterial({ color: 0x7fffd4, transparent: true, opacity: 0.95 }),
+  );
+  jetLine.renderOrder = 6;
+  assemblyGroup.add(jetLine);
+  const jetDots = new THREE.Points(
+    jetGeometry,
+    new THREE.PointsMaterial({ color: 0x7fffd4, size: 0.0032, sizeAttenuation: true }),
+  );
+  jetDots.renderOrder = 6;
+  assemblyGroup.add(jetDots);
+  const targetMarker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.0038, 16, 10),
+    new THREE.MeshBasicMaterial({ color: 0xffb55f }),
+  );
+  targetMarker.renderOrder = 7;
+  assemblyGroup.add(targetMarker);
+
+  updateJetPath = (oscillation = 0) => {
+    const origin = new THREE.Vector3(...JET_ORIGIN_MM).multiplyScalar(0.001);
+    const target = new THREE.Vector3(
+      simulationParameters.jetTargetX,
+      simulationParameters.jetTargetY,
+      simulationParameters.jetTargetZ,
+    ).multiplyScalar(0.001);
+    const direction = target.clone().sub(origin).normalize();
+    const lateral = new THREE.Vector3(0, 1, 0).cross(direction);
+    if (lateral.lengthSq() < 1e-8) lateral.set(1, 0, 0);
+    lateral.normalize();
+    for (let i = 0; i < jetPointCount; i += 1) {
+      const t = i / (jetPointCount - 1);
+      const point = origin.clone().lerp(target, t)
+        .addScaledVector(lateral, Math.sin(Math.PI * t) * oscillation * 0.0035);
+      jetPositions[i * 3] = point.x;
+      jetPositions[i * 3 + 1] = point.y;
+      jetPositions[i * 3 + 2] = point.z;
+    }
+    jetGeometry.attributes.position.needsUpdate = true;
+    targetMarker.position.copy(target);
+  };
+  updateJetPath(0);
+
   volumeSampleLayout = createVolumeSampleLayout();
   const volumeGeometry = new THREE.BufferGeometry();
   volumeGeometry.setAttribute(
@@ -307,10 +367,6 @@ function initProductionViewer(assemblyBuffer) {
     vertexColors: true,
     uniforms: {
       pixelRatio: { value: renderer.getPixelRatio() },
-      wavePhase: { value: 0 },
-      waveNumber: { value: 2 * Math.PI * selectedHole.target / simulationParameters.soundSpeed },
-      pressureMode: { value: 1 },
-      waveEnergy: { value: 0 },
     },
     vertexShader: `
       attribute float strength;
@@ -318,21 +374,9 @@ function initProductionViewer(assemblyBuffer) {
       varying vec3 pointColor;
       varying float pointStrength;
       uniform float pixelRatio;
-      uniform float wavePhase;
-      uniform float waveNumber;
-      uniform float pressureMode;
-      uniform float waveEnergy;
       void main() {
-        float wave = sin(wavePhase - position.z * waveNumber);
-        float radialFalloff = exp(-length(position.xy) / 0.018);
-        vec3 lowPressure = vec3(0.12, 0.36, 1.0);
-        vec3 highPressure = vec3(1.0, 0.49, 0.20);
-        pointColor = pressureMode > 0.5
-          ? mix(lowPressure, highPressure, 0.5 + 0.5 * wave)
-          : color;
-        pointStrength = fluid * (pressureMode > 0.5
-          ? max(strength, waveEnergy * radialFalloff * (0.35 + 0.65 * abs(wave)))
-          : strength);
+        pointColor = color;
+        pointStrength = fluid * strength;
         vec4 viewPosition = modelViewMatrix * vec4(position, 1.0);
         gl_Position = projectionMatrix * viewPosition;
         gl_PointSize = pixelRatio * (1.5 + 5.5 * strength);
@@ -372,7 +416,7 @@ function initProductionViewer(assemblyBuffer) {
     visible: true,
     orientation: "vertical",
     boreAxis: boreDirection.toArray(),
-    source: "live solver amplitude with slow-motion acoustic phase",
+    source: "actual solver field with live near-edge jet response",
   };
 
   function syncFluteMaterial() {
@@ -428,12 +472,6 @@ function initProductionViewer(assemblyBuffer) {
       camera.updateProjectionMatrix();
       volumeMaterial.uniforms.pixelRatio.value = renderer.getPixelRatio();
     }
-    volumeMaterial.uniforms.wavePhase.value = now * 0.001 * Math.PI * 2
-      * simulationParameters.visualPhaseHz;
-    volumeMaterial.uniforms.waveNumber.value = 2 * Math.PI * selectedHole.target
-      / simulationParameters.soundSpeed;
-    volumeMaterial.uniforms.pressureMode.value = ui.field.value === "pressure" ? 1 : 0;
-    window.__agnuquena3D.visualPhase = volumeMaterial.uniforms.wavePhase.value;
     controls.update();
     renderer.render(scene, camera);
     requestAnimationFrame(renderProduction);
@@ -599,6 +637,7 @@ struct Params {
   jet: vec4<f32>,
   view: vec4<u32>,
   display: vec4<f32>,
+  jetAim: vec4<f32>,
 };
 
 @group(0) @binding(0) var<storage, read> source: array<vec4<f32>>;
@@ -633,15 +672,12 @@ fn samplePressure(p: vec3<i32>, center: f32) -> f32 {
 fn inletVelocity(p: vec3<f32>, time: f32) -> vec3<f32> {
   let speed = params.jet.x;
   let amount = params.jet.y;
-  let targetFrequency = params.jet.z;
   let startup = smoothstep(0.0, params.display.w, time);
-  let acousticDrive = 1.0 + params.jet.w * sin(6.2831853 * targetFrequency * time);
   let phase0 = sin(171.0 * time + p.y * 1.73 + p.z * 0.39);
   let phase1 = sin(263.0 * time + p.x * 0.91 - p.y * 1.31);
   let phase2 = sin(389.0 * time + p.z * 0.77 + p.y * 2.17);
   let fluctuation = amount * vec3<f32>(phase0 * 0.35, phase1, phase2 * 0.55);
-  return startup * acousticDrive * speed
-    * normalize(vec3<f32>(-0.74, 0.0, 0.67) + fluctuation);
+  return startup * speed * normalize(params.jetAim.xyz + fluctuation);
 }
 
 @compute @workgroup_size(4, 4, 4)
@@ -744,6 +780,7 @@ struct Params {
   jet: vec4<f32>,
   view: vec4<u32>,
   display: vec4<f32>,
+  jetAim: vec4<f32>,
 };
 
 @group(0) @binding(0) var<storage, read> state: array<vec4<f32>>;
@@ -807,7 +844,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
 }`;
 
 function createParamsRaw() {
-  const raw = new ArrayBuffer(96);
+  const raw = new ArrayBuffer(112);
   const u32 = new Uint32Array(raw);
   const f32 = new Float32Array(raw);
   u32.set([NX, NY, NZ, 0], 0);
@@ -827,7 +864,7 @@ function createParamsRaw() {
     Number(ui.jetSpeed.value),
     Number(ui.turbulence.value) / 100,
     selectedHole.target,
-    simulationParameters.acousticDrivePercent / 100,
+    0,
   ], 12);
   const viewModes = { pressure: 0, speed: 1, vorticity: 2 };
   u32.set([Math.floor(NY / 2), viewModes[ui.field.value], 0, 0], 16);
@@ -837,6 +874,12 @@ function createParamsRaw() {
     simulationParameters.vorticityScale,
     simulationParameters.startupRampUs / 1e6,
   ], 20);
+  f32.set([
+    simulationParameters.jetDirectionX,
+    simulationParameters.jetDirectionY,
+    simulationParameters.jetDirectionZ,
+    0,
+  ], 24);
   return raw;
 }
 
@@ -867,7 +910,7 @@ async function initWebGPU() {
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   });
   const paramsBuffer = device.createBuffer({
-    size: 96,
+    size: 112,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
   const probeBuffer = device.createBuffer({
@@ -997,6 +1040,44 @@ function colorVolumeSamples(samples) {
       colors[offset + 2] = 0.18;
     }
   }
+  const target = [
+    simulationParameters.jetTargetX / 1000,
+    simulationParameters.jetTargetY / 1000,
+    simulationParameters.jetTargetZ / 1000,
+  ];
+  const direction = new THREE.Vector3(
+    simulationParameters.jetDirectionX,
+    simulationParameters.jetDirectionY,
+    simulationParameters.jetDirectionZ,
+  ).normalize();
+  const lateral = new THREE.Vector3(0, 1, 0).cross(direction).normalize();
+  let nearest = 0;
+  let nearestDistance = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < volumeSampleLayout.indices.length; i += 1) {
+    const offset = i * 3;
+    const distance = (volumeSampleLayout.positions[offset] - target[0]) ** 2
+      + (volumeSampleLayout.positions[offset + 1] - target[1]) ** 2
+      + (volumeSampleLayout.positions[offset + 2] - target[2]) ** 2;
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      nearest = i;
+    }
+  }
+  const sampleOffset = nearest * 4;
+  const lateralVelocity = samples[sampleOffset] * lateral.x
+    + samples[sampleOffset + 1] * lateral.y
+    + samples[sampleOffset + 2] * lateral.z;
+  const edgePressure = mode === "pressure" ? samples[sampleOffset + 3] : 0;
+  const jetSignal = Math.tanh(
+    lateralVelocity / Math.max(0.1, Number(ui.jetSpeed.value) * 0.08)
+    + edgePressure / simulationParameters.pressureScale,
+  );
+  jetSignalMinimum = Math.min(jetSignalMinimum, jetSignal);
+  jetSignalMaximum = Math.max(jetSignalMaximum, jetSignal);
+  const jetVisualSignal = Math.tanh(jetSignal * simulationParameters.jetDeflectionGain);
+  jetVisualMinimum = Math.min(jetVisualMinimum, jetVisualSignal);
+  jetVisualMaximum = Math.max(jetVisualMaximum, jetVisualSignal);
+  updateJetPath(jetVisualSignal);
   productionVolume.points.geometry.attributes.color.needsUpdate = true;
   productionVolume.points.geometry.attributes.strength.needsUpdate = true;
   productionVolume.updates += 1;
@@ -1005,14 +1086,14 @@ function colorVolumeSamples(samples) {
   window.__agnuquena3D.minimum = minimum;
   window.__agnuquena3D.maximum = maximum;
   window.__agnuquena3D.waveSpan = maximum - minimum;
-  const visualEnergy = mode === "pressure"
-    ? Math.min(
-      simulationParameters.visualEnergyCap,
-      Math.max(0, (maximum - minimum) / simulationParameters.visualEnergySpan),
-    )
-    : 0;
-  productionVolume.points.material.uniforms.waveEnergy.value = visualEnergy;
-  window.__agnuquena3D.visualEnergy = visualEnergy;
+  window.__agnuquena3D.jetSignal = jetSignal;
+  window.__agnuquena3D.jetSignalMinimum = jetSignalMinimum;
+  window.__agnuquena3D.jetSignalMaximum = jetSignalMaximum;
+  window.__agnuquena3D.jetSignalRange = jetSignalMaximum - jetSignalMinimum;
+  window.__agnuquena3D.jetVisualSignal = jetVisualSignal;
+  window.__agnuquena3D.jetVisualSignalRange = jetVisualMaximum - jetVisualMinimum;
+  window.__agnuquena3D.jetTargetDistanceMm = Math.sqrt(nearestDistance) * 1000;
+  ui.oscillation.textContent = `${jetSignal >= 0 ? "+" : ""}${jetSignal.toExponential(2)} raw · ${jetVisualSignal.toFixed(2)} visible`;
   ui.volumeStatus.textContent = (
     `${volumeSampleLayout.indices.length.toLocaleString()} live 3D ${mode} samples`
   );
@@ -1082,6 +1163,12 @@ function materialStatistics() {
 
 function resetGPU() {
   stepCount = 0;
+  jetSignalMinimum = Number.POSITIVE_INFINITY;
+  jetSignalMaximum = Number.NEGATIVE_INFINITY;
+  jetVisualMinimum = Number.POSITIVE_INFINITY;
+  jetVisualMaximum = Number.NEGATIVE_INFINITY;
+  updateJetPath(0);
+  ui.oscillation.textContent = "waiting for steady jet";
   if (!gpu) return;
   const zeros = new Float32Array(CELL_COUNT * 4);
   for (const buffer of gpu.stateBuffers) gpu.device.queue.writeBuffer(buffer, 0, zeros);
@@ -1166,6 +1253,13 @@ function publishSimulationParameters() {
   window.__agnuquenaCFD.configuration.parameters = { ...simulationParameters };
 }
 
+function updateParameterOutput(name) {
+  const output = ui.parameterOutputs.find((candidate) => candidate.dataset.paramOutput === name);
+  if (!output) return;
+  const digits = name.startsWith("jetDirection") ? 3 : 1;
+  output.value = Number(simulationParameters[name]).toFixed(digits);
+}
+
 function applySimulationParameter(input) {
   const name = input.dataset.simParam;
   const minimum = Number(input.min);
@@ -1174,10 +1268,70 @@ function applySimulationParameter(input) {
   const value = Math.min(maximum, Math.max(minimum, requested));
   if (!Number.isFinite(value)) {
     input.value = String(simulationParameters[name]);
+    updateParameterOutput(name);
     return;
   }
   input.value = String(value);
   simulationParameters[name] = value;
+  const targetNames = ["jetTargetX", "jetTargetY", "jetTargetZ"];
+  const directionNames = ["jetDirectionX", "jetDirectionY", "jetDirectionZ"];
+  if (targetNames.includes(name)) {
+    targetNames.forEach((field) => {
+      simulationParameters[field] = Number(
+        ui.parameterInputs.find((candidate) => candidate.dataset.simParam === field).value,
+      );
+      updateParameterOutput(field);
+    });
+    const direction = new THREE.Vector3(
+      simulationParameters.jetTargetX - JET_ORIGIN_MM[0],
+      simulationParameters.jetTargetY - JET_ORIGIN_MM[1],
+      simulationParameters.jetTargetZ - JET_ORIGIN_MM[2],
+    );
+    if (direction.lengthSq() > 1e-8) {
+      direction.normalize();
+      directionNames.forEach((field, index) => {
+        simulationParameters[field] = direction.getComponent(index);
+        ui.parameterInputs.find((candidate) => candidate.dataset.simParam === field).value
+          = direction.getComponent(index).toFixed(3);
+        updateParameterOutput(field);
+      });
+    }
+  } else if (directionNames.includes(name)) {
+    directionNames.forEach((field) => {
+      simulationParameters[field] = Number(
+        ui.parameterInputs.find((candidate) => candidate.dataset.simParam === field).value,
+      );
+    });
+    const direction = new THREE.Vector3(
+      simulationParameters.jetDirectionX,
+      simulationParameters.jetDirectionY,
+      simulationParameters.jetDirectionZ,
+    );
+    if (direction.lengthSq() > 1e-8) {
+      direction.normalize();
+      const currentTarget = new THREE.Vector3(
+        simulationParameters.jetTargetX,
+        simulationParameters.jetTargetY,
+        simulationParameters.jetTargetZ,
+      );
+      const origin = new THREE.Vector3(...JET_ORIGIN_MM);
+      const distance = Math.max(1, currentTarget.distanceTo(origin));
+      const target = origin.addScaledVector(direction, distance);
+      directionNames.forEach((field, index) => {
+        simulationParameters[field] = direction.getComponent(index);
+        ui.parameterInputs.find((candidate) => candidate.dataset.simParam === field).value
+          = direction.getComponent(index).toFixed(3);
+        updateParameterOutput(field);
+      });
+      targetNames.forEach((field, index) => {
+        simulationParameters[field] = target.getComponent(index);
+        ui.parameterInputs.find((candidate) => candidate.dataset.simParam === field).value
+          = target.getComponent(index).toFixed(1);
+        updateParameterOutput(field);
+      });
+    }
+  }
+  updateParameterOutput(name);
   resetGPU();
   colorVolumeSamples(new Float32Array(volumeSampleLayout.indices.length * 4));
   updateJetReadouts();
@@ -1201,7 +1355,22 @@ function updateRunButton() {
     : '<span class="play-icon" aria-hidden="true"></span> Run CFD';
 }
 
+function selectControlTab(tabName) {
+  for (const button of ui.controlTabButtons) {
+    const selected = button.dataset.controlTab === tabName;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-selected", String(selected));
+  }
+  for (const panel of ui.controlPanels) {
+    panel.hidden = panel.dataset.controlPanel !== tabName;
+  }
+  document.querySelector(".controls-scroll").scrollTop = 0;
+}
+
 function wireControls() {
+  for (const button of ui.controlTabButtons) {
+    button.addEventListener("click", () => selectControlTab(button.dataset.controlTab));
+  }
   ui.note.addEventListener("change", () => {
     selectedHole = SPEC.holes.find((hole) => hole.name === ui.note.value) || SPEC.holes[0];
     updateProfile();
@@ -1230,7 +1399,10 @@ function wireControls() {
   ui.jetSpeed.addEventListener("input", updateJetReadouts);
   ui.turbulence.addEventListener("input", updateJetReadouts);
   for (const input of ui.parameterInputs) {
-    input.addEventListener("change", () => applySimulationParameter(input));
+    const eventName = input.type === "range" && input.closest(".vector-slider")
+      ? "input"
+      : "change";
+    input.addEventListener(eventName, () => applySimulationParameter(input));
   }
 }
 
@@ -1279,7 +1451,7 @@ async function start() {
         geometrySource: productionMetadata.assembly.file,
         geometrySha256: productionMetadata.assembly.sha256,
         boundarySource: productionMetadata.solver_mask.derivation,
-        visualization: "single orbitable production STL with live 3D pressure-wave samples",
+        visualization: "actual 3D field samples plus live near-edge jet deflection",
       },
     };
   } catch (error) {

@@ -6,6 +6,7 @@ $fn = 64;
 
 // Shared flute dimensions are generated from designs/quena.json.
 include <generated/quena_parameters.scad>
+include <generated/case_logo_dimensions.scad>
 
 // Select "bottom", "lid", "print_in_place", "lid_logo",
 // "lid_logo_print", "hinge_coupon", "full_hinge_coupon", "latch",
@@ -38,8 +39,6 @@ corner_r = 7;
 logo_inlay_depth = 0.6;
 logo_title_width = 190;
 logo_map_width = 84;
-logo_title_source_size = [1129, 124];
-logo_map_source_size = [1194, 595];
 logo_vertical_scale = 0.84;
 logo_edge_margin = 2.0;
 
@@ -388,8 +387,10 @@ module lid_logo_inlay() {
 }
 
 module lid_logo_recess() {
-    translate([0, 0, lid_outer_h - logo_inlay_depth - 0.01])
-        linear_extrude(height = logo_inlay_depth + 0.02)
+    // Extend only through the exterior face. The recess floor stays exactly
+    // at the inlay top so the two ABS materials fuse instead of leaving a gap.
+    translate([0, 0, lid_outer_h - logo_inlay_depth])
+        linear_extrude(height = logo_inlay_depth + 0.01)
             lid_logo_2d();
 }
 
@@ -1168,7 +1169,7 @@ module bottom_assembly() {
     }
 }
 
-module lid_case() {
+module lid_case(with_logo_recess = true) {
     // The two case halves have identical outside height.  Their meeting faces
     // are flat; no tongue, ridge, or receiving groove crosses the seam.
     lid_h = lid_outer_h;
@@ -1178,17 +1179,17 @@ module lid_case() {
         translate([0, 0, -lid_closed_z])
             all_channel_cuts(4, false);
         lid_retention_relief();
-        lid_logo_recess();
+        if (with_logo_recess) lid_logo_recess();
     }
 }
 
-module lid_assembly() {
+module lid_assembly(with_logo_recess = true) {
     union() {
         // The bottom-knuckle clearance belongs to the lid shell only.  Keep
         // it out of the hinge union so it cannot square-cut the rounded pins.
         difference() {
             union() {
-                lid_case();
+                lid_case(with_logo_recess);
                 lid_simple_latch();
                 lid_thumb_grip();
             }
