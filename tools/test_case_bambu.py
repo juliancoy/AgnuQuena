@@ -1,31 +1,24 @@
 #!/usr/bin/env python3
-"""Slice the two-colour case with the installed Bambu Studio Flatpak."""
+"""Slice the two-colour case with the project-local BambuStudio CLI."""
 
 from __future__ import annotations
 
 import json
 import math
 import re
-import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 
+from bambu_studio import BINARY, command, environment
+
 
 ROOT = Path(__file__).resolve().parents[1]
 PROJECT = ROOT / "QuenaCase.3mf"
-BAMBU_APP = "com.bambulab.BambuStudio"
 
 
 def installed() -> bool:
-    if shutil.which("flatpak") is None:
-        return False
-    result = subprocess.run(
-        ["flatpak", "info", BAMBU_APP],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
-    return result.returncode == 0
+    return BINARY.is_file() and BINARY.stat().st_mode & 0o111 != 0
 
 
 def require_header(gcode: str, setting: str, value: str) -> None:
@@ -36,24 +29,22 @@ def require_header(gcode: str, setting: str, value: str) -> None:
 
 def main() -> None:
     if not installed():
-        print("QuenaCase Bambu slice: skipped, Bambu Studio Flatpak not installed")
+        print("QuenaCase Bambu slice: skipped, project-local BambuStudio is not built")
         return
     with tempfile.TemporaryDirectory(prefix=".bambu_case_slice_", dir=ROOT) as temp_dir:
         output = Path(temp_dir)
         completed = subprocess.run(
-            [
-                "flatpak",
-                "run",
-                BAMBU_APP,
+            command(
                 "--debug",
                 "1",
                 "--slice",
                 "0",
                 "--outputdir",
-                str(output),
-                str(PROJECT),
-            ],
+                output,
+                PROJECT,
+            ),
             cwd=output,
+            env=environment(),
             capture_output=True,
             text=True,
         )
@@ -133,7 +124,7 @@ def main() -> None:
 
     print(
         "QuenaCase Bambu slice: ok, P1S plate, 96 layers, 2 ABS filaments, "
-        "3 changes, black mandalas/logo, 20 mm tower ending at Z=0.6, "
+        "3 changes, black logo/mandala/flourish inlays, 20 mm tower ending at Z=0.6, "
         "no supports/brim/skirt"
     )
 

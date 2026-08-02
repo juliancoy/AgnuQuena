@@ -5,18 +5,86 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 import trimesh
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+OPENSCAD = REPO_ROOT / "tools" / "openscad"
+
+
+def remove_triangulation_debris(path: Path) -> int:
+    """Remove proven zero-volume triangulation debris from a Manifold export."""
+    mesh = trimesh.load(path, force="mesh")
+    components = mesh.split(only_watertight=False)
+    solids = []
+    debris = []
+    for component in components:
+        if (
+            component.is_watertight
+            and len(component.faces) >= 4
+            and abs(component.volume) > 1e-6
+        ):
+            solids.append(component)
+        else:
+            debris.append(component)
+    if not solids:
+        raise RuntimeError(f"{path.name}: OpenSCAD export contains no solid components")
+    invalid = [
+        component
+        for component in debris
+        if not (
+            len(component.faces) <= 2
+            or (
+                component.is_watertight
+                and len(component.faces) <= 4
+                and abs(component.volume) <= 1e-6
+            )
+        )
+    ]
+    if invalid:
+        raise RuntimeError(f"{path.name}: OpenSCAD export contains an open solid")
+    if debris:
+        cleaned = trimesh.util.concatenate(solids)
+        ascii_stl = trimesh.exchange.stl.export_stl_ascii(cleaned)
+        ascii_stl = ascii_stl.replace("solid \n", "solid mesh\n", 1)
+        ascii_stl = ascii_stl.replace("endsolid \n", "endsolid mesh\n", 1)
+        path.write_text(
+            ascii_stl,
+            encoding="ascii",
+        )
+    return len(debris)
 
 
 def render(scad: Path, output: Path) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["openscad", "-o", str(output), str(scad)], cwd=REPO_ROOT, check=True)
+    file_descriptor, temporary_name = tempfile.mkstemp(
+        dir=output.parent,
+        prefix=f".{output.stem}.",
+        suffix=".stl",
+    )
+    os.close(file_descriptor)
+    temporary = Path(temporary_name)
+    try:
+        subprocess.run(
+            [
+                str(OPENSCAD),
+                "--backend=Manifold",
+                "-o",
+                str(temporary),
+                str(scad),
+            ],
+            cwd=REPO_ROOT,
+            check=True,
+        )
+        remove_triangulation_debris(temporary)
+        os.replace(temporary, output)
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def validate(path: Path) -> dict[str, object]:

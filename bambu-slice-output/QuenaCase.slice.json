@@ -1,0 +1,46 @@
+{
+  "gcode": {
+    "file": "QuenaCase.gcode",
+    "sha256": "3fa70c07bc2dcdbbb66bd9700c370c56aca7afcb1256003452671bd38b13dcc9"
+  },
+  "generated_at": "2026-08-02T23:33:56.655092+00:00",
+  "job": "QuenaCase",
+  "project": {
+    "file": "QuenaCase.3mf",
+    "sha256": "dd1bb5ab1d77e24088e540e1cf596f20fe533c602203edddb71f5a63ec36afb9"
+  },
+  "schema_version": 1,
+  "slicer": {
+    "application": "Bambu Studio",
+    "version": "02.07.01.62"
+  },
+  "validation": {
+    "bbox_mm": {
+      "depth": 113.94758605957031,
+      "height": 19.299999237060547,
+      "width": 245.99452209472656,
+      "x": 5.002738952636719,
+      "y": 70.78741455078125,
+      "z": 7.907102750337458e-11
+    },
+    "filament_change_times": 3,
+    "filaments": [
+      {
+        "filament_id": "GFB60",
+        "id": 1,
+        "main_used_g": 106.72407531738281,
+        "total_used_g": 107.9425048828125
+      },
+      {
+        "filament_id": "GFB60",
+        "id": 2,
+        "main_used_g": 2.4600963592529297,
+        "total_used_g": 2.857349395751953
+      }
+    ],
+    "layers": 96,
+    "sparse_infill_density_percent": 10.0,
+    "supports": false,
+    "wall_loops": 3
+  }
+}

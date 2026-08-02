@@ -8,6 +8,7 @@ source, so they catch render regressions before slicing.
 from __future__ import annotations
 
 import math
+import os
 import json
 import re
 import struct
@@ -23,6 +24,7 @@ import trimesh
 
 
 ROOT = Path(__file__).resolve().parents[1]
+OPENSCAD = Path(os.environ.get("AGNUQUENA_OPENSCAD", ROOT / "tools" / "openscad"))
 
 OBSOLETE_SPLIT_EXPORTS = (
     "QuenaCaseBottom.stl",
@@ -53,9 +55,9 @@ EXPECTED = {
         "components": 1,
     },
     "QuenaCaseArtwork.stl": {
-        "size": (236.894, 105.654, 0.6),
+        "size": (236.894, 105.341, 0.6),
         "min_triangles": 35000,
-        "components": 29,
+        "components": 31,
     },
     "QuenaCaseHingeCoupon.stl": {
         "size": (46.0, 28.0, 19.4),
@@ -83,8 +85,9 @@ LID_SWEEP_MAX_DEG = 180
 CONTACT_TOLERANCE_MM = 0.05
 CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
 # Canonical 32 mm mouthpiece pocket, 8 mm short-row gaps, 1.5 mm bed-edge
-# rounding, retention border, engraved back, and enclosed round hinge ends.
-EXPECTED_CASE_VOLUME_MM3 = 255_083.18
+# rounding, retention border, swapped artwork faces, two flourishes, and
+# enclosed round hinge ends.
+EXPECTED_CASE_VOLUME_MM3 = 253_779.53
 CASE_VOLUME_TOLERANCE_MM3 = 10.0
 # OpenSCAD's ASCII STL coordinate quantization accumulates a sub-voxel volume
 # difference after the rigid 180-degree print-pose transform of rounded shells.
@@ -115,7 +118,7 @@ def scad_scalar(name: str) -> float:
             encoding="utf-8",
         )
         result = subprocess.run(
-            ["openscad", "-D", 'part="none"', "-o", str(probe_stl), str(probe_scad)],
+            [str(OPENSCAD), "-D", 'part="none"', "-o", str(probe_stl), str(probe_scad)],
             check=True,
             text=True,
             stdout=subprocess.PIPE,
@@ -142,7 +145,7 @@ def evaluated_hinge_pose() -> tuple[float, float, float]:
             encoding="utf-8",
         )
         result = subprocess.run(
-            ["openscad", '-D', 'part="none"', "-o", str(probe_stl), str(probe_scad)],
+            [str(OPENSCAD), '-D', 'part="none"', "-o", str(probe_stl), str(probe_scad)],
             check=True,
             text=True,
             stdout=subprocess.PIPE,
@@ -168,6 +171,9 @@ def run_hinge_design_checks() -> None:
     bearing_starter_h = scad_scalar("hinge_bearing_starter_h")
     print_shell_gap = scad_scalar("hinge_print_shell_gap")
     body_inset = scad_scalar("hinge_body_inset")
+    base_r = scad_scalar("hinge_base_r")
+    case_l = scad_scalar("case_outer_l")
+    corner_r = scad_scalar("corner_r")
     end_barrel_d = scad_scalar("hinge_end_barrel_d")
     end_barrel_overhang = scad_scalar("hinge_end_barrel_overhang")
 
@@ -199,6 +205,9 @@ def run_hinge_design_checks() -> None:
         raise AssertionError("hinge axis does not produce the specified print shell gap")
     if not 4.4 <= body_inset <= 4.8:
         raise AssertionError("hinge body inset must retain rotational clearance")
+    expected_base_r = corner_r * segment_w / case_l
+    if not math.isclose(base_r, expected_base_r, abs_tol=0.01):
+        raise AssertionError("hinge base does not scale with the case curvature")
     if rear_projection > 5.5:
         raise AssertionError(f"hinge rear projection is {rear_projection:.2f} mm")
     if not math.isclose(end_barrel_d, outer_d, abs_tol=0.01):
@@ -213,6 +222,7 @@ def run_hinge_design_checks() -> None:
         f"{bore_clearance / 2:.2f} mm "
         f"radial print clearance, {segment_w:.1f} mm closed bearings, "
         f"{print_shell_gap:.2f} mm bed gap, fully round bearing with starter web, "
+        f"{base_r:.2f} mm proportionally body-matched hinge-base radius, "
         f"{end_barrel_d:.2f} mm round outer end barrels, "
         f"{rear_projection:.2f} mm rear projection, web-captured ends, "
         "support-free exports"
@@ -231,7 +241,7 @@ def run_hinge_end_roundness_check() -> None:
         )
         subprocess.run(
             [
-                "openscad",
+                str(OPENSCAD),
                 "-D",
                 'part="none"',
                 "-o",
@@ -280,7 +290,7 @@ def run_stator_roundness_check() -> None:
         )
         subprocess.run(
             [
-                "openscad",
+                str(OPENSCAD),
                 "-D",
                 'part="none"',
                 "-o",
@@ -444,21 +454,35 @@ def run_exterior_design_checks() -> None:
         raise AssertionError("bottom ornament is not a two-layer engraving")
     if floor - depth < 2.4:
         raise AssertionError("bottom ornament leaves insufficient floor thickness")
-    if not 1.0 <= edge_r <= floor - 1.0:
+    if edge_r < 1.0 or edge_r > floor - 1.0 + 0.01:
         raise AssertionError("bed-facing edge radius is not printable within the shell")
     if "for (x = mandala_centers)" not in source:
-        raise AssertionError("bottom ornament is not procedurally repeated")
-    if "bottom_ornament_recess();" not in source:
-        raise AssertionError("bottom ornament is not cut into the production shell")
+        raise AssertionError("mandala ornament is not procedurally repeated")
+    if "flourish_2d();" not in source:
+        raise AssertionError("mandala panel is missing its interstitial flourishes")
+    if "lid_ornament_recess();" not in source:
+        raise AssertionError("mandala ornament is not cut into the production lid")
+    if "bottom_logo_recess();" not in source:
+        raise AssertionError("upright logo is not cut into the upper print-pose panel")
+    logo_module = source.split("module case_logo_2d()", 1)[1].split(
+        "module bottom_logo_inlay()", 1
+    )[0]
+    if not re.search(r"rotate\(180\)\s*scale", logo_module):
+        raise AssertionError(
+            "case logo is not rotated in-plane for normal exterior reading"
+        )
+    if "mirror(" in logo_module:
+        raise AssertionError("case logo is reflected, reversing the title and continent")
     if "round_bottom = true" not in source or "round_top = true" not in source:
         raise AssertionError("both bed-facing case backs are not edge-rounded")
 
-    bottom = trimesh.load(ROOT / "QuenaCaseBottomViewer.stl", force="mesh")
+    lid = trimesh.load(ROOT / "QuenaCaseLidViewer.stl", force="mesh")
+    lid_outer_h = scad_scalar("lid_outer_h")
     ornament_floor_vertices = int(
-        (abs(bottom.vertices[:, 2] - depth) <= 0.01).sum()
+        (abs(lid.vertices[:, 2] - (lid_outer_h - depth)) <= 0.01).sum()
     )
     if ornament_floor_vertices < 1000:
-        raise AssertionError("rendered bottom lacks the detailed ornament floor")
+        raise AssertionError("rendered lid lacks the detailed ornament floor")
 
     for name, use_max_z in (
         ("QuenaCaseBottomViewer.stl", False),
@@ -476,7 +500,8 @@ def run_exterior_design_checks() -> None:
 
     print(
         "QuenaCase exterior: ok, "
-        f"{corner_r:.0f} mm outer corner radius, three procedural mandalas, "
+        f"{corner_r:.0f} mm outer corner radius, three procedural mandalas "
+        "and two interstitial flourishes, "
         f"{inset:.0f} mm inset rounded border, {stroke:.1f} mm minimum strokes, "
         f"{depth:.1f} mm support-free engraving, {floor - depth:.1f} mm floor, "
         f"{edge_r:.1f} mm bed-facing edge radius"
@@ -626,7 +651,7 @@ intersection() {{
         )
         result = subprocess.run(
             [
-                "openscad",
+                str(OPENSCAD),
                 "-D",
                 'part="none"',
                 "-o",
@@ -704,8 +729,9 @@ def run_mesh_checks() -> None:
                 raise AssertionError("print-in-place export exceeds the 256 mm target bed")
 
             # The production STL must contain both complete case halves, not a
-            # hinge-only assembly or cropped coupon. Rigid print-pose transforms
-            # preserve each source mesh's face count and enclosed volume.
+            # hinge-only assembly or cropped coupon. Compare physical volume;
+            # Manifold may retessellate a rigidly transformed CSG result without
+            # changing the represented solid.
             source_halves = [
                 trimesh.load(ROOT / "QuenaCaseBottomViewer.stl", force="mesh"),
                 trimesh.load(ROOT / "QuenaCaseLidViewer.stl", force="mesh"),
@@ -713,8 +739,7 @@ def run_mesh_checks() -> None:
             production_halves = sorted(moving_halves, key=lambda half: len(half.faces))
             source_halves.sort(key=lambda half: len(half.faces))
             complete = all(
-                len(production.faces) == len(source.faces)
-                and math.isclose(
+                math.isclose(
                     abs(float(production.volume)),
                     abs(float(source.volume)),
                     abs_tol=PRINT_POSE_VOLUME_TOLERANCE_MM3,
@@ -784,10 +809,9 @@ def run_color_project_checks() -> None:
 
     case_outer_l = scad_scalar("case_outer_l")
     case_outer_w = scad_scalar("case_outer_w")
-    hinge_axis_y = scad_scalar("hinge_axis_y")
     shell_bounds = (
-        (-case_outer_l / 2, 2 * hinge_axis_y - case_outer_w / 2),
-        (case_outer_l / 2, 2 * hinge_axis_y + case_outer_w / 2),
+        (-case_outer_l / 2, -case_outer_w / 2),
+        (case_outer_l / 2, case_outer_w / 2),
     )
     edge_margin = scad_scalar("logo_edge_margin")
     for axis in range(2):
@@ -807,7 +831,7 @@ def run_color_project_checks() -> None:
             encoding="utf-8",
         )
         subprocess.run(
-            ["openscad", "-D", 'part="none"', "-o", str(solid_stl), str(solid_scad)],
+            [str(OPENSCAD), "-D", 'part="none"', "-o", str(solid_stl), str(solid_scad)],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -881,8 +905,9 @@ def run_color_project_checks() -> None:
     if 'transform="1 0 0 0 1 0 0 0 1 128 156.685 0"' not in model:
         raise AssertionError("case 3MF is not centered in the validated P1S plate pose")
     print(
-        "QuenaCase colour project: ok, exact selected artwork traced for a 0.4 mm "
-        "nozzle, black mandala and logo inlays, compact lower-layer prime tower"
+        "QuenaCase colour project: ok, upright upper-panel logo and lower-panel "
+        "mandala/flourish inlays traced for a 0.4 mm nozzle, compact lower-layer "
+        "prime tower"
     )
 
 def run_hinge_sweep_check() -> None:
@@ -918,7 +943,7 @@ def run_hinge_sweep_check() -> None:
             )
             subprocess.run(
                 [
-                    "openscad",
+                    str(OPENSCAD),
                     "-D",
                     'part="none"',
                     "-o",
@@ -936,7 +961,7 @@ def run_hinge_sweep_check() -> None:
             )
             subprocess.run(
                 [
-                    "openscad",
+                    str(OPENSCAD),
                     "-D",
                     'part="none"',
                     "-o",
@@ -955,7 +980,7 @@ def run_hinge_sweep_check() -> None:
             )
             subprocess.run(
                 [
-                    "openscad",
+                    str(OPENSCAD),
                     "-D",
                     'part="none"',
                     "-o",

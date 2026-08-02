@@ -14,6 +14,20 @@ make quena-validate
 make quena-export
 ```
 
+To regenerate, validate, and slice both the complete quena layout and its
+two-colour print-in-place case for the Bambu Lab P1S, run:
+
+```sh
+make print-slice
+```
+
+The retained projects and G-code are named `Quena` and `QuenaCase` under
+`bambu-slice-output/`, alongside job-specific slicer results and SHA-256
+manifests. The source is pinned in the `BambuStudio` submodule and the scripts
+invoke its official native Linux CLI directly; run `make bambu-studio-setup`
+once after cloning. `make print-export` performs the same canonical geometry
+and project generation without slicing.
+
 ## Browser CFD lab
 
 `run.py` starts the lab and its automated Chrome test environment as two

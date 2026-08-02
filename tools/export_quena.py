@@ -17,6 +17,7 @@ import trimesh
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+OPENSCAD = REPO_ROOT / "tools" / "openscad"
 GENERATOR = REPO_ROOT / "tools" / "generate_quena.py"
 SCAD_SOURCE = REPO_ROOT / "Quena.scad"
 GENERATED_MANIFEST = REPO_ROOT / "generated" / "quena_manifest.json"
@@ -37,6 +38,49 @@ def ensure_generated_files_are_current() -> None:
     )
 
 
+def remove_triangulation_debris(path: Path) -> int:
+    """Remove proven zero-volume triangulation debris from a Manifold export."""
+    mesh = trimesh.load(path, force="mesh")
+    components = mesh.split(only_watertight=False)
+    solids = []
+    debris = []
+    for component in components:
+        if (
+            component.is_watertight
+            and len(component.faces) >= 4
+            and abs(component.volume) > 1e-6
+        ):
+            solids.append(component)
+        else:
+            debris.append(component)
+    if not solids:
+        raise RuntimeError(f"{path.name}: OpenSCAD export contains no solid components")
+    invalid = [
+        component
+        for component in debris
+        if not (
+            len(component.faces) <= 2
+            or (
+                component.is_watertight
+                and len(component.faces) <= 4
+                and abs(component.volume) <= 1e-6
+            )
+        )
+    ]
+    if invalid:
+        raise RuntimeError(f"{path.name}: OpenSCAD export contains an open solid")
+    if debris:
+        cleaned = trimesh.util.concatenate(solids)
+        ascii_stl = trimesh.exchange.stl.export_stl_ascii(cleaned)
+        ascii_stl = ascii_stl.replace("solid \n", "solid mesh\n", 1)
+        ascii_stl = ascii_stl.replace("endsolid \n", "endsolid mesh\n", 1)
+        path.write_text(
+            ascii_stl,
+            encoding="ascii",
+        )
+    return len(debris)
+
+
 def export_stl(export_part: str, destination: Path) -> None:
     destination.parent.mkdir(parents=True, exist_ok=True)
     file_descriptor, temporary_name = tempfile.mkstemp(
@@ -49,7 +93,8 @@ def export_stl(export_part: str, destination: Path) -> None:
     try:
         subprocess.run(
             [
-                "openscad",
+                str(OPENSCAD),
+                "--backend=Manifold",
                 "-D",
                 f'export_part="{export_part}"',
                 "-o",
@@ -59,6 +104,9 @@ def export_stl(export_part: str, destination: Path) -> None:
             cwd=REPO_ROOT,
             check=True,
         )
+        removed = remove_triangulation_debris(temporary)
+        if removed:
+            print(f"removed {removed} non-solid triangulation shells")
         os.replace(temporary, destination)
     finally:
         temporary.unlink(missing_ok=True)

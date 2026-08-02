@@ -8,8 +8,8 @@ $fn = 64;
 include <generated/quena_parameters.scad>
 include <generated/case_logo_dimensions.scad>
 
-// Select "bottom", "bottom_ornament", "lid", "print_in_place",
-// "lid_logo", "case_artwork_print", "hinge_coupon", "full_hinge_coupon",
+// Select "bottom", "mandala_panel", "lid", "case_engraving_viewer", "print_in_place",
+// "case_logo", "case_artwork_print", "hinge_coupon", "full_hinge_coupon",
 // "latch", "latch_coupon", "assembly", "preview", or "none".
 // Override from the CLI with:
 // openscad -D 'part="print_in_place"' -o QuenaCasePrintInPlace.stl QuenaCase.scad
@@ -34,20 +34,23 @@ floor_thickness = 2.8;
 lid_roof_thickness = 2.8;
 // A broad plan-view radius removes the formerly abrupt luggage-case corners
 // while leaving the straight hinge and latch lands unchanged.
-corner_r = 12;
+corner_r = 14;
 bed_edge_r = 1.5;
 
-// Shallow face-down engraving decorates the otherwise plain bottom exterior.
-// Every stroke is at least two 0.4 mm nozzle widths and the recess spans two
-// 0.20 mm layers, so it prints without support and leaves 2.4 mm of floor.
+// Shallow face-down engraving decorates the lid exterior in the open print
+// pose. Every stroke is at least two 0.4 mm nozzle widths and the recess spans
+// two 0.20 mm layers, so it prints without support.
 mandala_inset = 5;
 mandala_stroke = 0.9;
 mandala_depth = 0.4;
 mandala_radius = 22;
 mandala_centers = [-78, 0, 78];
+flourish_width = 30;
+flourish_height = 12;
 
 // Three 0.2 mm layers form a flush, separately exported AMS inlay on the
-// exterior lid face. The matching recess remains in the primary lid mesh.
+// upper base-shell face in the open print pose. The matching recess remains in
+// the primary shell mesh, and the untransformed vectors read upright there.
 logo_inlay_depth = 0.6;
 logo_title_width = 190;
 logo_map_width = 84;
@@ -162,6 +165,10 @@ hinge_axle_x2 = hinge_axle_support_segments[
 ][1];
 hinge_span = hinge_axle_x2 - hinge_axle_x1;
 hinge_tab_t = 2.2;
+// Carry the shell's plan-view curvature into each shorter hinge base at the
+// same radius-to-width ratio. This rounds the visible axial shoulders without
+// expanding the shallow radial land into the stationary case half.
+hinge_base_r = corner_r * hinge_segment_w / case_outer_l;
 // Solid lid-owned barrels cover both exposed axle ends. Their cylindrical
 // exterior has no print flat; a short axial overhang leaves each visible end
 // as a complete round face rather than a D-shaped axle stub.
@@ -350,6 +357,13 @@ module rounded_box(size, r) {
     }
 }
 
+module y_extruded_rounded_box(size, r) {
+    translate([0, -size[1] / 2, 0])
+        rotate([-90, 0, 0])
+            linear_extrude(height = size[1])
+                rounded_rect_2d([size[0], size[2]], r);
+}
+
 module fully_rounded_box(size, r, edge_r = bed_edge_r) {
     minkowski() {
         translate([0, 0, edge_r])
@@ -393,6 +407,37 @@ module radial_stroke_2d(y1, y2, stroke = mandala_stroke) {
             translate([0, y]) circle(d = stroke);
 }
 
+module stroke_path_2d(points, stroke = mandala_stroke) {
+    for (i = [0 : len(points) - 2])
+        hull()
+            for (p = [points[i], points[i + 1]])
+                translate(p) circle(d = stroke);
+}
+
+module flourish_leaf_2d(length = 4.8, width = 2.2) {
+    scale([length / 2, width / 2]) circle(r = 1);
+}
+
+module flourish_2d() {
+    // Four mirrored tendrils and broad leaves fill the spaces between the
+    // rosettes without introducing unsupported islands or nozzle hairlines.
+    union() {
+        rotate(45) square([2.8, 2.8], center = true);
+        for (sx = [-1, 1])
+            for (sy = [-1, 1])
+                scale([sx, sy]) {
+                    stroke_path_2d([
+                        [0, 0], [3, 2.5], [7, flourish_height / 2],
+                        [11, 4], [flourish_width / 2, 0.8], [12, -1.2]
+                    ]);
+                    translate([7.8, 4.7]) rotate(-18)
+                        flourish_leaf_2d();
+                    translate([12.1, 1.8]) rotate(-42)
+                        flourish_leaf_2d(4.2, 2.0);
+                }
+    }
+}
+
 module mandala_2d(radius = mandala_radius, petals = 12) {
     // Concentric rings, orbiting halos, and alternating radial rays create a
     // deterministic rosette with no imported artwork or fragile hairlines.
@@ -416,7 +461,7 @@ module mandala_2d(radius = mandala_radius, petals = 12) {
     }
 }
 
-module bottom_ornament_2d() {
+module mandala_panel_2d() {
     border_radius = corner_r - mandala_inset;
     inner_margin = mandala_inset + mandala_stroke + 0.6;
     union() {
@@ -438,8 +483,15 @@ module bottom_ornament_2d() {
             );
         }
         intersection() {
-            for (x = mandala_centers)
-                translate([x, 0]) mandala_2d();
+            union() {
+                for (x = mandala_centers)
+                    translate([x, 0]) mandala_2d();
+                for (i = [0 : len(mandala_centers) - 2])
+                    translate([
+                        (mandala_centers[i] + mandala_centers[i + 1]) / 2,
+                        0
+                    ]) flourish_2d();
+            }
             rounded_rect_2d(
                 [
                     case_outer_l - 2 * inner_margin,
@@ -451,26 +503,31 @@ module bottom_ornament_2d() {
     }
 }
 
-module bottom_ornament_recess() {
-    translate([0, 0, -0.01])
+module lid_ornament_recess() {
+    translate([0, 0, lid_outer_h - mandala_depth])
         linear_extrude(height = mandala_depth + 0.01)
-            bottom_ornament_2d();
+            mandala_panel_2d();
 }
 
-module bottom_ornament_inlay() {
+module lid_ornament_inlay() {
     intersection() {
-        linear_extrude(height = mandala_depth)
-            bottom_ornament_2d();
-        bottom_assembly(false);
+        translate([0, 0, lid_outer_h - mandala_depth])
+            linear_extrude(height = mandala_depth)
+                mandala_panel_2d();
+        lid_assembly(false);
     }
 }
 
-module lid_logo_2d() {
+module case_logo_2d() {
     // These vectors are traced from the selected two-colour PNG. The vertical
     // scale retains the long lid composition while leaving a real edge margin.
+    // Rotate in the shell plane so the artwork reads normally when viewed
+    // through the bottom shell's exterior (-Z) face. Do not reflect it: that
+    // would leave the title and continent backward.
     intersection() {
-        scale([1, logo_vertical_scale])
-            union() {
+        rotate(180)
+            scale([1, logo_vertical_scale])
+                union() {
                 translate([0, 20])
                     translate([
                         -logo_title_width / 2,
@@ -500,18 +557,18 @@ module lid_logo_2d() {
     }
 }
 
-module lid_logo_inlay() {
-    translate([0, 0, lid_outer_h - logo_inlay_depth])
+module bottom_logo_inlay() {
+    translate([0, 0, 0])
         linear_extrude(height = logo_inlay_depth)
-            lid_logo_2d();
+            case_logo_2d();
 }
 
-module lid_logo_recess() {
-    // Extend only through the exterior face. The recess floor stays exactly
-    // at the inlay top so the two ABS materials fuse instead of leaving a gap.
-    translate([0, 0, lid_outer_h - logo_inlay_depth])
+module bottom_logo_recess() {
+    // Extend only through the exterior face. The recess roof stays exactly at
+    // the inlay top so the two ABS materials fuse instead of leaving a gap.
+    translate([0, 0, -0.01])
         linear_extrude(height = logo_inlay_depth + 0.01)
-            lid_logo_2d();
+            case_logo_2d();
 }
 
 module profiled_segment(x1, x2, d1, d2) {
@@ -712,7 +769,10 @@ module hinge_tab(x1, x2, local_z, seam_side = -1) {
         (hinge_axis_y + attach_y) / 2,
         local_z + seam_side * hinge_tab_t / 2
     ])
-        cube([x2 - x1, attach_y - hinge_axis_y, hinge_tab_t], center = true);
+        y_extruded_rounded_box(
+            [x2 - x1, attach_y - hinge_axis_y, hinge_tab_t],
+            hinge_base_r
+        );
 }
 
 module hinge_axle_at(
@@ -1254,7 +1314,7 @@ module lid_rim_socket() {
     }
 }
 
-module bottom_case_core(with_ornament_recess = true) {
+module bottom_case_core(with_logo_recess = true) {
     difference() {
         union() {
             difference() {
@@ -1276,25 +1336,25 @@ module bottom_case_core(with_ornament_recess = true) {
         // assembled so neither the shell nor the raised channel bed can touch
         // the axle or its round end barrels.
         lid_hinge_relief();
-        if (with_ornament_recess) bottom_ornament_recess();
+        if (with_logo_recess) bottom_logo_recess();
     }
 }
 
-module bottom_case(with_ornament_recess = true) {
-    bottom_case_core(with_ornament_recess);
+module bottom_case(with_logo_recess = true) {
+    bottom_case_core(with_logo_recess);
 }
 
-module bottom_assembly(with_ornament_recess = true) {
+module bottom_assembly(with_logo_recess = true) {
     difference() {
         union() {
-            bottom_case(with_ornament_recess);
+            bottom_case(with_logo_recess);
             bottom_hinge();
         }
         bottom_simple_latch_indent_cut();
     }
 }
 
-module lid_case(with_logo_recess = true) {
+module lid_case(with_ornament_recess = true) {
     // The two case halves have identical outside height.  Their meeting faces
     // are flat; no tongue, ridge, or receiving groove crosses the seam.
     lid_h = lid_outer_h;
@@ -1308,17 +1368,17 @@ module lid_case(with_logo_recess = true) {
         translate([0, 0, -lid_closed_z])
             all_channel_cuts(4, false);
         lid_retention_relief();
-        if (with_logo_recess) lid_logo_recess();
+        if (with_ornament_recess) lid_ornament_recess();
     }
 }
 
-module lid_assembly(with_logo_recess = true) {
+module lid_assembly(with_ornament_recess = true) {
     union() {
         // The bottom-knuckle clearance belongs to the lid shell only.  Keep
         // it out of the hinge union so it cannot square-cut the rounded pins.
         difference() {
             union() {
-                lid_case(with_logo_recess);
+                lid_case(with_ornament_recess);
                 lid_simple_latch();
                 lid_thumb_grip();
             }
@@ -1361,8 +1421,8 @@ module lid_in_print_pose() {
 }
 
 module case_artwork_in_print_pose() {
-    bottom_ornament_inlay();
-    lid_in_print_pose() lid_logo_inlay();
+    bottom_logo_inlay();
+    lid_in_print_pose() lid_ornament_inlay();
 }
 
 module print_in_place_case() {
@@ -1585,12 +1645,14 @@ module latch_coupon() {
 if (part == "none") {
 } else if (part == "bottom") {
     bottom_assembly();
-} else if (part == "bottom_ornament") {
-    bottom_ornament_2d();
+} else if (part == "mandala_panel") {
+    mandala_panel_2d();
 } else if (part == "lid") {
     lid_assembly();
-} else if (part == "lid_logo") {
-    lid_logo_inlay();
+} else if (part == "case_engraving_viewer") {
+    lid_ornament_inlay();
+} else if (part == "case_logo") {
+    bottom_logo_inlay();
 } else if (part == "case_artwork_print") {
     case_artwork_in_print_pose();
 } else if (part == "hinge_coupon") {
@@ -1611,6 +1673,7 @@ if (part == "none") {
     translate([0, 0, lid_closed_z])
         color("lightgray") lid_assembly();
     translate([0, 0, lid_closed_z])
-        color("gold") lid_logo_inlay();
+        color("gold") lid_ornament_inlay();
+    color("gold") bottom_logo_inlay();
     preview_ghosts();
 }

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import filecmp
+import os
 import shutil
 import subprocess
 import tempfile
@@ -13,9 +14,13 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from PIL import Image
+import trimesh
 
 
 ROOT = Path(__file__).resolve().parents[1]
+OPENSCAD = Path(os.environ.get("AGNUQUENA_OPENSCAD", ROOT / "tools" / "openscad"))
+OPENSCAD_DOCKERFILE = ROOT / "tools" / "openscad.Dockerfile"
+OPENSCAD_SOURCE = ROOT / "openscad" / "CMakeLists.txt"
 SCAD = ROOT / "QuenaCase.scad"
 RENDERER = Path(__file__).resolve()
 LOGO_VECTORIZER = ROOT / "tools" / "vectorize_case_logo.py"
@@ -32,6 +37,8 @@ STL_PARTS = [
     # coordinates without undoing print transforms.
     ("bottom", ROOT / "QuenaCaseBottomViewer.stl", True),
     ("lid", ROOT / "QuenaCaseLidViewer.stl", True),
+    ("case_logo", ROOT / "QuenaCaseLogoViewer.stl", True),
+    ("case_engraving_viewer", ROOT / "QuenaCaseEngravingViewer.stl", True),
     ("case_artwork_print", ROOT / "QuenaCaseArtwork.stl", True),
     ("hinge_coupon", ROOT / "QuenaCaseHingeCoupon.stl", False),
     ("full_hinge_coupon", ROOT / "QuenaCaseFullHingeCoupon.stl", False),
@@ -87,6 +94,50 @@ def run(command: list[str]) -> None:
     subprocess.run(command, cwd=ROOT, check=True)
 
 
+def remove_triangulation_debris(path: Path) -> int:
+    """Remove triangulation debris while preserving every printable solid."""
+    mesh = trimesh.load(path, force="mesh")
+    components = mesh.split(only_watertight=False)
+    solids = []
+    debris = []
+    for component in components:
+        if (
+            component.is_watertight
+            and len(component.faces) >= 4
+            and abs(component.volume) > 1e-6
+        ):
+            solids.append(component)
+        else:
+            debris.append(component)
+    removed = len(debris)
+    if not solids:
+        raise RuntimeError(f"{path.name}: OpenSCAD export contains no solid components")
+    invalid = [
+        component
+        for component in debris
+        if not (
+            len(component.faces) <= 2
+            or (
+                component.is_watertight
+                and len(component.faces) <= 4
+                and abs(component.volume) <= 1e-6
+            )
+        )
+    ]
+    if invalid:
+        raise RuntimeError(f"{path.name}: OpenSCAD export contains an open solid")
+    if removed:
+        cleaned = trimesh.util.concatenate(solids)
+        ascii_stl = trimesh.exchange.stl.export_stl_ascii(cleaned)
+        ascii_stl = ascii_stl.replace("solid \n", "solid mesh\n", 1)
+        ascii_stl = ascii_stl.replace("endsolid \n", "endsolid mesh\n", 1)
+        path.write_text(
+            ascii_stl,
+            encoding="ascii",
+        )
+    return removed
+
+
 def render_stl(part: str, output: Path, *, force: bool = False) -> None:
     logo_inputs = (
         ROOT / "EurasianSynergyFlute_logo_2color.png",
@@ -94,24 +145,51 @@ def render_stl(part: str, output: Path, *, force: bool = False) -> None:
         ROOT / "generated" / "case_logo_map.svg",
         ROOT / "generated" / "case_logo_dimensions.scad",
     )
-    artwork_parts = {"case_artwork_print", "lid", "print_in_place", "assembly"}
-    dependencies = (SCAD, RENDERER) + (
+    artwork_parts = {
+        "bottom",
+        "case_artwork_print",
+        "lid",
+        "print_in_place",
+        "assembly",
+    }
+    dependencies = (
+        SCAD,
+        RENDERER,
+        OPENSCAD,
+        OPENSCAD_DOCKERFILE,
+        OPENSCAD_SOURCE,
+    ) + (
         logo_inputs if "logo" in part or part in artwork_parts else ()
     )
     if not force and is_current(output, dependencies):
         print(f"Skipping current STL: {output.relative_to(ROOT)}")
         return
     started = time.perf_counter()
-    run([
-        "openscad",
-        "--export-format",
-        "asciistl",
-        "-D",
-        f'part="{part}"',
-        "-o",
-        str(output),
-        str(SCAD),
-    ])
+    file_descriptor, temporary_name = tempfile.mkstemp(
+        dir=output.parent,
+        prefix=f".{output.stem}.",
+        suffix=".stl",
+    )
+    os.close(file_descriptor)
+    temporary = Path(temporary_name)
+    try:
+        run([
+            str(OPENSCAD),
+            "--backend=Manifold",
+            "--export-format",
+            "asciistl",
+            "-D",
+            f'part="{part}"',
+            "-o",
+            str(temporary),
+            str(SCAD),
+        ])
+        removed = remove_triangulation_debris(temporary)
+        if removed:
+            print(f"Removed {removed} non-solid triangulation shells")
+        os.replace(temporary, output)
+    finally:
+        temporary.unlink(missing_ok=True)
     elapsed = time.perf_counter() - started
     print(f"Rendered {output.relative_to(ROOT)} in {elapsed:.1f}s")
 
@@ -130,7 +208,7 @@ def render_all_stls(*, force: bool = False) -> None:
 
 def render_png(part: str, output: Path, camera: str) -> None:
     run([
-        "openscad",
+        str(OPENSCAD),
         "-D",
         f'part="{part}"',
         "--colorscheme",
@@ -151,7 +229,7 @@ def render_png(part: str, output: Path, camera: str) -> None:
 
 def render_closeup_png(part: str, output: Path, camera: str) -> None:
     run([
-        "openscad",
+        str(OPENSCAD),
         "-D",
         f'part="{part}"',
         "--colorscheme",

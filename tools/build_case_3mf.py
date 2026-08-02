@@ -5,32 +5,28 @@ from __future__ import annotations
 
 import json
 import re
-import shutil
 import subprocess
 import tempfile
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
+from bambu_studio import PROFILE_ROOT, command, environment, require
+
 
 ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "QuenaCase.3mf"
-PROFILE_TEMPLATE = ROOT / "Quena.3mf"
+SETTINGS_TEMPLATE = ROOT / "config" / "bambu_p1s_abs_project_settings.json"
 CASE_STL = ROOT / "QuenaCasePrintInPlace.stl"
 ARTWORK_STL = ROOT / "QuenaCaseArtwork.stl"
-BAMBU_APP = "com.bambulab.BambuStudio"
-BAMBU_PROFILE_ROOT = "/app/share/BambuStudio/profiles/BBL"
-MACHINE_PROFILE = f"{BAMBU_PROFILE_ROOT}/machine/Bambu Lab P1S 0.4 nozzle.json"
-PROCESS_PROFILE = f"{BAMBU_PROFILE_ROOT}/process/0.20mm Strength @BBL X1C.json"
-FILAMENT_PROFILE = f"{BAMBU_PROFILE_ROOT}/filament/PolyLite ABS @BBL X1C.json"
+MACHINE_PROFILE = PROFILE_ROOT / "machine" / "Bambu Lab P1S 0.4 nozzle.json"
+PROCESS_PROFILE = PROFILE_ROOT / "process" / "0.20mm Strength @BBL X1C.json"
+FILAMENT_PROFILE = PROFILE_ROOT / "filament" / "PolyLite ABS @BBL X1C.json"
 PLATE_TRANSFORM = "1 0 0 0 1 0 0 0 1 128 156.685 0"
 
 
 def project_settings() -> dict[str, object]:
-    with zipfile.ZipFile(PROFILE_TEMPLATE) as archive:
-        settings = json.loads(
-            archive.read("Metadata/project_settings.config").decode("utf-8")
-        )
+    settings = json.loads(SETTINGS_TEMPLATE.read_text(encoding="utf-8"))
     settings.update(
         {
             "name": "AgnuQuena two-colour print-in-place case",
@@ -68,12 +64,8 @@ def project_settings() -> dict[str, object]:
 
 
 def bambu_skeleton(output: Path) -> None:
-    if shutil.which("flatpak") is None:
-        raise SystemExit("Flatpak is required to build the Bambu Studio project")
-    command = [
-        "flatpak",
-        "run",
-        BAMBU_APP,
+    require()
+    invocation = command(
         "--debug",
         "1",
         "--assemble",
@@ -89,13 +81,14 @@ def bambu_skeleton(output: Path) -> None:
         "--load-filament-ids",
         "1,2",
         "--export-3mf",
-        str(output),
-        str(CASE_STL),
-        str(ARTWORK_STL),
-    ]
+        output,
+        CASE_STL,
+        ARTWORK_STL,
+    )
     completed = subprocess.run(
-        command,
+        invocation,
         cwd=output.parent,
+        env=environment(),
         capture_output=True,
         text=True,
     )
@@ -189,7 +182,7 @@ def write_project(skeleton: Path) -> None:
 
 
 def main() -> None:
-    for path in (PROFILE_TEMPLATE, CASE_STL, ARTWORK_STL):
+    for path in (SETTINGS_TEMPLATE, CASE_STL, ARTWORK_STL):
         if not path.exists():
             raise SystemExit(f"missing {path.name}; render case assets first")
     with tempfile.TemporaryDirectory(prefix=".bambu_case_", dir=ROOT) as temp_dir:

@@ -1,0 +1,7 @@
+[submodule "openscad"]
+	path = openscad
+	url = https://github.com/juliancoy/openscad.git
+[submodule "BambuStudio"]
+	path = BambuStudio
+	url = https://github.com/bambulab/BambuStudio.git
+	ignore = untracked

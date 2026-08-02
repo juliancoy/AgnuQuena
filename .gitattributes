@@ -1,0 +1,2 @@
+# BambuStudio emits significant machine-code lines with trailing spaces.
+bambu-slice-output/*.gcode -whitespace

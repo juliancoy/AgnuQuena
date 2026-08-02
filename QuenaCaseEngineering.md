@@ -133,7 +133,7 @@ This checks:
   OpenSCAD parameters.
 - The production STL contains exactly two watertight moving components, both
   touch `Z=0`, and the complete footprint stays inside `256 x 256 mm`.
-- The bottom exterior retains a `12 mm` plan-view corner radius, `1.5 mm`
+- The bottom exterior retains a `14 mm` plan-view corner radius, `1.5 mm`
   bed-facing edge rounds, a border exactly `5 mm` inward, and three rendered
   mandalas with printable strokes and a two-layer recess floor.
 - Closed clamshell solid overlap using OpenSCAD CSG intersection.
@@ -144,33 +144,53 @@ This checks:
 - Chrome renders untransformed model-space STLs and checks their exact triangle
   BVHs at every whole-degree pose from `0` to `180`. A deliberate `4 mm`
   penetration must also register, proving that the detector is active.
-- The installed Bambu Studio Flatpak opens and slices the native project with
-  the P1S profile, two ABS filaments, three colour changes, and no generated
-  support, brim, or skirt toolpaths. It checks that black is used only in the
+- The browser keeps positive Z at the top of the view, lights both intentional
+  friction-fit nub contacts while the case is closed, and removes those latch
+  markers once the nubs release at `3 degrees`. Exact surface intersections
+  elsewhere remain highlighted as line segments on the model.
+- The browser loads the logo/title and mandala/flourish inlays as separate
+  model-space meshes, using contrasting coral and gold materials rather than
+  flattening either decoration into the blue shell material.
+- The checksum-verified native Bambu Studio CLI opens and slices the project
+  directly with the P1S profile, two ABS filaments, three colour changes, and
+  no generated support, brim, or skirt toolpaths. It checks that black is used only in the
   first three `0.20 mm` layers and that the compact prime tower ends at `Z=0.6`.
 
 The OpenSCAD and browser checks are required because Bullet/pybullet can miss
 static concave mesh penetration and does not detect coplanar Z-fighting. The
-browser regression caught a real seven-point hinge collision at `25 degrees`;
-the lid relief now follows each stator's complete circular envelope.
+browser therefore displays exact triangle contact separately from the two
+intentional closed latch interferences. The browser regression caught a real
+seven-point hinge collision at `25 degrees`; the lid relief now follows each
+stator's complete circular envelope. A zero-depth hinge surface contact can be
+visible without failing the rigid-envelope sweep; the failure threshold remains
+`0.05 mm` of actual penetration.
 The loaded sweep is a deterministic rigid-envelope interference screen. It does
 not model flute bounce, elastic deformation, friction, wear, or latch failure;
 inverted and shock retention remain separate engineering checks.
 
-## Procedural Bottom Ornament
+The larger shell's plan-view corner radius is `14 mm`. The alternating
+axle-support tabs carry the same radius-to-width ratio into their shorter
+visible profiles, producing an approximately `0.83 mm` base radius instead of
+square shoulders. This proportional rounding does not expand the shallow
+radial attachment land or alter the concentric bearing, bore, or
+print-in-place clearance.
 
-The otherwise plain bottom exterior carries three twelve-fold mandala rosettes
-inside a rounded frame. The design is generated entirely in `QuenaCase.scad`
-from concentric rings, radial strokes, and orbiting halos, so it remains
-deterministic and scales with the case rather than depending on another image
-asset. The frame centerline follows the case outline exactly `5 mm` inward.
+## Procedural Mandala and Flourish Panel
+
+The lower panel in the open print pose carries three twelve-fold mandala
+rosettes inside a rounded frame. Two symmetric vine-knot flourishes fill the
+spaces between the rosettes. The design is generated entirely in
+`QuenaCase.scad` from concentric rings, radial strokes, orbiting halos, curved
+tendrils, and broad leaves, so it remains deterministic and scales with the
+case rather than depending on another image asset. The frame centerline follows
+the case outline exactly `5 mm` inward.
 
 The ornament is engraved `0.40 mm`, or two project layers, and filled by the
 black `QuenaCaseArtwork.stl` inlay instead of being embossed. This preserves
-the case's face-down production pose and leaves `2.40 mm` of solid floor. All
+the case's face-down production pose and leaves `2.40 mm` of solid roof. All
 nominal strokes are `0.90 mm` wide, exceeding two line widths for the `0.4 mm`
 nozzle. The recesses close without slicer-generated support, and the inlay
-meets their floors exactly. The outside plan-view corner radius is `12 mm`,
+meets their floors exactly. The outside plan-view corner radius is `14 mm`,
 and `1.5 mm` rounds soften both exposed bed-facing shell edges while retaining
 flat first-layer contact. Internal fit, hinge, and latch geometry are unchanged.
 
@@ -180,20 +200,22 @@ flat first-layer contact. Internal fit, hinge, and latch geometry are unchanged.
 `python3 tools/vectorize_case_logo.py` separates its original title and Eurasian
 silhouette, removes details narrower than a `0.4 mm` nozzle, and deterministically
 generates `generated/case_logo_title.svg`, `generated/case_logo_map.svg`, and
-their measured source dimensions. The lid uses those traced vectors rather than
-a substituted font or a hand-redrawn map.
+their measured source dimensions. The upper open-pose panel uses those traced
+vectors rather than a substituted font or a hand-redrawn map.
 
 The title remains `190 mm` wide and the map `84 mm` wide. A `0.84` vertical
-scale fits the composition inside the long lid face while retaining at least a
+scale fits the composition inside the long upper face while retaining at least a
 `2.0 mm` rounded-edge margin. The inlay is `0.60 mm` deep: exactly three layers
 at the project's `0.20 mm` layer height. Its top meets the recess floor exactly,
 so the black and yellow ABS fuse across a full planar interface.
 
-The logo inlay and lid share the same `lid_in_print_pose()` transform, while
-the bottom ornament is already in the bottom's face-down coordinates.
-`QuenaCaseArtwork.stl` combines both black inlays, so they are mirrored,
-translated, and aligned with `QuenaCasePrintInPlace.stl`; no slicer positioning
-is required.
+The traced logo is rotated 180 degrees in the CAD source so it reads normally
+when viewed through the base shell's exterior face, while remaining upright on
+the upper panel like the display of an open laptop. It is not reflected, which
+would reverse both the title and continent. The mandala and flourish inlay
+shares the lid's `lid_in_print_pose()` transform and occupies the lower panel.
+`QuenaCaseArtwork.stl` combines both black inlays, so they are translated and
+aligned with `QuenaCasePrintInPlace.stl`; no slicer positioning is required.
 
 `QuenaCase.3mf` is the canonical native Bambu Studio two-colour P1S project.
 `tools/build_case_3mf.py` creates its archive through the installed Bambu Studio
@@ -251,22 +273,22 @@ to the complete case.
 `QuenaCaseFullHingeCoupon.stl` is the full-width hinge coupon. It uses the same
 alternating seven-bearing/eight-web layout and axial capture as the case.
 
-- `QuenaCasePrintInPlace.stl`: `66460` triangles,
+- `QuenaCasePrintInPlace.stl`: `71424` triangles,
   `246.0 x 113.9 x 19.3 mm`, `2` connected components.
-- `QuenaCaseArtwork.stl`: `40692` triangles, `236.9 x 105.7 x 0.6 mm`,
-  `29` connected artwork components.
-- `QuenaCaseHingeCoupon.stl`: `2648` triangles, `46.0 x 28.0 x 19.3 mm`,
+- `QuenaCaseArtwork.stl`: `44502` triangles, `236.9 x 105.3 x 0.6 mm`,
+  `31` connected artwork components.
+- `QuenaCaseHingeCoupon.stl`: `3176` triangles, `46.0 x 28.0 x 19.3 mm`,
   `2` connected components.
-- `QuenaCaseFullHingeCoupon.stl`: `14288` triangles,
+- `QuenaCaseFullHingeCoupon.stl`: `17300` triangles,
   `243.5 x 28.0 x 19.3 mm`, `2` connected components.
 - `QuenaCaseFullHingeCoupon_9views.png`: `1500 x 1101 px`.
-- `QuenaCaseBottomViewer.stl`: `47392` triangles,
+- `QuenaCaseBottomViewer.stl`: `17580` triangles,
   `246.0 x 61.3 x 19.3 mm`, `1` connected component.
-- `QuenaCaseLidViewer.stl`: `19068` triangles,
+- `QuenaCaseLidViewer.stl`: `53844` triangles,
   `246.0 x 62.4 x 19.3 mm`, `1` connected component.
 - `QuenaCaseLatch.stl`: `56.0 x 8.3 x 11.6 mm`.
 - `QuenaCaseLatchCoupon.stl`: `182.0 x 34.0 x 18.9 mm`.
-- `QuenaCaseAssembly.stl`: `66460` triangles, `246.0 x 62.4 x 28.8 mm`.
+- `QuenaCaseAssembly.stl`: `71424` triangles, `246.0 x 62.4 x 28.8 mm`.
 - Closed overlap check: empty intersection.
 - Hinge sweep check: passes from `0` to `180` degrees around
   `(0.00, -28.35, 14.40)`.

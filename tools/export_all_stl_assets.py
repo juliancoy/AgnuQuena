@@ -18,6 +18,15 @@ ROOT_STL_ALIASES = {
     ROOT / "build" / "quena" / "QuenaTube2.stl": ROOT / "QuenaPart3.stl",
     ROOT / "build" / "quena-layout" / "QuenaLayout.stl": ROOT / "Quena.stl",
 }
+SITE_STL_ASSETS = {
+    ROOT / "build" / "quena" / "QuenaMouthpiece.stl": "QuenaMouthpiece.stl",
+    ROOT / "build" / "quena" / "QuenaTube1.stl": "QuenaTube1.stl",
+    ROOT / "build" / "quena" / "QuenaTube2.stl": "QuenaTube2.stl",
+}
+SITE_ASSET_DIRECTORIES = (
+    ROOT / "website" / "assets",
+    ROOT / "site-hosting" / "public" / "assets",
+)
 
 
 def run(*args: str) -> None:
@@ -34,6 +43,15 @@ def update_root_stl_aliases() -> None:
         print(f"updated and validated {destination.relative_to(ROOT)}", flush=True)
 
 
+def update_site_stl_assets() -> None:
+    for source, name in SITE_STL_ASSETS.items():
+        for directory in SITE_ASSET_DIRECTORIES:
+            destination = directory / name
+            shutil.copy2(source, destination)
+            validate_stl(destination, 1)
+            print(f"updated and validated {destination.relative_to(ROOT)}", flush=True)
+
+
 def main() -> None:
     run("tools/generate_quena.py")
     run("tools/export_quena.py")
@@ -45,6 +63,8 @@ def main() -> None:
         "build/quena-layout",
     )
     update_root_stl_aliases()
+    update_site_stl_assets()
+    run("tools/build_quena_3mf.py")
     run("tools/render_case_assets.py", "--stls", "--force")
     run("tools/test_case_stls.py")
     run("acoustics/export_assembled.py")

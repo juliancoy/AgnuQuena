@@ -1,0 +1,28 @@
+#!/bin/sh
+set -eu
+
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+commit=$(git -C "$root/openscad" rev-parse --short=12 HEAD)
+recipe=$(sha256sum "$root/tools/openscad.Dockerfile" | cut -c1-12)
+image="agnuquena-openscad:$commit-$recipe"
+lock="${TMPDIR:-/tmp}/agnuquena-openscad-image.lock"
+
+if ! docker image inspect "$image" >/dev/null 2>&1; then
+    (
+        flock 9
+        if ! docker image inspect "$image" >/dev/null 2>&1; then
+            docker build \
+                --file "$root/tools/openscad.Dockerfile" \
+                --tag "$image" \
+                "$root/openscad"
+        fi
+    ) 9>"$lock"
+fi
+
+exec docker run --rm --init \
+    --user "$(id -u):$(id -g)" \
+    --volume "$root:$root" \
+    --volume /tmp:/tmp \
+    --workdir "$root" \
+    --env HOME=/tmp \
+    "$image" "$@"
