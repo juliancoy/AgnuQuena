@@ -67,9 +67,9 @@ def test_measured_axial_retune_and_shifted_tube_break_are_explicit():
     assert holes["B"]["physical_z_mm"] == pytest.approx(275.0)
     assert holes["B"]["position"]["local_offset_mm"] == pytest.approx(42.75)
     assert holes["B"]["position"]["axial_adjust_mm"] == pytest.approx(-8.2595)
-    assert holes["A"]["physical_z_mm"] == pytest.approx(309.437)
-    assert holes["A"]["position"]["local_offset_mm"] == pytest.approx(77.187)
-    assert holes["A"]["position"]["axial_adjust_mm"] == pytest.approx(-3.908)
+    assert holes["A"]["physical_z_mm"] == pytest.approx(305.753)
+    assert holes["A"]["position"]["local_offset_mm"] == pytest.approx(73.503)
+    assert holes["A"]["position"]["axial_adjust_mm"] == pytest.approx(-7.592)
     tube_1 = next(part for part in manifest["parts"] if part["name"] == "tube_1")
     assert tube_1["length_mm"] == 232.25
 
@@ -96,7 +96,7 @@ def test_holes_honor_playable_minimums_as_equal_area_rounded_squares():
     assert manifest["tone_hole_profile"]["corner_ratio"] == pytest.approx(0.4)
 
     expected_diameters = {
-        "A": 9.5,
+        "A": 9.0,
         "B": 10.63,
         "C": 9.75,
         "D": 10.5,

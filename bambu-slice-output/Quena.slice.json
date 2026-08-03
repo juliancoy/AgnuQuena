@@ -1,13 +1,13 @@
 {
   "gcode": {
     "file": "Quena.gcode",
-    "sha256": "fbed623ba14042909b9c07f12a6a6872a2077954d48e279bfb5910576d7884eb"
+    "sha256": "6a11397bbe242db951ee9d5c383abe54cf550366dfcb36add19fe04f14f343b1"
   },
-  "generated_at": "2026-08-03T20:27:19.662651+00:00",
+  "generated_at": "2026-08-03T20:31:36.414476+00:00",
   "job": "Quena",
   "project": {
     "file": "Quena.3mf",
-    "sha256": "78906e9de3c86e78ce05a5430d04dcbc383da58cb853d007932a95079b72a62a"
+    "sha256": "c447af955d72273f7318ceefbbdcb08a7e80814353e16acb4489c7115aca2786"
   },
   "schema_version": 1,
   "slicer": {
@@ -28,8 +28,8 @@
       {
         "filament_id": "GFB60",
         "id": 1,
-        "main_used_g": 19.605876922607422,
-        "total_used_g": 19.605876922607422
+        "main_used_g": 19.611709594726562,
+        "total_used_g": 19.611709594726562
       }
     ],
     "layers": 1191,

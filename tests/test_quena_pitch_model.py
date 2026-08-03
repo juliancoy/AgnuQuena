@@ -28,6 +28,6 @@ def test_lower_tube_holes_include_the_measured_axial_retune():
     assert [hole.name for hole in geometry.holes] == ["A", "B", "C", "D", "E", "F#"]
     a_hole, b_hole, c_hole = geometry.holes[:3]
     assert math.isclose(b_hole.acoustic_mm, 307.0, abs_tol=1e-9)
-    assert math.isclose(a_hole.acoustic_mm - b_hole.acoustic_mm, 34.437)
+    assert math.isclose(a_hole.acoustic_mm - b_hole.acoustic_mm, 30.753)
     assert math.isclose(b_hole.acoustic_mm - c_hole.acoustic_mm, 21.826)
-    assert [hole.diameter_mm for hole in (a_hole, b_hole, c_hole)] == [9.5, 10.63, 9.75]
+    assert [hole.diameter_mm for hole in (a_hole, b_hole, c_hole)] == [9.0, 10.63, 9.75]

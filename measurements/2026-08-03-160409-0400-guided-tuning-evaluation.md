@@ -14,7 +14,7 @@ shift is:
 
 | Hole | Consensus error | Error relative to G4 | Requested distal shift | Generated physical Z |
 |---|---:|---:|---:|---:|
-| A | +60.93 c | +51.14 c | +7.437 mm | 309.437 mm |
+| A | +60.93 c | +51.14 c | +3.753 mm | 305.753 mm |
 | B | +15.49 c | +5.70 c | +1.142 mm | 275.000 mm |
 | C | +69.84 c | +60.05 c | +11.174 mm | 253.174 mm |
 | D | +69.81 c | +60.01 c | +9.949 mm | 217.112 mm |
@@ -26,7 +26,7 @@ solution so the rounded-square B/C cuts retain the required 12 mm axial
 ligament. Its solved diameter therefore increases slightly from 10.50 to
 10.63 mm to preserve the pitch target.
 
-The A hole was subsequently reduced from 10.10 to 9.50 mm and moved 3.908 mm
+The A hole was subsequently reduced from 10.10 to 9.00 mm and moved 7.592 mm
 toward the mouthpiece. The paired diameter/position change preserves its fitted
 pitch while making the lowest hole smaller and easier to reach.
 

@@ -3,37 +3,37 @@
     "export_time": 0,
     "layer_height": 0.20000000298023224,
     "plate_index": 0,
-    "prepare_time": 45,
+    "prepare_time": 43,
     "return_code": 0,
     "sliced_plates": [
         {
             "feature_type_times": {
-                "Brim": 181.5865936279297,
-                "Custom": 364.4375,
+                "Brim": 181.5892791748047,
+                "Custom": 364.4374084472656,
                 "Flush": 29.0,
-                "Gap infill": 16.0037841796875,
-                "Inner wall": 17.62351417541504,
-                "Outer wall": 4855.53369140625,
-                "Overhang wall": 5.11375617980957,
+                "Gap infill": 16.559654235839844,
+                "Inner wall": 18.311925888061523,
+                "Outer wall": 4903.6494140625,
+                "Overhang wall": 5.061188697814941,
                 "Top surface": 8.157415390014648,
-                "Travel": 487.0209045410156,
-                "Undefined": 480.4352111816406
+                "Travel": 581.34375,
+                "Undefined": 574.7582397460938
             },
             "filament_change_times": 0,
             "filaments": [
                 {
                     "filament_id": "GFB60",
                     "id": 1,
-                    "main_used_g": 19.605876922607422,
-                    "total_used_g": 19.605876922607422
+                    "main_used_g": 19.611709594726563,
+                    "total_used_g": 19.611709594726563
                 }
             ],
-            "generate_support_material_time": 1069,
+            "generate_support_material_time": 1034,
             "id": 1,
-            "infill_time": 69,
+            "infill_time": 62,
             "layer_filament_change": 0,
-            "main_predication": 5542.06640625,
-            "make_perimeters_time": 586,
+            "main_predication": 5685.8046875,
+            "make_perimeters_time": 594,
             "obj_cached_cnt": 0,
             "objects": [
                 {
@@ -47,13 +47,13 @@
                     },
                     "id": 5,
                     "name": "Quena.stl",
-                    "triangle_count": 17772
+                    "triangle_count": 17760
                 }
             ],
-            "sliced_time": 3377,
-            "sliced_time_with_cache": 1021,
-            "total_predication": 5957.8876953125,
-            "triangle_count": 17772,
+            "sliced_time": 3314,
+            "sliced_time_with_cache": 1016,
+            "total_predication": 6101.6259765625,
+            "triangle_count": 17760,
             "warning_message": ""
         }
     ],

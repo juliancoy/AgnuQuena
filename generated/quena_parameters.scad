@@ -2,7 +2,7 @@
 // Source: designs/quena.json
 // Regenerate: python3 tools/generate_quena.py
 generated_design_id = "agnuquena-g";
-generated_spec_sha256 = "d66a5db51825bfc5f6373fa83b4e71293644cc84d0946dceb0b4151c2e7b04c7";
+generated_spec_sha256 = "74390b153be537b29967f0e3c263f01ff98ae7e49238b635318caecb377f7aa4";
 
 quena_facet_count = 100.0;
 shell_width = 0.8;
@@ -40,9 +40,9 @@ lower_tube_hole_angle_spread = 12.0;
 lower_tube_first_hole_offset = 20.924;
 lower_tube_hole_spacing = 30.0855;
 
-tone_hole_a_z = 309.437;
+tone_hole_a_z = 305.753;
 tone_hole_a_angle = -12.0;
-tone_hole_a_diameter = 9.5;
+tone_hole_a_diameter = 9.0;
 tone_hole_b_z = 275.0;
 tone_hole_b_angle = 12.0;
 tone_hole_b_diameter = 10.63;

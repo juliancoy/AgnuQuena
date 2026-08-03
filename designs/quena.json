@@ -49,12 +49,12 @@
       "position": {
         "mode": "lower_hand",
         "index": 2,
-        "axial_adjust_mm": -3.908
+        "axial_adjust_mm": -7.592
       },
       "angle_factor": -1.0,
       "diameter": {
         "mode": "measured_compensation",
-        "minimum_mm": 9.5,
+        "minimum_mm": 9.0,
         "calibration": {
           "source": "measurements/2026-08-03-160409-0400-guided-tuning.csv",
           "acoustic_position_mm": 334.0,
