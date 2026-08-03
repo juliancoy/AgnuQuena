@@ -14,19 +14,25 @@ make quena-validate
 make quena-export
 ```
 
-To regenerate, validate, and slice both the complete quena layout and its
-two-colour print-in-place case for the Bambu Lab P1S, run:
+To regenerate, validate, and slice the complete quena layout plus two-color and
+single-filament print-in-place case variants for the Bambu Lab P1S, run:
 
 ```sh
 make print-slice
 ```
 
-The retained projects and G-code are named `Quena` and `QuenaCase` under
-`bambu-slice-output/`, alongside job-specific slicer results and SHA-256
-manifests. The source is pinned in the `BambuStudio` submodule and the scripts
+The retained projects and G-code are named `Quena`, `QuenaCase`, and
+`QuenaCaseSingleFilament` under `bambu-slice-output/`, alongside job-specific
+slicer results and SHA-256 manifests. The single-filament case preserves the
+recessed logo and mandala/flourish engraving but omits the separate inlay mesh,
+second filament, and prime tower. It is the unattended option for a printer
+equipped with one AMS HT: assigning the two-color project's other filament to
+the unpowered external spool requires a manual load or unload at each prompted
+transition. The source is pinned in the `BambuStudio` submodule and the scripts
 invoke its official native Linux CLI directly; run `make bambu-studio-setup`
-once after cloning. `make print-export` performs the same canonical geometry
-and project generation without slicing.
+once after cloning. `make print-export` performs the same canonical geometry and
+project generation without slicing, while `make case-single-export` rebuilds
+only the single-filament case project.
 
 ## Browser CFD lab
 

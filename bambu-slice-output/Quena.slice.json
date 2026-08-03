@@ -1,9 +1,9 @@
 {
   "gcode": {
     "file": "Quena.gcode",
-    "sha256": "f6c0a421134805ba7507bd74eed625feb1b08897b02f0b8b614df77e82ea9baa"
+    "sha256": "9fa9b94040006adb43b18d129ad8090d1f5fdd3cd05acc914a067abd502a8668"
   },
-  "generated_at": "2026-08-02T23:33:53.233925+00:00",
+  "generated_at": "2026-08-03T02:32:43.247155+00:00",
   "job": "Quena",
   "project": {
     "file": "Quena.3mf",
@@ -33,6 +33,8 @@
       }
     ],
     "layers": 1143,
+    "multi_material": false,
+    "prime_tower": false,
     "sparse_infill_density_percent": 25.0,
     "supports": false,
     "wall_loops": 6

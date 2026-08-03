@@ -1,13 +1,13 @@
 {
   "gcode": {
     "file": "QuenaCase.gcode",
-    "sha256": "3fa70c07bc2dcdbbb66bd9700c370c56aca7afcb1256003452671bd38b13dcc9"
+    "sha256": "141c41c2adedff40fbf9e05628796fd3b5f66911ce823e0d64abbe74dad9cf6f"
   },
-  "generated_at": "2026-08-02T23:33:56.655092+00:00",
+  "generated_at": "2026-08-03T02:32:47.202560+00:00",
   "job": "QuenaCase",
   "project": {
     "file": "QuenaCase.3mf",
-    "sha256": "dd1bb5ab1d77e24088e540e1cf596f20fe533c602203edddb71f5a63ec36afb9"
+    "sha256": "e26dccc897f264a7bd78ec67d22e6a967c58db7a65f7f2e7ada2b3c47a2e41e8"
   },
   "schema_version": 1,
   "slicer": {
@@ -28,8 +28,8 @@
       {
         "filament_id": "GFB60",
         "id": 1,
-        "main_used_g": 106.72407531738281,
-        "total_used_g": 107.9425048828125
+        "main_used_g": 106.72323608398438,
+        "total_used_g": 107.9416732788086
       },
       {
         "filament_id": "GFB60",
@@ -39,6 +39,8 @@
       }
     ],
     "layers": 96,
+    "multi_material": true,
+    "prime_tower": true,
     "sparse_infill_density_percent": 10.0,
     "supports": false,
     "wall_loops": 3

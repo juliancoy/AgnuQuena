@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regenerate, slice, validate, and retain both AgnuQuena P1S print jobs."""
+"""Regenerate, slice, validate, and retain all AgnuQuena P1S print jobs."""
 
 from __future__ import annotations
 
@@ -35,6 +35,8 @@ class PrintJob:
     wall_loops: int
     infill_percent: float
     expected_filaments: tuple[int, ...]
+    multi_material: bool
+    expected_filament_changes: int
 
 
 JOBS = (
@@ -47,6 +49,8 @@ JOBS = (
         6,
         25.0,
         (1,),
+        False,
+        0,
     ),
     PrintJob(
         "QuenaCase",
@@ -57,6 +61,20 @@ JOBS = (
         3,
         10.0,
         (1, 2),
+        True,
+        3,
+    ),
+    PrintJob(
+        "QuenaCaseSingleFilament",
+        ROOT / "QuenaCaseSingleFilament.3mf",
+        ROOT / "QuenaCasePrintInPlace.stl",
+        "QuenaCaseSingleFilament.gcode",
+        ("Assembly",),
+        3,
+        10.0,
+        (1,),
+        False,
+        0,
     ),
 )
 
@@ -113,6 +131,12 @@ def validate_slice(job: PrintJob, result: dict[str, object], gcode: str) -> dict
     filament_ids = tuple(item["id"] for item in plate["filaments"])
     if filament_ids != job.expected_filaments:
         raise RuntimeError(f"{job.name}: unexpected filament assignment {filament_ids}")
+    filament_change_times = int(plate.get("filament_change_times", -1))
+    if filament_change_times != job.expected_filament_changes:
+        raise RuntimeError(
+            f"{job.name}: expected {job.expected_filament_changes} filament changes, "
+            f"got {filament_change_times}"
+        )
     if int(result.get("wall_loops", -1)) != job.wall_loops:
         raise RuntimeError(f"{job.name}: slicer did not retain {job.wall_loops} walls")
     if abs(float(result.get("sparse_infill_density", -1)) - job.infill_percent) > 0.01:
@@ -121,17 +145,29 @@ def validate_slice(job: PrintJob, result: dict[str, object], gcode: str) -> dict
         raise RuntimeError(f"{job.name}: G-code is not targeted at the Bambu Lab P1S")
     if header_value(gcode, "enable_support") != "0":
         raise RuntimeError(f"{job.name}: support generation must remain disabled")
+    expected_filament_header = ",".join(str(value) for value in job.expected_filaments)
+    if header_value(gcode, "filament") != expected_filament_header:
+        raise RuntimeError(f"{job.name}: G-code has an unexpected filament map")
+    expected_multi_material = "1" if job.multi_material else "0"
+    if header_value(gcode, "single_extruder_multi_material") != expected_multi_material:
+        raise RuntimeError(f"{job.name}: G-code has the wrong material mode")
+    if header_value(gcode, "enable_prime_tower") != expected_multi_material:
+        raise RuntimeError(f"{job.name}: G-code has the wrong prime-tower mode")
+    if not job.multi_material and re.search(r"^(?:T1|M620 S1A)$", gcode, re.MULTILINE):
+        raise RuntimeError(f"{job.name}: single-filament G-code requests a second tool")
     layer_match = re.search(r"^; total layer number:\s*(\d+)$", gcode, re.MULTILINE)
     if not layer_match:
         raise RuntimeError(f"{job.name}: G-code does not report a layer count")
     return {
         "bbox_mm": bbox,
         "filaments": plate["filaments"],
-        "filament_change_times": plate.get("filament_change_times"),
+        "filament_change_times": filament_change_times,
         "layers": int(layer_match.group(1)),
         "wall_loops": job.wall_loops,
         "sparse_infill_density_percent": job.infill_percent,
         "supports": False,
+        "multi_material": job.multi_material,
+        "prime_tower": job.multi_material,
     }
 
 

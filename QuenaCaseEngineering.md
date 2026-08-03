@@ -218,9 +218,9 @@ shares the lid's `lid_in_print_pose()` transform and occupies the lower panel.
 aligned with `QuenaCasePrintInPlace.stl`; no slicer positioning is required.
 
 `QuenaCase.3mf` is the canonical native Bambu Studio two-colour P1S project.
-`tools/build_case_3mf.py` creates its archive through the installed Bambu Studio
-Flatpak, then applies the locked placement and reviewed print contract. It
-contains one assembly with:
+`tools/build_case_3mf.py` creates its archive through the checksum-verified
+project-local Bambu Studio CLI, then applies the locked placement and reviewed
+print contract. It contains one assembly with:
 
 - `QuenaCasePrintInPlace.stl` assigned to yellow ABS / AMS slot 1.
 - `QuenaCaseArtwork.stl` assigned to black ABS / AMS slot 2.
@@ -228,6 +228,19 @@ contains one assembly with:
   elephant-foot compensation.
 - Supports, brims, and skirts disabled; a compact `20 mm` prime tower with a
   `1 mm` brim is limited to active colour layers and ends at `Z=0.6`.
+
+The two-colour slice has three material transitions. With only one AMS HT,
+mapping the artwork filament to the unpowered external spool uses Bambu
+Studio's external-spool swapping workflow: the printer pauses and the operator
+must manually unload or load that spool at each prompted transition. It is not
+an unattended two-colour configuration.
+
+`QuenaCaseSingleFilament.3mf` is the one-material alternative. It contains only
+`QuenaCasePrintInPlace.stl` on filament 1, so the logo and mandala/flourish
+remain visible as recessed engraving instead of flush black inlays. It retains
+the same placement, layers, walls, infill, and support-free contract while
+disabling multi-material mode and the prime tower. Its validated G-code must
+contain no second-tool request.
 
 The project places the complete assembly at `X=5.003..250.997 mm` and its
 sliced paths at `Y=70.787..184.735 mm`, clear of the P1S front-left exclusion
@@ -244,8 +257,9 @@ those estimates can vary with Bambu Studio releases and printer calibration.
 ## Print Practice
 
 `QuenaCasePrintInPlace.stl` is the canonical production geometry for the Bambu
-Lab P1S; use `QuenaCase.3mf` for the complete two-colour job. The STL is already
-oriented with both exterior backs on `Z=0`, side by
+Lab P1S; use `QuenaCase.3mf` for the complete two-colour job or
+`QuenaCaseSingleFilament.3mf` for a recessed one-material finish. The STL is
+already oriented with both exterior backs on `Z=0`, side by
 side, and the hinge captured at 180 degrees. Its `246.0 x 113.9 mm` footprint
 fits the nominal `256 x 256 mm` bed with about `5.0 mm` of X margin per
 side when centered. Disable brims, skirts, and automatic support; confirm that

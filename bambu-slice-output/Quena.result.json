@@ -3,7 +3,7 @@
     "export_time": 0,
     "layer_height": 0.20000000298023224,
     "plate_index": 0,
-    "prepare_time": 45,
+    "prepare_time": 46,
     "return_code": 0,
     "sliced_plates": [
         {
@@ -13,11 +13,11 @@
                 "Flush": 29.0,
                 "Gap infill": 16.073060989379883,
                 "Inner wall": 17.655733108520508,
-                "Outer wall": 4791.013671875,
+                "Outer wall": 4791.00927734375,
                 "Overhang wall": 5.642782211303711,
                 "Top surface": 8.157042503356934,
-                "Travel": 572.0205688476563,
-                "Undefined": 564.5621337890625
+                "Travel": 569.6002197265625,
+                "Undefined": 562.1417846679688
             },
             "filament_change_times": 0,
             "filaments": [
@@ -28,12 +28,12 @@
                     "total_used_g": 19.6143798828125
                 }
             ],
-            "generate_support_material_time": 1160,
+            "generate_support_material_time": 1212,
             "id": 1,
-            "infill_time": 99,
+            "infill_time": 84,
             "layer_filament_change": 0,
-            "main_predication": 5563.37255859375,
-            "make_perimeters_time": 787,
+            "main_predication": 5560.90625,
+            "make_perimeters_time": 826,
             "obj_cached_cnt": 0,
             "objects": [
                 {
@@ -50,9 +50,9 @@
                     "triangle_count": 17808
                 }
             ],
-            "sliced_time": 4035,
-            "sliced_time_with_cache": 1223,
-            "total_predication": 5979.19384765625,
+            "sliced_time": 3799,
+            "sliced_time_with_cache": 1028,
+            "total_predication": 5976.7275390625,
             "triangle_count": 17808,
             "warning_message": ""
         }
