@@ -358,8 +358,15 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
                 calibration["measured_frequency_hz"],
                 f"hole {name} calibration.measured_frequency_hz",
             )
+            global_pitch_offset_cents = number(
+                calibration.get("global_pitch_offset_cents", 0.0),
+                f"hole {name} calibration.global_pitch_offset_cents",
+            )
+            interval_frequency = measured_frequency / (
+                2.0 ** (global_pitch_offset_cents / 1200.0)
+            )
 
-            measured_effective_length = speed_of_sound / (2.0 * measured_frequency)
+            measured_effective_length = speed_of_sound / (2.0 * interval_frequency)
             calibration_geometric_correction = tonehole_equivalent_correction(
                 calibration_diameter,
                 bore_radius,
@@ -413,6 +420,10 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
             )
             compensation_detail = {
                 "model": compensation["model"],
+                "calibration_source": calibration.get("source"),
+                "calibration_measured_frequency_hz": measured_frequency,
+                "calibration_global_pitch_offset_cents": global_pitch_offset_cents,
+                "calibration_interval_frequency_hz": interval_frequency,
                 "empirical_factor": empirical_factor,
                 "acoustically_tuned_diameter_mm": acoustic_diameter,
                 "minimum_diameter_mm": minimum_diameter,

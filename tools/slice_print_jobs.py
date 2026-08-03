@@ -55,14 +55,14 @@ JOBS = (
     PrintJob(
         "QuenaCase",
         ROOT / "QuenaCase.3mf",
-        ROOT / "QuenaCasePrintInPlace.stl",
+        ROOT / "QuenaCaseTwoColorPrintInPlace.stl",
         "QuenaCase.gcode",
         ("Assembly",),
         3,
         10.0,
         (1, 2),
         True,
-        3,
+        1,
     ),
     PrintJob(
         "QuenaCaseSingleFilament",

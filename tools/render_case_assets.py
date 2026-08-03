@@ -31,6 +31,13 @@ STL_PARTS = [
     # Canonical production export: both exterior backs on the bed, with the
     # captive hinge already assembled at 180 degrees.
     ("print_in_place", ROOT / "QuenaCasePrintInPlace.stl", True),
+    # Two-color body with one 0.2 mm decoration recess. The deeper canonical
+    # body above remains the single-filament engraved export.
+    (
+        "print_in_place_two_color",
+        ROOT / "QuenaCaseTwoColorPrintInPlace.stl",
+        True,
+    ),
     # Everything below is auxiliary validation/coupon output. The complete
     # printable case itself remains the single STL above. Browser mechanics
     # uses model-space meshes so rendering and collision share the exact hinge
@@ -150,6 +157,7 @@ def render_stl(part: str, output: Path, *, force: bool = False) -> None:
         "case_artwork_print",
         "lid",
         "print_in_place",
+        "print_in_place_two_color",
         "assembly",
     }
     dependencies = (

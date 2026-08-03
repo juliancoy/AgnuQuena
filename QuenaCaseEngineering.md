@@ -152,9 +152,10 @@ This checks:
   model-space meshes, using contrasting coral and gold materials rather than
   flattening either decoration into the blue shell material.
 - The checksum-verified native Bambu Studio CLI opens and slices the project
-  directly with the P1S profile, two ABS filaments, three colour changes, and
-  no generated support, brim, or skirt toolpaths. It checks that black is used only in the
-  first three `0.20 mm` layers and that the compact prime tower ends at `Z=0.6`.
+  directly with the P1S profile, two ABS filaments, one colour change, and
+  no generated support, brim, or skirt toolpaths. It checks that black is used
+  only in the first `0.20 mm` layer and that the compact prime tower ends at
+  `Z=0.2`.
 
 The OpenSCAD and browser checks are required because Bullet/pybullet can miss
 static concave mesh penetration and does not detect coplanar Z-fighting. The
@@ -185,9 +186,11 @@ tendrils, and broad leaves, so it remains deterministic and scales with the
 case rather than depending on another image asset. The frame centerline follows
 the case outline exactly `5 mm` inward.
 
-The ornament is engraved `0.40 mm`, or two project layers, and filled by the
-black `QuenaCaseArtwork.stl` inlay instead of being embossed. This preserves
-the case's face-down production pose and leaves `2.40 mm` of solid roof. All
+The single-filament body engraves the ornament `0.40 mm`, or two project
+layers. The two-colour body instead uses a `0.20 mm` recess filled by the black
+`QuenaCaseArtwork.stl` inlay. This preserves the case's face-down production
+pose, reduces the two-colour job to one material change, and leaves at least
+`2.40 mm` of solid roof. All
 nominal strokes are `0.90 mm` wide, exceeding two line widths for the `0.4 mm`
 nozzle. The recesses close without slicer-generated support, and the inlay
 meets their floors exactly. The outside plan-view corner radius is `14 mm`,
@@ -205,9 +208,10 @@ vectors rather than a substituted font or a hand-redrawn map.
 
 The title remains `190 mm` wide and the map `84 mm` wide. A `0.84` vertical
 scale fits the composition inside the long upper face while retaining at least a
-`2.0 mm` rounded-edge margin. The inlay is `0.60 mm` deep: exactly three layers
-at the project's `0.20 mm` layer height. Its top meets the recess floor exactly,
-so the black and yellow ABS fuse across a full planar interface.
+`2.0 mm` rounded-edge margin. The single-filament logo remains engraved
+`0.60 mm` deep for visibility. In the two-colour body, both logo and ornament
+inlays are exactly one `0.20 mm` layer deep. Their tops meet the recess floors
+exactly, so the black and yellow ABS fuse across a full planar interface.
 
 The traced logo is rotated 180 degrees in the CAD source so it reads normally
 when viewed through the base shell's exterior face, while remaining upright on
@@ -215,25 +219,27 @@ the upper panel like the display of an open laptop. It is not reflected, which
 would reverse both the title and continent. The mandala and flourish inlay
 shares the lid's `lid_in_print_pose()` transform and occupies the lower panel.
 `QuenaCaseArtwork.stl` combines both black inlays, so they are translated and
-aligned with `QuenaCasePrintInPlace.stl`; no slicer positioning is required.
+aligned with `QuenaCaseTwoColorPrintInPlace.stl`; no slicer positioning is
+required.
 
 `QuenaCase.3mf` is the canonical native Bambu Studio two-colour P1S project.
 `tools/build_case_3mf.py` creates its archive through the checksum-verified
 project-local Bambu Studio CLI, then applies the locked placement and reviewed
 print contract. It contains one assembly with:
 
-- `QuenaCasePrintInPlace.stl` assigned to yellow ABS / AMS slot 1.
+- `QuenaCaseTwoColorPrintInPlace.stl` assigned to yellow ABS / AMS slot 1.
 - `QuenaCaseArtwork.stl` assigned to black ABS / AMS slot 2.
 - `0.20 mm` layers, three walls, `10%` grid infill, and `0.15 mm`
   elephant-foot compensation.
 - Supports, brims, and skirts disabled; a compact `20 mm` prime tower with a
-  `1 mm` brim is limited to active colour layers and ends at `Z=0.6`.
+  `1 mm` brim is limited to the active colour layer and ends at `Z=0.2`.
 
-The two-colour slice has three material transitions. With only one AMS HT,
+The two-colour slice has one material transition. With only one AMS HT,
 mapping the artwork filament to the unpowered external spool uses Bambu
 Studio's external-spool swapping workflow: the printer pauses and the operator
-must manually unload or load that spool at each prompted transition. It is not
-an unattended two-colour configuration.
+must manually unload that spool at the prompted transition before printing
+continues from the AMS. It is still not an unattended two-colour configuration,
+but the single-layer artwork minimizes the intervention and purge waste.
 
 `QuenaCaseSingleFilament.3mf` is the one-material alternative. It contains only
 `QuenaCasePrintInPlace.stl` on filament 1, so the logo and mandala/flourish
@@ -242,29 +248,30 @@ the same placement, layers, walls, infill, and support-free contract while
 disabling multi-material mode and the prime tower. Its validated G-code must
 contain no second-tool request.
 
-The project places the complete assembly at `X=5.003..250.997 mm` and its
+The project places the complete assembly at `X=2.275..253.725 mm` and its
 sliced paths at `Y=70.787..184.735 mm`, clear of the P1S front-left exclusion
-region and with the prime-tower area behind it. Inspect the first three sliced
-layers before printing: only the artwork should be black, every artwork island
-must contact the yellow case at layer four, and the `0.60 mm` hinge shell gap must remain
-open.
+region and with the prime-tower area behind it. Inspect the first two sliced
+layers before printing: only the first-layer artwork should be black, every
+artwork island must bond to the yellow case at layer two, and the `0.60 mm`
+hinge shell gap must remain open.
 
-The automated Bambu slice produces `96` layers and three colour changes. Its
-current estimate is about `109.5 g` of model ABS (`107.1 g` yellow and `2.4 g`
-black), `111.1 g` including purge and prime-tower material, and `4 h 44 min`;
-those estimates can vary with Bambu Studio releases and printer calibration.
+The automated Bambu slice produces `96` layers and one colour change. The
+current estimate is about `111.39 g` of model ABS (`110.30 g` yellow and
+`1.08 g` black), `112.06 g` including purge and prime-tower material, and
+`4 h 30 min`; estimates can vary with Bambu Studio releases and printer
+calibration.
 
 ## Print Practice
 
-`QuenaCasePrintInPlace.stl` is the canonical production geometry for the Bambu
-Lab P1S; use `QuenaCase.3mf` for the complete two-colour job or
-`QuenaCaseSingleFilament.3mf` for a recessed one-material finish. The STL is
-already oriented with both exterior backs on `Z=0`, side by
-side, and the hinge captured at 180 degrees. Its `246.0 x 113.9 mm` footprint
-fits the nominal `256 x 256 mm` bed with about `5.0 mm` of X margin per
-side when centered. Disable brims, skirts, and automatic support; confirm that
-the slicer's printer-specific exclusion zones do not reduce usable X below
-`246.0 mm` before starting the full print.
+`QuenaCasePrintInPlace.stl` is the deeply engraved single-filament production
+geometry. `QuenaCaseTwoColorPrintInPlace.stl` is the shallow-recess body for
+`QuenaCase.3mf`; use `QuenaCaseSingleFilament.3mf` for a recessed one-material
+finish. Both STLs are already oriented with both exterior backs on `Z=0`, side by
+side, and the hinge captured at 180 degrees. Its `251.5 x 113.9 mm` footprint
+fits the nominal `256 x 256 mm` bed with about `2.3 mm` of X margin per
+side when centered. Disable brims, skirts, and automatic support; confirm the
+retained P1S plate placement and printer-specific exclusion zones before
+starting the full print.
 
 The former `QuenaCaseBottom.stl` and `QuenaCaseLid.stl` snap-assembly exports
 are intentionally removed. They contained the obsolete open C-bearing and must
@@ -287,22 +294,24 @@ to the complete case.
 `QuenaCaseFullHingeCoupon.stl` is the full-width hinge coupon. It uses the same
 alternating seven-bearing/eight-web layout and axial capture as the case.
 
-- `QuenaCasePrintInPlace.stl`: `71424` triangles,
-  `246.0 x 113.9 x 19.3 mm`, `2` connected components.
-- `QuenaCaseArtwork.stl`: `44502` triangles, `236.9 x 105.3 x 0.6 mm`,
+- `QuenaCasePrintInPlace.stl`: `71624` triangles,
+  `251.5 x 113.9 x 19.3 mm`, `2` connected components.
+- `QuenaCaseTwoColorPrintInPlace.stl`: `71644` triangles,
+  `251.5 x 113.9 x 19.3 mm`, `2` connected components.
+- `QuenaCaseArtwork.stl`: `44492` triangles, `242.4 x 105.3 x 0.2 mm`,
   `31` connected artwork components.
-- `QuenaCaseHingeCoupon.stl`: `3176` triangles, `46.0 x 28.0 x 19.3 mm`,
+- `QuenaCaseHingeCoupon.stl`: `3194` triangles, `46.0 x 28.0 x 19.3 mm`,
   `2` connected components.
-- `QuenaCaseFullHingeCoupon.stl`: `17300` triangles,
+- `QuenaCaseFullHingeCoupon.stl`: `16232` triangles,
   `243.5 x 28.0 x 19.3 mm`, `2` connected components.
 - `QuenaCaseFullHingeCoupon_9views.png`: `1500 x 1101 px`.
-- `QuenaCaseBottomViewer.stl`: `17580` triangles,
-  `246.0 x 61.3 x 19.3 mm`, `1` connected component.
-- `QuenaCaseLidViewer.stl`: `53844` triangles,
-  `246.0 x 62.4 x 19.3 mm`, `1` connected component.
+- `QuenaCaseBottomViewer.stl`: `17742` triangles,
+  `251.5 x 61.3 x 19.3 mm`, `1` connected component.
+- `QuenaCaseLidViewer.stl`: `53882` triangles,
+  `251.5 x 62.4 x 19.3 mm`, `1` connected component.
 - `QuenaCaseLatch.stl`: `56.0 x 8.3 x 11.6 mm`.
 - `QuenaCaseLatchCoupon.stl`: `182.0 x 34.0 x 18.9 mm`.
-- `QuenaCaseAssembly.stl`: `71424` triangles, `246.0 x 62.4 x 28.8 mm`.
+- `QuenaCaseAssembly.stl`: `71626` triangles, `251.5 x 62.4 x 28.8 mm`.
 - Closed overlap check: empty intersection.
 - Hinge sweep check: passes from `0` to `180` degrees around
   `(0.00, -28.35, 14.40)`.

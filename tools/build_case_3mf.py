@@ -19,7 +19,8 @@ ROOT = Path(__file__).resolve().parents[1]
 TWO_COLOR_OUTPUT = ROOT / "QuenaCase.3mf"
 SINGLE_FILAMENT_OUTPUT = ROOT / "QuenaCaseSingleFilament.3mf"
 SETTINGS_TEMPLATE = ROOT / "config" / "bambu_p1s_abs_project_settings.json"
-CASE_STL = ROOT / "QuenaCasePrintInPlace.stl"
+SINGLE_FILAMENT_CASE_STL = ROOT / "QuenaCasePrintInPlace.stl"
+TWO_COLOR_CASE_STL = ROOT / "QuenaCaseTwoColorPrintInPlace.stl"
 ARTWORK_STL = ROOT / "QuenaCaseArtwork.stl"
 MACHINE_PROFILE = PROFILE_ROOT / "machine" / "Bambu Lab P1S 0.4 nozzle.json"
 PROCESS_PROFILE = PROFILE_ROOT / "process" / "0.20mm Strength @BBL X1C.json"
@@ -72,7 +73,11 @@ def project_settings(*, two_color: bool) -> dict[str, object]:
 
 def bambu_skeleton(output: Path, *, two_color: bool) -> None:
     require()
-    models = (CASE_STL, ARTWORK_STL) if two_color else (CASE_STL,)
+    models = (
+        (TWO_COLOR_CASE_STL, ARTWORK_STL)
+        if two_color
+        else (SINGLE_FILAMENT_CASE_STL,)
+    )
     invocation = command(
         "--debug",
         "1",
@@ -133,7 +138,11 @@ def patched_model_settings(data: bytes, *, two_color: bool) -> bytes:
         raise ValueError(
             f"Bambu project must contain exactly {expected_parts} case part(s)"
         )
-    names = (CASE_STL.name, ARTWORK_STL.name) if two_color else (CASE_STL.name,)
+    names = (
+        (TWO_COLOR_CASE_STL.name, ARTWORK_STL.name)
+        if two_color
+        else (SINGLE_FILAMENT_CASE_STL.name,)
+    )
     extruders = ("1", "2") if two_color else ("1",)
     for part, name, extruder in zip(
         parts,
@@ -214,9 +223,11 @@ def main() -> None:
         help="select which case project variant to export",
     )
     args = parser.parse_args()
-    required = [SETTINGS_TEMPLATE, CASE_STL]
+    required = [SETTINGS_TEMPLATE]
     if args.mode in ("all", "two-color"):
-        required.append(ARTWORK_STL)
+        required.extend((TWO_COLOR_CASE_STL, ARTWORK_STL))
+    if args.mode in ("all", "single"):
+        required.append(SINGLE_FILAMENT_CASE_STL)
     for path in required:
         if not path.exists():
             raise SystemExit(f"missing {path.name}; render case assets first")

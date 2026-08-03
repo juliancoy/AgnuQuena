@@ -23,16 +23,22 @@ make print-slice
 
 The retained projects and G-code are named `Quena`, `QuenaCase`, and
 `QuenaCaseSingleFilament` under `bambu-slice-output/`, alongside job-specific
-slicer results and SHA-256 manifests. The single-filament case preserves the
+slicer results and SHA-256 manifests. The two-color case confines all artwork
+to the first `0.20 mm` layer, reducing the job to one material change. The
+single-filament case preserves the
 recessed logo and mandala/flourish engraving but omits the separate inlay mesh,
 second filament, and prime tower. It is the unattended option for a printer
 equipped with one AMS HT: assigning the two-color project's other filament to
 the unpowered external spool requires a manual load or unload at each prompted
 transition. The source is pinned in the `BambuStudio` submodule and the scripts
-invoke its official native Linux CLI directly; run `make bambu-studio-setup`
-once after cloning. `make print-export` performs the same canonical geometry and
-project generation without slicing, while `make case-single-export` rebuilds
-only the single-filament case project.
+invoke the native Linux CLI built directly from that revision. Run
+`make bambu-studio-setup` once after cloning; its Ubuntu 24.04 Docker builder
+keeps the large incremental build cache inside the ignored submodule build
+directory, installs a project-local runtime, and installs the pinned official
+Bambu networking plugin under the user's BambuStudio data directory. Existing
+plugin files are retained in a timestamped backup. `make print-export` performs
+the same canonical geometry and project generation without slicing, while
+`make case-single-export` rebuilds only the single-filament case project.
 
 ## Browser CFD lab
 

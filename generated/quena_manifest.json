@@ -24,75 +24,87 @@
   },
   "holes": [
     {
-      "acoustic_position_mm": 334.0,
+      "acoustic_position_mm": 341.437,
       "angle_deg": -12.0,
-      "calibrated_correction_mm": 39.8417944815626,
+      "calibrated_correction_mm": 48.33536220619061,
       "compensation": {
-        "acoustically_tuned_diameter_mm": 7.872603174513642,
+        "acoustically_tuned_diameter_mm": 9.499947499967675,
+        "calibration_global_pitch_offset_cents": 9.791252216,
+        "calibration_interval_frequency_hz": 453.19126669290915,
+        "calibration_measured_frequency_hz": 455.761619107,
+        "calibration_source": "measurements/2026-08-03-160409-0400-guided-tuning.csv",
         "diameter_increment_mm": 0.01,
-        "empirical_factor": 1.9103638773525855,
-        "estimated_pitch_delta_cents": 72.2463361311851,
-        "generated_effective_length_mm": 373.8417944815626,
+        "empirical_factor": 2.130238654148298,
+        "estimated_pitch_delta_cents": 0.001621498555911168,
+        "generated_effective_length_mm": 389.7723622061906,
         "minimum_applied": true,
-        "minimum_diameter_mm": 10.1,
+        "minimum_diameter_mm": 9.5,
         "model": "lefebvre_2011_open_tonehole_shunt",
         "target_effective_length_mm": 389.77272727272725,
-        "unrounded_diameter_mm": 10.1
+        "unrounded_diameter_mm": 9.5
       },
-      "diameter_mm": 10.1,
+      "diameter_mm": 9.5,
       "diameter_mode": "measured_compensation",
       "name": "A",
-      "physical_z_mm": 302.0,
+      "physical_z_mm": 309.437,
       "position": {
-        "axial_adjust_mm": 0.0,
-        "local_offset_mm": 79.5,
+        "axial_adjust_mm": -3.908,
+        "local_offset_mm": 77.187,
         "mode": "lower_hand",
         "part": 2
       },
-      "profile_axial_width_mm": 9.637131536883011,
-      "profile_circumferential_width_mm": 9.637131536883011,
+      "profile_axial_width_mm": 9.064628673305803,
+      "profile_circumferential_width_mm": 9.064628673305803,
       "target_note": "A4"
     },
     {
-      "acoustic_position_mm": 305.154575,
+      "acoustic_position_mm": 307.0,
       "angle_deg": 12.0,
-      "calibrated_correction_mm": 42.093447811040164,
+      "calibrated_correction_mm": 40.25051768615998,
       "compensation": {
-        "acoustically_tuned_diameter_mm": 10.499999949752237,
+        "acoustically_tuned_diameter_mm": 10.630468609415402,
+        "calibration_global_pitch_offset_cents": 9.791252216,
+        "calibration_interval_frequency_hz": 495.51252636112724,
+        "calibration_measured_frequency_hz": 498.322911097,
+        "calibration_source": "measurements/2026-08-03-160409-0400-guided-tuning.csv",
         "diameter_increment_mm": 0.01,
-        "empirical_factor": 2.1306144587891804,
-        "estimated_pitch_delta_cents": 1.4074131327212285e-06,
-        "generated_effective_length_mm": 347.2480228110402,
-        "minimum_applied": true,
+        "empirical_factor": 2.0728239523063228,
+        "estimated_pitch_delta_cents": -0.012436956395333527,
+        "generated_effective_length_mm": 347.25051768616,
+        "minimum_applied": false,
         "minimum_diameter_mm": 10.5,
         "model": "lefebvre_2011_open_tonehole_shunt",
         "target_effective_length_mm": 347.24802309333677,
-        "unrounded_diameter_mm": 10.5
+        "unrounded_diameter_mm": 10.630468609415402
       },
-      "diameter_mm": 10.5,
+      "diameter_mm": 10.63,
       "diameter_mode": "measured_compensation",
       "name": "B",
-      "physical_z_mm": 273.154575,
+      "physical_z_mm": 275.0,
       "position": {
-        "axial_adjust_mm": 1.154575,
-        "local_offset_mm": 50.654575,
+        "axial_adjust_mm": -8.2595,
+        "local_offset_mm": 42.75,
         "mode": "lower_hand",
         "part": 2
       },
-      "profile_axial_width_mm": 10.01880011260115,
-      "profile_circumferential_width_mm": 10.01880011260115,
+      "profile_axial_width_mm": 10.142842399709545,
+      "profile_circumferential_width_mm": 10.142842399709545,
       "target_note": "B4"
     },
     {
-      "acoustic_position_mm": 274.0,
+      "acoustic_position_mm": 285.174,
       "angle_deg": 0.0,
-      "calibrated_correction_mm": 40.864083228605125,
+      "calibrated_correction_mm": 42.58424233374046,
       "compensation": {
-        "acoustically_tuned_diameter_mm": 7.952993600763875,
+        "acoustically_tuned_diameter_mm": 9.749958903623337,
+        "calibration_global_pitch_offset_cents": 9.791252216,
+        "calibration_interval_frequency_hz": 541.7199502279906,
+        "calibration_measured_frequency_hz": 544.792408336,
+        "calibration_source": "measurements/2026-08-03-160409-0400-guided-tuning.csv",
         "diameter_increment_mm": 0.01,
-        "empirical_factor": 1.8662454180656796,
-        "estimated_pitch_delta_cents": 69.48473991938893,
-        "generated_effective_length_mm": 314.8640832286051,
+        "empirical_factor": 1.9448043577179857,
+        "estimated_pitch_delta_cents": 0.0013035743958018972,
+        "generated_effective_length_mm": 327.75824233374044,
         "minimum_applied": true,
         "minimum_diameter_mm": 9.75,
         "model": "lefebvre_2011_open_tonehole_shunt",
@@ -102,10 +114,10 @@
       "diameter_mm": 9.75,
       "diameter_mode": "measured_compensation",
       "name": "C",
-      "physical_z_mm": 242.0,
+      "physical_z_mm": 253.174,
       "position": {
         "axial_adjust_mm": 0.0,
-        "local_offset_mm": 19.5,
+        "local_offset_mm": 20.924,
         "mode": "lower_hand",
         "part": 2
       },
@@ -114,84 +126,96 @@
       "target_note": "C5"
     },
     {
-      "acoustic_position_mm": 239.16283889866003,
+      "acoustic_position_mm": 249.11174205693786,
       "angle_deg": 5.0,
-      "calibrated_correction_mm": 42.27782416749636,
+      "calibrated_correction_mm": 42.887876216513035,
       "compensation": {
-        "acoustically_tuned_diameter_mm": 8.926706256199395,
+        "acoustically_tuned_diameter_mm": 10.500000078685844,
+        "calibration_global_pitch_offset_cents": 9.791252216,
+        "calibration_interval_frequency_hz": 608.0466767466365,
+        "calibration_measured_frequency_hz": 611.495318321,
+        "calibration_source": "measurements/2026-08-03-160409-0400-guided-tuning.csv",
         "diameter_increment_mm": 0.01,
-        "empirical_factor": 2.139946907218872,
-        "estimated_pitch_delta_cents": 63.76283279287212,
-        "generated_effective_length_mm": 281.4406630661564,
-        "minimum_applied": true,
+        "empirical_factor": 2.170825482955495,
+        "estimated_pitch_delta_cents": -2.6699276637227865e-06,
+        "generated_effective_length_mm": 291.9996182734509,
+        "minimum_applied": false,
         "minimum_diameter_mm": 10.5,
         "model": "lefebvre_2011_open_tonehole_shunt",
         "target_effective_length_mm": 291.99961782312596,
-        "unrounded_diameter_mm": 10.5
+        "unrounded_diameter_mm": 10.500000078685844
       },
       "diameter_mm": 10.5,
       "diameter_mode": "measured_compensation",
       "name": "D",
-      "physical_z_mm": 207.16283889866003,
+      "physical_z_mm": 217.11174205693786,
       "position": {
         "mode": "tuned_source",
-        "source_position_mm": 237.546493
+        "source_position_mm": 247.428158
       },
       "profile_axial_width_mm": 10.01880011260115,
       "profile_circumferential_width_mm": 10.01880011260115,
       "target_note": "D5"
     },
     {
-      "acoustic_position_mm": 209.71945826081046,
+      "acoustic_position_mm": 219.4807716217964,
       "angle_deg": -5.0,
-      "calibrated_correction_mm": 40.04746837179954,
+      "calibrated_correction_mm": 40.66131361347351,
       "compensation": {
-        "acoustically_tuned_diameter_mm": 9.406865923832811,
+        "acoustically_tuned_diameter_mm": 11.10000000368018,
+        "calibration_global_pitch_offset_cents": 9.791252216,
+        "calibration_interval_frequency_hz": 684.9567509360512,
+        "calibration_measured_frequency_hz": 688.841601258,
+        "calibration_source": "measurements/2026-08-03-160409-0400-guided-tuning.csv",
         "diameter_increment_mm": 0.01,
-        "empirical_factor": 2.1925405983188835,
-        "estimated_pitch_delta_cents": 70.46083421326757,
-        "generated_effective_length_mm": 249.76692663261,
-        "minimum_applied": true,
+        "empirical_factor": 2.22614773175763,
+        "estimated_pitch_delta_cents": -1.2762874043967584e-07,
+        "generated_effective_length_mm": 260.1420852352699,
+        "minimum_applied": false,
         "minimum_diameter_mm": 11.1,
         "model": "lefebvre_2011_open_tonehole_shunt",
         "target_effective_length_mm": 260.1420852160919,
-        "unrounded_diameter_mm": 11.1
+        "unrounded_diameter_mm": 11.10000000368018
       },
       "diameter_mm": 11.1,
       "diameter_mode": "measured_compensation",
       "name": "E",
-      "physical_z_mm": 177.71945826081046,
+      "physical_z_mm": 187.4807716217964,
       "position": {
         "mode": "tuned_source",
-        "source_position_mm": 208.302101
+        "source_position_mm": 217.997444
       },
       "profile_axial_width_mm": 10.591302976178358,
       "profile_circumferential_width_mm": 10.591302976178358,
       "target_note": "E5"
     },
     {
-      "acoustic_position_mm": 182.02854843204864,
+      "acoustic_position_mm": 190.39090213563443,
       "angle_deg": 0.0,
-      "calibrated_correction_mm": 39.062669068463265,
+      "calibrated_correction_mm": 41.369348124587475,
       "compensation": {
-        "acoustically_tuned_diameter_mm": 9.356912314899091,
+        "acoustically_tuned_diameter_mm": 11.130000001296139,
+        "calibration_global_pitch_offset_cents": 9.791252216,
+        "calibration_interval_frequency_hz": 767.6885174098246,
+        "calibration_measured_frequency_hz": 772.042595211,
+        "calibration_source": "measurements/2026-08-03-160409-0400-guided-tuning.csv",
         "diameter_increment_mm": 0.01,
-        "empirical_factor": 2.146861325983975,
-        "estimated_pitch_delta_cents": 81.58971603057928,
-        "generated_effective_length_mm": 221.0912175005119,
-        "minimum_applied": true,
+        "empirical_factor": 2.2736350507484278,
+        "estimated_pitch_delta_cents": -5.1174353988019195e-08,
+        "generated_effective_length_mm": 231.7602502602219,
+        "minimum_applied": false,
         "minimum_diameter_mm": 11.13,
         "model": "lefebvre_2011_open_tonehole_shunt",
         "target_effective_length_mm": 231.7602502533712,
-        "unrounded_diameter_mm": 11.13
+        "unrounded_diameter_mm": 11.130000001296139
       },
       "diameter_mm": 11.13,
       "diameter_mode": "measured_compensation",
       "name": "F#",
-      "physical_z_mm": 150.02854843204864,
+      "physical_z_mm": 158.39090213563443,
       "position": {
         "mode": "tuned_source",
-        "source_position_mm": 180.798336
+        "source_position_mm": 189.104174
       },
       "profile_axial_width_mm": 10.61992811935722,
       "profile_circumferential_width_mm": 10.61992811935722,
@@ -205,7 +229,7 @@
           "F#",
           "E"
         ],
-        "mm": 17.085294280994027,
+        "mm": 18.484253938394183,
         "part": 1
       },
       {
@@ -213,7 +237,7 @@
           "E",
           "D"
         ],
-        "mm": 19.13832909345982,
+        "mm": 19.325918890751698,
         "part": 1
       },
       {
@@ -221,7 +245,7 @@
           "C",
           "B"
         ],
-        "mm": 21.493589177134627,
+        "mm": 12.1029930335804,
         "part": 2
       },
       {
@@ -229,7 +253,7 @@
           "B",
           "A"
         ],
-        "mm": 19.017459175257898,
+        "mm": 24.833264463492338,
         "part": 2
       }
     ],
@@ -245,46 +269,46 @@
     },
     "end_ligaments": [
       {
-        "end_mm": 67.87595086190662,
+        "end_mm": 60.725202293695205,
         "hole": "A",
         "part": 2,
-        "start_mm": 74.68143423155851
+        "start_mm": 72.6546856633471
       },
       {
-        "end_mm": 96.53054157404752,
+        "end_mm": 94.62309543049335,
         "hole": "B",
         "part": 2,
-        "start_mm": 45.64517494369943
+        "start_mm": 37.6785788001452
       },
       {
-        "end_mm": 128.0429308637833,
+        "end_mm": 116.86893086378329,
         "hole": "C",
         "part": 2,
-        "start_mm": 14.848414233435193
+        "start_mm": 16.2724142334352
       },
       {
-        "end_mm": 10.327761045039399,
+        "end_mm": 10.128857886761569,
         "hole": "D",
         "part": 1,
-        "start_mm": 202.15343884235946
+        "start_mm": 212.1023420006373
       },
       {
-        "end_mm": 39.48489025110037,
+        "end_mm": 39.473576890114416,
         "hole": "E",
         "part": 1,
-        "start_mm": 172.42380677272126
+        "start_mm": 182.18512013370722
       },
       {
-        "end_mm": 67.16148750827276,
+        "end_mm": 68.54913380468696,
         "hole": "F#",
         "part": 1,
-        "start_mm": 144.71858437237003
+        "start_mm": 153.08093807595583
       }
     ],
-    "maximum_print_height_mm": 230.1,
+    "maximum_print_height_mm": 239.85,
     "maximum_profile_width_mm": 10.61992811935722,
-    "minimum_axial_ligament_mm": 17.085294280994027,
-    "minimum_end_ligament_mm": 10.327761045039399,
+    "minimum_axial_ligament_mm": 12.1029930335804,
+    "minimum_end_ligament_mm": 10.128857886761569,
     "status": "passed"
   },
   "parts": [
@@ -294,20 +318,20 @@
       "print_height_mm": 62.6
     },
     {
-      "length_mm": 222.5,
+      "length_mm": 232.25,
       "name": "tube_1",
-      "print_height_mm": 230.1,
+      "print_height_mm": 239.85,
       "start_z_mm": 0.0
     },
     {
-      "length_mm": 152.19451663034812,
+      "length_mm": 142.44451663034812,
       "name": "tube_2",
-      "print_height_mm": 152.19451663034812,
-      "start_z_mm": 222.5
+      "print_height_mm": 142.44451663034812,
+      "start_z_mm": 232.25
     }
   ],
   "schema_version": 1,
-  "spec_sha256": "ba2e20caecc561d344c5e5c3109a4064a47abe4fcf6a769e0278da03be1ad855",
+  "spec_sha256": "d66a5db51825bfc5f6373fa83b4e71293644cc84d0946dceb0b4151c2e7b04c7",
   "tone_hole_profile": {
     "axial_scale": 1.0,
     "circumferential_scale": 1.0,

@@ -3,60 +3,60 @@
     "export_time": 0,
     "layer_height": 0.20000000298023224,
     "plate_index": 0,
-    "prepare_time": 145,
+    "prepare_time": 139,
     "return_code": 0,
     "sliced_plates": [
         {
             "feature_type_times": {
-                "Bottom surface": 541.313720703125,
-                "Bridge": 1660.07373046875,
+                "Bottom surface": 555.9046020507813,
+                "Bridge": 1684.5008544921875,
                 "Custom": 373.7161560058594,
                 "Flush": 29.0,
-                "Gap infill": 135.4300079345703,
-                "Inner wall": 2887.160888671875,
-                "Internal solid infill": 2912.04345703125,
-                "Outer wall": 4181.85546875,
-                "Overhang wall": 123.41244506835938,
-                "Sparse infill": 1824.988037109375,
-                "Top surface": 987.099853515625,
-                "Travel": 1412.0592041015625,
-                "Undefined": 1396.3763427734375
+                "Gap infill": 134.13375854492188,
+                "Inner wall": 2904.54541015625,
+                "Internal solid infill": 3009.850341796875,
+                "Outer wall": 4212.296875,
+                "Overhang wall": 121.6075210571289,
+                "Sparse infill": 1881.1185302734375,
+                "Top surface": 998.1145629882813,
+                "Travel": 1410.988037109375,
+                "Undefined": 1395.30517578125
             },
             "filament_change_times": 0,
             "filaments": [
                 {
                     "filament_id": "GFB60",
                     "id": 1,
-                    "main_used_g": 113.96757507324219,
-                    "total_used_g": 113.96757507324219
+                    "main_used_g": 116.10640716552734,
+                    "total_used_g": 116.10640716552734
                 }
             ],
-            "generate_support_material_time": 379,
+            "generate_support_material_time": 321,
             "id": 1,
-            "infill_time": 1498,
+            "infill_time": 1245,
             "layer_filament_change": 0,
-            "main_predication": 16635.216796875,
-            "make_perimeters_time": 727,
+            "main_predication": 16883.275390625,
+            "make_perimeters_time": 621,
             "obj_cached_cnt": 0,
             "objects": [
                 {
                     "bbox": {
                         "depth": 113.94758605957031,
                         "height": 19.299999237060547,
-                        "width": 245.99452209472656,
-                        "x": 5.002738952636719,
+                        "width": 251.4499969482422,
+                        "x": 2.2750015258789063,
                         "y": 70.78741455078125,
                         "z": 1.469725674496658e-09
                     },
                     "id": 5,
                     "name": "Assembly",
-                    "triangle_count": 71424
+                    "triangle_count": 71624
                 }
             ],
-            "sliced_time": 4407,
-            "sliced_time_with_cache": 1677,
-            "total_predication": 17051.21875,
-            "triangle_count": 71424,
+            "sliced_time": 3336,
+            "sliced_time_with_cache": 1064,
+            "total_predication": 17299.27734375,
+            "triangle_count": 71624,
             "warning_message": ""
         }
     ],

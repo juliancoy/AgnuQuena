@@ -40,22 +40,27 @@ OBSOLETE_SPLIT_EXPORTS = (
 
 EXPECTED = {
     "QuenaCasePrintInPlace.stl": {
-        "size": (245.994, 113.948, 19.4),
+        "size": (251.45, 113.948, 19.4),
+        "min_triangles": 18000,
+        "components": 2,
+    },
+    "QuenaCaseTwoColorPrintInPlace.stl": {
+        "size": (251.45, 113.948, 19.4),
         "min_triangles": 18000,
         "components": 2,
     },
     "QuenaCaseBottomViewer.stl": {
-        "size": (245.994, 61.3, 19.4),
+        "size": (251.45, 61.3, 19.4),
         "min_triangles": 2200,
         "components": 1,
     },
     "QuenaCaseLidViewer.stl": {
-        "size": (245.994, 62.448, 19.3),
+        "size": (251.45, 62.448, 19.3),
         "min_triangles": 1200,
         "components": 1,
     },
     "QuenaCaseArtwork.stl": {
-        "size": (236.894, 105.341, 0.6),
+        "size": (242.35, 105.341, 0.2),
         "min_triangles": 35000,
         "components": 31,
     },
@@ -75,7 +80,7 @@ EXPECTED = {
         "components": 7,
     },
     "QuenaCaseAssembly.stl": {
-        "size": (245.994, 62.448, 28.8),
+        "size": (251.45, 62.448, 28.8),
         "min_triangles": 18000,
         "components": 2,
     },
@@ -87,7 +92,7 @@ CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
 # Canonical 32 mm mouthpiece pocket, 8 mm short-row gaps, 1.5 mm bed-edge
 # rounding, retention border, swapped artwork faces, two flourishes, and
 # enclosed round hinge ends.
-EXPECTED_CASE_VOLUME_MM3 = 253_779.53
+EXPECTED_CASE_VOLUME_MM3 = 262_388.33
 CASE_VOLUME_TOLERANCE_MM3 = 10.0
 # OpenSCAD's ASCII STL coordinate quantization accumulates a sub-voxel volume
 # difference after the rigid 180-degree print-pose transform of rounded shells.
@@ -460,12 +465,12 @@ def run_exterior_design_checks() -> None:
         raise AssertionError("mandala ornament is not procedurally repeated")
     if "flourish_2d();" not in source:
         raise AssertionError("mandala panel is missing its interstitial flourishes")
-    if "lid_ornament_recess();" not in source:
+    if "lid_ornament_recess(ornament_depth);" not in source:
         raise AssertionError("mandala ornament is not cut into the production lid")
-    if "bottom_logo_recess();" not in source:
+    if "bottom_logo_recess(logo_depth);" not in source:
         raise AssertionError("upright logo is not cut into the upper print-pose panel")
     logo_module = source.split("module case_logo_2d()", 1)[1].split(
-        "module bottom_logo_inlay()", 1
+        "module bottom_logo_inlay(", 1
     )[0]
     if not re.search(r"rotate\(180\)\s*scale", logo_module):
         raise AssertionError(
@@ -798,17 +803,17 @@ def run_color_project_checks() -> None:
         raise AssertionError("case artwork must be a watertight, consistently wound mesh")
     if not math.isclose(float(artwork.bounds[0][2]), 0.0, abs_tol=0.01):
         raise AssertionError("case artwork must start on the build plate")
-    if not math.isclose(float(artwork.bounds[1][2]), 0.6, abs_tol=0.01):
-        raise AssertionError("case logo must occupy exactly three 0.2 mm layers")
+    if not math.isclose(float(artwork.bounds[1][2]), 0.2, abs_tol=0.01):
+        raise AssertionError("case artwork must occupy exactly one 0.2 mm layer")
+    case_outer_l = scad_scalar("case_outer_l")
+    case_outer_w = scad_scalar("case_outer_w")
     logo_parts = [
         component
         for component in artwork.split(only_watertight=False)
-        if float(component.bounds[1][2]) > 0.5
+        if float(component.bounds[1][1]) > -case_outer_w / 2
     ]
     logo = trimesh.util.concatenate(logo_parts)
 
-    case_outer_l = scad_scalar("case_outer_l")
-    case_outer_w = scad_scalar("case_outer_w")
     shell_bounds = (
         (-case_outer_l / 2, -case_outer_w / 2),
         (case_outer_l / 2, case_outer_w / 2),
@@ -837,7 +842,9 @@ def run_color_project_checks() -> None:
             stderr=subprocess.STDOUT,
         )
         solid_case = trimesh.load(solid_stl, force="mesh")
-    recessed_case = trimesh.load(ROOT / "QuenaCasePrintInPlace.stl", force="mesh")
+    recessed_case = trimesh.load(
+        ROOT / "QuenaCaseTwoColorPrintInPlace.stl", force="mesh"
+    )
     recess_volume = float(solid_case.volume - recessed_case.volume)
     # Independent curved-shell and artwork STL tessellations accumulate a
     # small volume-integration difference even though both are generated from
@@ -873,7 +880,10 @@ def run_color_project_checks() -> None:
         raise AssertionError("case 3MF was not authored in Bambu Studio format")
     if "3D/Objects/object_1.model" not in names:
         raise AssertionError("case 3MF is missing its Bambu Studio object model")
-    for current_name in ("QuenaCasePrintInPlace.stl", "QuenaCaseArtwork.stl"):
+    for current_name in (
+        "QuenaCaseTwoColorPrintInPlace.stl",
+        "QuenaCaseArtwork.stl",
+    ):
         if current_name not in metadata:
             raise AssertionError(f"case 3MF is missing {current_name}")
     for obsolete_name in ("QuenaCaseBottom.stl", "QuenaCaseLid.stl"):
@@ -898,16 +908,39 @@ def run_color_project_checks() -> None:
     )
     source_face_counts = sorted(
         len(trimesh.load(ROOT / name, force="mesh").faces)
-        for name in ("QuenaCasePrintInPlace.stl", "QuenaCaseArtwork.stl")
+        for name in (
+            "QuenaCaseTwoColorPrintInPlace.stl",
+            "QuenaCaseArtwork.stl",
+        )
     )
     if project_face_counts != source_face_counts:
         raise AssertionError("case 3MF meshes differ from the canonical STL inputs")
     if 'transform="1 0 0 0 1 0 0 0 1 128 156.685 0"' not in model:
         raise AssertionError("case 3MF is not centered in the validated P1S plate pose")
+
+    single_project = ROOT / "QuenaCaseSingleFilament.3mf"
+    with zipfile.ZipFile(single_project) as archive:
+        single_metadata = archive.read("Metadata/model_settings.config").decode(
+            "utf-8"
+        )
+    if "QuenaCasePrintInPlace.stl" not in single_metadata:
+        raise AssertionError("single-filament 3MF does not retain the deeply engraved body")
+    if "QuenaCaseTwoColorPrintInPlace.stl" in single_metadata:
+        raise AssertionError("single-filament 3MF incorrectly uses the shallow color body")
+    single_metadata_root = ET.fromstring(single_metadata)
+    single_face_counts = [
+        int(node.attrib["face_count"])
+        for node in single_metadata_root.findall("./object/part/mesh_stat")
+    ]
+    deep_body_faces = len(
+        trimesh.load(ROOT / "QuenaCasePrintInPlace.stl", force="mesh").faces
+    )
+    if single_face_counts != [deep_body_faces]:
+        raise AssertionError("single-filament 3MF mesh differs from its canonical STL")
     print(
         "QuenaCase colour project: ok, upright upper-panel logo and lower-panel "
-        "mandala/flourish inlays traced for a 0.4 mm nozzle, compact lower-layer "
-        "prime tower"
+        "mandala/flourish inlays traced for a 0.4 mm nozzle, one 0.2 mm colour "
+        "layer, compact first-layer prime tower"
     )
 
 def run_hinge_sweep_check() -> None:

@@ -1,23 +1,23 @@
 {
   "gcode": {
     "file": "Quena.gcode",
-    "sha256": "9fa9b94040006adb43b18d129ad8090d1f5fdd3cd05acc914a067abd502a8668"
+    "sha256": "fbed623ba14042909b9c07f12a6a6872a2077954d48e279bfb5910576d7884eb"
   },
-  "generated_at": "2026-08-03T02:32:43.247155+00:00",
+  "generated_at": "2026-08-03T20:27:19.662651+00:00",
   "job": "Quena",
   "project": {
     "file": "Quena.3mf",
-    "sha256": "5cf72d9014a078ea33b2830209c617bac412e976b2dc4716bc72c64babee3476"
+    "sha256": "78906e9de3c86e78ce05a5430d04dcbc383da58cb853d007932a95079b72a62a"
   },
   "schema_version": 1,
   "slicer": {
     "application": "Bambu Studio",
-    "version": "02.07.01.62"
+    "version": "02.08.01.55"
   },
   "validation": {
     "bbox_mm": {
       "depth": 45.69999694824219,
-      "height": 230.10000610351562,
+      "height": 239.85000610351562,
       "width": 42.820003509521484,
       "x": 106.58999633789062,
       "y": 105.1500015258789,
@@ -28,11 +28,11 @@
       {
         "filament_id": "GFB60",
         "id": 1,
-        "main_used_g": 19.6143798828125,
-        "total_used_g": 19.6143798828125
+        "main_used_g": 19.605876922607422,
+        "total_used_g": 19.605876922607422
       }
     ],
-    "layers": 1143,
+    "layers": 1191,
     "multi_material": false,
     "prime_tower": false,
     "sparse_infill_density_percent": 25.0,

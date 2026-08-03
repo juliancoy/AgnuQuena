@@ -58,24 +58,36 @@ def test_negative_connector_clearance_is_rejected():
         generate(spec)
 
 
-def test_lower_hand_layout_spans_the_printable_section():
+def test_measured_axial_retune_and_shifted_tube_break_are_explicit():
     _, manifest = generate(load_spec())
     holes = {hole["name"]: hole for hole in manifest["holes"]}
 
-    assert holes["C"]["physical_z_mm"] == 242.0
-    assert holes["C"]["position"]["local_offset_mm"] == 19.5
-    assert holes["B"]["physical_z_mm"] == pytest.approx(273.154575)
-    assert holes["B"]["position"]["local_offset_mm"] == pytest.approx(50.654575)
-    assert holes["B"]["position"]["axial_adjust_mm"] == pytest.approx(1.154575)
-    assert holes["A"]["position"]["local_offset_mm"] == 79.5
-    assert holes["B"]["physical_z_mm"] - holes["C"]["physical_z_mm"] == pytest.approx(
-        31.154575
-    )
-    assert holes["A"]["physical_z_mm"] - holes["B"]["physical_z_mm"] == pytest.approx(
-        28.845425
-    )
+    assert holes["C"]["physical_z_mm"] == pytest.approx(253.174)
+    assert holes["C"]["position"]["local_offset_mm"] == pytest.approx(20.924)
+    assert holes["B"]["physical_z_mm"] == pytest.approx(275.0)
+    assert holes["B"]["position"]["local_offset_mm"] == pytest.approx(42.75)
+    assert holes["B"]["position"]["axial_adjust_mm"] == pytest.approx(-8.2595)
+    assert holes["A"]["physical_z_mm"] == pytest.approx(309.437)
+    assert holes["A"]["position"]["local_offset_mm"] == pytest.approx(77.187)
+    assert holes["A"]["position"]["axial_adjust_mm"] == pytest.approx(-3.908)
     tube_1 = next(part for part in manifest["parts"] if part["name"] == "tube_1")
-    assert tube_1["length_mm"] == 222.5
+    assert tube_1["length_mm"] == 232.25
+
+
+def test_latest_calibration_removes_global_headstock_offset():
+    _, manifest = generate(load_spec())
+
+    for hole in manifest["holes"]:
+        detail = hole["compensation"]
+        assert detail["calibration_source"].endswith(
+            "2026-08-03-160409-0400-guided-tuning.csv"
+        )
+        assert detail["calibration_global_pitch_offset_cents"] == pytest.approx(
+            9.791252216
+        )
+        assert detail["calibration_interval_frequency_hz"] < detail[
+            "calibration_measured_frequency_hz"
+        ]
 
 
 def test_holes_honor_playable_minimums_as_equal_area_rounded_squares():
@@ -84,8 +96,8 @@ def test_holes_honor_playable_minimums_as_equal_area_rounded_squares():
     assert manifest["tone_hole_profile"]["corner_ratio"] == pytest.approx(0.4)
 
     expected_diameters = {
-        "A": 10.1,
-        "B": 10.5,
+        "A": 9.5,
+        "B": 10.63,
         "C": 9.75,
         "D": 10.5,
         "E": 11.1,
@@ -100,17 +112,18 @@ def test_holes_honor_playable_minimums_as_equal_area_rounded_squares():
         )
 
 
-def test_measured_compensation_reports_ergonomic_pitch_tradeoff():
+def test_measured_compensation_retune_preserves_minimums_and_targets_pitch():
     _, manifest = generate(load_spec())
     compensated = [hole for hole in manifest["holes"] if hole["compensation"]]
 
     assert compensated
     for hole in compensated:
         detail = hole["compensation"]
-        assert detail["minimum_applied"] is True
-        assert detail["minimum_diameter_mm"] == pytest.approx(hole["diameter_mm"])
-        assert detail["acoustically_tuned_diameter_mm"] < hole["diameter_mm"]
-        assert detail["estimated_pitch_delta_cents"] > 0.0
+        assert hole["diameter_mm"] >= detail["minimum_diameter_mm"]
+        assert hole["diameter_mm"] == pytest.approx(
+            detail["acoustically_tuned_diameter_mm"], abs=0.005
+        )
+        assert abs(detail["estimated_pitch_delta_cents"]) < 0.05
 
 
 def test_measured_compensation_targets_each_explicit_12tet_note():

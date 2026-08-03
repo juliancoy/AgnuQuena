@@ -9,8 +9,8 @@ include <generated/quena_parameters.scad>
 include <generated/case_logo_dimensions.scad>
 
 // Select "bottom", "mandala_panel", "lid", "case_engraving_viewer", "print_in_place",
-// "case_logo", "case_artwork_print", "hinge_coupon", "full_hinge_coupon",
-// "latch", "latch_coupon", "assembly", "preview", or "none".
+// "print_in_place_two_color", "case_logo", "case_artwork_print", "hinge_coupon",
+// "full_hinge_coupon", "latch", "latch_coupon", "assembly", "preview", or "none".
 // Override from the CLI with:
 // openscad -D 'part="print_in_place"' -o QuenaCasePrintInPlace.stl QuenaCase.scad
 part = is_undef(part) ? "preview" : part;
@@ -37,9 +37,8 @@ lid_roof_thickness = 2.8;
 corner_r = 14;
 bed_edge_r = 1.5;
 
-// Shallow face-down engraving decorates the lid exterior in the open print
-// pose. Every stroke is at least two 0.4 mm nozzle widths and the recess spans
-// two 0.20 mm layers, so it prints without support.
+// Deep face-down recesses remain visible in single-filament prints. The
+// two-color export below uses a separate one-layer recess and matching inlay.
 mandala_inset = 5;
 mandala_stroke = 0.9;
 mandala_depth = 0.4;
@@ -48,10 +47,11 @@ mandala_centers = [-78, 0, 78];
 flourish_width = 30;
 flourish_height = 12;
 
-// Three 0.2 mm layers form a flush, separately exported AMS inlay on the
-// upper base-shell face in the open print pose. The matching recess remains in
-// the primary shell mesh, and the untransformed vectors read upright there.
+// The logo uses a deeper recess in single-filament mode for visibility.
 logo_inlay_depth = 0.6;
+// A single bed-facing layer is sufficient for the visible black artwork. The
+// matching two-color shell closes directly over it on the following layer.
+two_color_inlay_depth = 0.2;
 logo_title_width = 190;
 logo_map_width = 84;
 logo_vertical_scale = 0.84;
@@ -503,16 +503,16 @@ module mandala_panel_2d() {
     }
 }
 
-module lid_ornament_recess() {
-    translate([0, 0, lid_outer_h - mandala_depth])
-        linear_extrude(height = mandala_depth + 0.01)
+module lid_ornament_recess(depth = mandala_depth) {
+    translate([0, 0, lid_outer_h - depth])
+        linear_extrude(height = depth + 0.01)
             mandala_panel_2d();
 }
 
-module lid_ornament_inlay() {
+module lid_ornament_inlay(depth = mandala_depth) {
     intersection() {
-        translate([0, 0, lid_outer_h - mandala_depth])
-            linear_extrude(height = mandala_depth)
+        translate([0, 0, lid_outer_h - depth])
+            linear_extrude(height = depth)
                 mandala_panel_2d();
         lid_assembly(false);
     }
@@ -557,17 +557,17 @@ module case_logo_2d() {
     }
 }
 
-module bottom_logo_inlay() {
+module bottom_logo_inlay(depth = logo_inlay_depth) {
     translate([0, 0, 0])
-        linear_extrude(height = logo_inlay_depth)
+        linear_extrude(height = depth)
             case_logo_2d();
 }
 
-module bottom_logo_recess() {
+module bottom_logo_recess(depth = logo_inlay_depth) {
     // Extend only through the exterior face. The recess roof stays exactly at
     // the inlay top so the two ABS materials fuse instead of leaving a gap.
     translate([0, 0, -0.01])
-        linear_extrude(height = logo_inlay_depth + 0.01)
+        linear_extrude(height = depth + 0.01)
             case_logo_2d();
 }
 
@@ -1314,7 +1314,10 @@ module lid_rim_socket() {
     }
 }
 
-module bottom_case_core(with_logo_recess = true) {
+module bottom_case_core(
+    with_logo_recess = true,
+    logo_depth = logo_inlay_depth
+) {
     difference() {
         union() {
             difference() {
@@ -1336,25 +1339,28 @@ module bottom_case_core(with_logo_recess = true) {
         // assembled so neither the shell nor the raised channel bed can touch
         // the axle or its round end barrels.
         lid_hinge_relief();
-        if (with_logo_recess) bottom_logo_recess();
+        if (with_logo_recess) bottom_logo_recess(logo_depth);
     }
 }
 
-module bottom_case(with_logo_recess = true) {
-    bottom_case_core(with_logo_recess);
+module bottom_case(with_logo_recess = true, logo_depth = logo_inlay_depth) {
+    bottom_case_core(with_logo_recess, logo_depth);
 }
 
-module bottom_assembly(with_logo_recess = true) {
+module bottom_assembly(with_logo_recess = true, logo_depth = logo_inlay_depth) {
     difference() {
         union() {
-            bottom_case(with_logo_recess);
+            bottom_case(with_logo_recess, logo_depth);
             bottom_hinge();
         }
         bottom_simple_latch_indent_cut();
     }
 }
 
-module lid_case(with_ornament_recess = true) {
+module lid_case(
+    with_ornament_recess = true,
+    ornament_depth = mandala_depth
+) {
     // The two case halves have identical outside height.  Their meeting faces
     // are flat; no tongue, ridge, or receiving groove crosses the seam.
     lid_h = lid_outer_h;
@@ -1368,17 +1374,20 @@ module lid_case(with_ornament_recess = true) {
         translate([0, 0, -lid_closed_z])
             all_channel_cuts(4, false);
         lid_retention_relief();
-        if (with_ornament_recess) lid_ornament_recess();
+        if (with_ornament_recess) lid_ornament_recess(ornament_depth);
     }
 }
 
-module lid_assembly(with_ornament_recess = true) {
+module lid_assembly(
+    with_ornament_recess = true,
+    ornament_depth = mandala_depth
+) {
     union() {
         // The bottom-knuckle clearance belongs to the lid shell only.  Keep
         // it out of the hinge union so it cannot square-cut the rounded pins.
         difference() {
             union() {
-                lid_case(with_ornament_recess);
+                lid_case(with_ornament_recess, ornament_depth);
                 lid_simple_latch();
                 lid_thumb_grip();
             }
@@ -1420,17 +1429,20 @@ module lid_in_print_pose() {
             ]) children();
 }
 
-module case_artwork_in_print_pose() {
-    bottom_logo_inlay();
-    lid_in_print_pose() lid_ornament_inlay();
+module case_artwork_in_print_pose(depth = two_color_inlay_depth) {
+    bottom_logo_inlay(depth);
+    lid_in_print_pose() lid_ornament_inlay(depth);
 }
 
-module print_in_place_case() {
+module print_in_place_case(
+    logo_depth = logo_inlay_depth,
+    ornament_depth = mandala_depth
+) {
     // Rotate the closed lid exactly 180 degrees about the production hinge.
     // This puts both exterior backs at Z=0 and leaves the two rear shell edges
     // separated by hinge_print_shell_gap on the build plate.
-    bottom_assembly();
-    lid_in_print_pose() lid_assembly();
+    bottom_assembly(true, logo_depth);
+    lid_in_print_pose() lid_assembly(true, ornament_depth);
 }
 
 module print_in_place_hinge_coupon(span = 46) {
@@ -1665,6 +1677,8 @@ if (part == "none") {
     latch_coupon();
 } else if (part == "assembly") {
     closed_assembly_case();
+} else if (part == "print_in_place_two_color") {
+    print_in_place_case(two_color_inlay_depth, two_color_inlay_depth);
 } else if (part == "print_in_place") {
     print_in_place_case();
 } else {

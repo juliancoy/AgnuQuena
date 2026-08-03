@@ -20,9 +20,9 @@ const dims = {
     releaseAngle: 3,
   },
   quenaSlots: [
-    { asset: "QuenaTube1.stl", x: 0, y: -11.9, z: 12.95, bodyX0: -115.05, rotationZ: 0, outwardRoll: 270, openingAxis: [0, -1, 0] },
-    { asset: "QuenaTube2.stl", x: -38.9527, y: 11.9, z: 12.95, bodyX0: -76.0973, rotationZ: 0, outwardRoll: 90, openingAxis: [0, 1, 0] },
-    { asset: "QuenaMouthpiece.stl", x: 83.75, y: 11.9, z: 12.95, bodyX0: -31.3, rotationZ: 180, outwardRoll: 180, openingAxis: [1, 0, 0] },
+    { asset: "QuenaTube1.stl", x: 0, y: -11.9, z: 12.95, bodyX0: -119.925, rotationZ: 0, outwardRoll: 270, openingAxis: [0, -1, 0] },
+    { asset: "QuenaTube2.stl", x: -48.7027, y: 11.9, z: 12.95, bodyX0: -71.2223, rotationZ: 0, outwardRoll: 90, openingAxis: [0, 1, 0] },
+    { asset: "QuenaMouthpiece.stl", x: 88.625, y: 11.9, z: 12.95, bodyX0: -31.3, rotationZ: 180, outwardRoll: 180, openingAxis: [1, 0, 0] },
   ],
 };
 

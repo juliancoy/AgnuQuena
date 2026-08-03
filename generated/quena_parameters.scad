@@ -2,7 +2,7 @@
 // Source: designs/quena.json
 // Regenerate: python3 tools/generate_quena.py
 generated_design_id = "agnuquena-g";
-generated_spec_sha256 = "ba2e20caecc561d344c5e5c3109a4064a47abe4fcf6a769e0278da03be1ad855";
+generated_spec_sha256 = "d66a5db51825bfc5f6373fa83b4e71293644cc84d0946dceb0b4151c2e7b04c7";
 
 quena_facet_count = 100.0;
 shell_width = 0.8;
@@ -25,8 +25,8 @@ accent_ring_z = 0.0;
 mouthpiece_overlap = 32.0;
 tube_joint_overlap = 7.0;
 non_mouthpiece_acoustic_length = 374.69451663;
-tube_part_1_length = 222.5;
-tube_part_2_length = 152.19451663;
+tube_part_1_length = 232.25;
+tube_part_2_length = 142.44451663;
 part_lengths = [tube_part_1_length, tube_part_2_length];
 part_start = [0, tube_part_1_length];
 tube_spacing_factor = 0.6;
@@ -37,24 +37,24 @@ tone_hole_axial_scale = 1.0;
 tone_hole_circumferential_scale = 1.0;
 tone_hole_corner_ratio = 0.4;
 lower_tube_hole_angle_spread = 12.0;
-lower_tube_first_hole_offset = 19.5;
-lower_tube_hole_spacing = 30.0;
+lower_tube_first_hole_offset = 20.924;
+lower_tube_hole_spacing = 30.0855;
 
-tone_hole_a_z = 302.0;
+tone_hole_a_z = 309.437;
 tone_hole_a_angle = -12.0;
-tone_hole_a_diameter = 10.1;
-tone_hole_b_z = 273.154575;
+tone_hole_a_diameter = 9.5;
+tone_hole_b_z = 275.0;
 tone_hole_b_angle = 12.0;
-tone_hole_b_diameter = 10.5;
-tone_hole_c_z = 242.0;
+tone_hole_b_diameter = 10.63;
+tone_hole_c_z = 253.174;
 tone_hole_c_angle = 0.0;
 tone_hole_c_diameter = 9.75;
-tone_hole_d_z = 207.162838899;
+tone_hole_d_z = 217.111742057;
 tone_hole_d_angle = 5.0;
 tone_hole_d_diameter = 10.5;
-tone_hole_e_z = 177.719458261;
+tone_hole_e_z = 187.480771622;
 tone_hole_e_angle = -5.0;
 tone_hole_e_diameter = 11.1;
-tone_hole_fs_z = 150.028548432;
+tone_hole_fs_z = 158.390902136;
 tone_hole_fs_angle = 0.0;
 tone_hole_fs_diameter = 11.13;

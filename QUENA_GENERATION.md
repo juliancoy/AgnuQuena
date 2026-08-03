@@ -50,6 +50,10 @@ prototype measurements. Each calibrated opening is solved directly against its
 12-TET `target_note`; no legacy reference geometry defines the tuning target.
 Calibration stores the printed prototype's actual acoustic hole position, so a
 later body-length correction cannot rescale and invalidate that measurement.
+When a guided run uses the removable headstock as a global tuner, its calibration
+also stores `global_pitch_offset_cents`. The generator removes that shared offset
+before fitting the hole correction, keeping base-note adjustment separate from
+interval tuning.
 Diameter results are rounded to the configured production increment. The fit is
 based on Antoine Lefebvre's *Computational
 Acoustic Methods for the Design of Woodwind Instruments*, equations 2.3.1–2.3.2:

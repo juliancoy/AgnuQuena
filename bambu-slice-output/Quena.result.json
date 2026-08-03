@@ -3,43 +3,43 @@
     "export_time": 0,
     "layer_height": 0.20000000298023224,
     "plate_index": 0,
-    "prepare_time": 46,
+    "prepare_time": 45,
     "return_code": 0,
     "sliced_plates": [
         {
             "feature_type_times": {
-                "Brim": 181.64649963378906,
-                "Custom": 365.3102722167969,
+                "Brim": 181.5865936279297,
+                "Custom": 364.4375,
                 "Flush": 29.0,
-                "Gap infill": 16.073060989379883,
-                "Inner wall": 17.655733108520508,
-                "Outer wall": 4791.00927734375,
-                "Overhang wall": 5.642782211303711,
-                "Top surface": 8.157042503356934,
-                "Travel": 569.6002197265625,
-                "Undefined": 562.1417846679688
+                "Gap infill": 16.0037841796875,
+                "Inner wall": 17.62351417541504,
+                "Outer wall": 4855.53369140625,
+                "Overhang wall": 5.11375617980957,
+                "Top surface": 8.157415390014648,
+                "Travel": 487.0209045410156,
+                "Undefined": 480.4352111816406
             },
             "filament_change_times": 0,
             "filaments": [
                 {
                     "filament_id": "GFB60",
                     "id": 1,
-                    "main_used_g": 19.6143798828125,
-                    "total_used_g": 19.6143798828125
+                    "main_used_g": 19.605876922607422,
+                    "total_used_g": 19.605876922607422
                 }
             ],
-            "generate_support_material_time": 1212,
+            "generate_support_material_time": 1069,
             "id": 1,
-            "infill_time": 84,
+            "infill_time": 69,
             "layer_filament_change": 0,
-            "main_predication": 5560.90625,
-            "make_perimeters_time": 826,
+            "main_predication": 5542.06640625,
+            "make_perimeters_time": 586,
             "obj_cached_cnt": 0,
             "objects": [
                 {
                     "bbox": {
                         "depth": 45.69999694824219,
-                        "height": 230.10000610351563,
+                        "height": 239.85000610351563,
                         "width": 42.820003509521484,
                         "x": 106.58999633789063,
                         "y": 105.1500015258789,
@@ -47,13 +47,13 @@
                     },
                     "id": 5,
                     "name": "Quena.stl",
-                    "triangle_count": 17808
+                    "triangle_count": 17772
                 }
             ],
-            "sliced_time": 3799,
-            "sliced_time_with_cache": 1028,
-            "total_predication": 5976.7275390625,
-            "triangle_count": 17808,
+            "sliced_time": 3377,
+            "sliced_time_with_cache": 1021,
+            "total_predication": 5957.8876953125,
+            "triangle_count": 17772,
             "warning_message": ""
         }
     ],
