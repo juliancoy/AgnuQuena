@@ -77,10 +77,10 @@ def main() -> None:
         )
     bbox = plate["objects"][0]["bbox"]
     expected_bbox = {
-        "x": 2.275,
+        "x": 1.575,
         "y": 70.787,
         "z": 0.0,
-        "width": 251.45,
+        "width": 252.85,
         "depth": 113.948,
         "height": 19.3,
     }

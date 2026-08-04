@@ -102,8 +102,12 @@ connector clearance, rather than the nominal flute-part centers. This keeps
 the recesses optically centered even though connector-bearing profiles are
 asymmetric.
 
-- The long tube recess is centered horizontally by its finished cut bounds.
-- The short tube and mouthpiece recesses use equal `8 mm` left, middle, and
+- P1 is a plain `241.25 mm` body. The `15 mm` tube-joint sleeve belongs to
+  P2 and extends before its body, with the expanded case pocket on that end.
+  Its closest assembled tone-hole edge is the D hole at `4.129 mm`; changing
+  the breakpoint does not move any acoustically calibrated hole position.
+- The long P1 recess is centered horizontally by its finished cut bounds.
+- The short tube and mouthpiece recesses use equal `11.54 mm` left, middle, and
   right distribution gaps.
 - Raised land between the two channel rows: `2.5 mm`.
 - Raised perimeter land around the channel field: `2.5 mm` minimum.
@@ -288,8 +292,8 @@ calibration.
 geometry. `QuenaCaseTwoColorPrintInPlace.stl` is the shallow-recess body for
 `QuenaCase.3mf`; use `QuenaCaseSingleFilament.3mf` for a recessed one-material
 finish. Both STLs are already oriented with both exterior backs on `Z=0`, side by
-side, and the hinge captured at 180 degrees. Its `251.5 x 113.9 mm` footprint
-fits the nominal `256 x 256 mm` bed with about `2.3 mm` of X margin per
+side, and the hinge captured at 180 degrees. Its `252.9 x 113.9 mm` footprint
+fits the nominal `256 x 256 mm` bed with about `1.6 mm` of X margin per
 side when centered. Disable brims, skirts, and automatic support; confirm the
 retained P1S plate placement and printer-specific exclusion zones before
 starting the full print.
@@ -305,18 +309,18 @@ the bed and part are fully cool, flex the two halves oppositely along the hinge
 line to break any wisps, then rotate progressively from the center toward both
 ends. Do not drive a blade or wire through the bearings.
 
-- `QuenaCasePrintInPlace.stl`: `71624` triangles,
-  `251.5 x 113.9 x 19.3 mm`, `2` connected components.
-- `QuenaCaseTwoColorPrintInPlace.stl`: `71644` triangles,
-  `251.5 x 113.9 x 19.3 mm`, `2` connected components.
-- `QuenaCaseArtwork.stl`: `44492` triangles, `242.4 x 105.3 x 0.2 mm`,
+- `QuenaCasePrintInPlace.stl`: `72294` triangles,
+  `252.9 x 113.9 x 19.3 mm`, `2` connected components.
+- `QuenaCaseTwoColorPrintInPlace.stl`: `72310` triangles,
+  `252.9 x 113.9 x 19.3 mm`, `2` connected components.
+- `QuenaCaseArtwork.stl`: `44502` triangles, `243.8 x 105.3 x 0.2 mm`,
   `31` connected artwork components.
-- `QuenaCaseBottom.stl`: `17742` triangles,
-  `251.5 x 61.3 x 19.3 mm`, `1` connected component.
-- `QuenaCaseLid.stl`: `53882` triangles,
-  `251.5 x 62.4 x 19.3 mm`, `1` connected component.
+- `QuenaCaseBottom.stl`: `17342` triangles,
+  `252.9 x 61.3 x 19.3 mm`, `1` connected component.
+- `QuenaCaseLid.stl`: `54960` triangles,
+  `252.9 x 62.4 x 19.3 mm`, `1` connected component.
 - `QuenaCaseLatch.stl`: `56.0 x 8.3 x 11.6 mm`.
-- `QuenaCaseAssembly.stl`: `71626` triangles, `251.5 x 62.4 x 28.8 mm`.
+- `QuenaCaseAssembly.stl`: `72294` triangles, `252.9 x 62.4 x 28.8 mm`.
 - Closed overlap check: empty intersection.
 - Hinge sweep check: passes from `0` to `180` degrees around
   `(0.00, -28.35, 14.40)`.

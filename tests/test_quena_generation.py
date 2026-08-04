@@ -43,7 +43,8 @@ def test_two_wall_shell_and_tight_connector_fit_are_explicit():
     assert manifest["connectors"]["outer_diameter_mm"] == pytest.approx(20.7)
     assert manifest["connectors"]["wall_width_mm"] == pytest.approx(0.8)
     assert manifest["connectors"]["mouthpiece_overlap_mm"] == pytest.approx(32.0)
-    assert manifest["connectors"]["tube_joint_overlap_mm"] == pytest.approx(7.0)
+    assert manifest["connectors"]["tube_joint_overlap_mm"] == pytest.approx(15.0)
+    assert manifest["connectors"]["tube_joint_connector_part"] == 2
     mouthpiece = next(
         part for part in manifest["parts"] if part["name"] == "mouthpiece"
     )
@@ -63,15 +64,39 @@ def test_measured_axial_retune_and_shifted_tube_break_are_explicit():
     holes = {hole["name"]: hole for hole in manifest["holes"]}
 
     assert holes["C"]["physical_z_mm"] == pytest.approx(253.174)
-    assert holes["C"]["position"]["local_offset_mm"] == pytest.approx(20.924)
+    assert holes["C"]["position"]["local_offset_mm"] == pytest.approx(11.924)
     assert holes["B"]["physical_z_mm"] == pytest.approx(275.0)
-    assert holes["B"]["position"]["local_offset_mm"] == pytest.approx(42.75)
+    assert holes["B"]["position"]["local_offset_mm"] == pytest.approx(33.75)
     assert holes["B"]["position"]["axial_adjust_mm"] == pytest.approx(-8.2595)
     assert holes["A"]["physical_z_mm"] == pytest.approx(305.753)
-    assert holes["A"]["position"]["local_offset_mm"] == pytest.approx(73.503)
+    assert holes["A"]["position"]["local_offset_mm"] == pytest.approx(64.503)
     assert holes["A"]["position"]["axial_adjust_mm"] == pytest.approx(-7.592)
     tube_1 = next(part for part in manifest["parts"] if part["name"] == "tube_1")
-    assert tube_1["length_mm"] == 232.25
+    tube_2 = next(part for part in manifest["parts"] if part["name"] == "tube_2")
+    assert tube_1["length_mm"] == 241.25
+    assert tube_1["print_height_mm"] == pytest.approx(241.25)
+    assert tube_2["print_height_mm"] == pytest.approx(
+        tube_2["length_mm"] + 15.0
+    )
+    assert manifest["manufacturing_validation"][
+        "minimum_sleeve_to_hole_clearance_mm"
+    ] >= 4.0
+
+
+def test_tube_joint_connector_owner_must_be_a_part_number():
+    spec = copy.deepcopy(load_spec())
+    spec["connectors"]["tube_joint_connector_part"] = 3
+
+    with pytest.raises(DesignError, match="must be 2"):
+        generate(spec)
+
+
+def test_tube_joint_sleeve_must_clear_every_tone_hole():
+    spec = copy.deepcopy(load_spec())
+    spec["geometry"]["tube_part_1_length_mm"] = 240.0
+
+    with pytest.raises(DesignError, match="sleeve is only"):
+        generate(spec)
 
 
 def test_latest_calibration_removes_global_headstock_offset():

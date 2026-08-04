@@ -1,17 +1,17 @@
 {
   "gcode": {
     "file": "Quena.gcode",
-    "sha256": "6a11397bbe242db951ee9d5c383abe54cf550366dfcb36add19fe04f14f343b1"
+    "sha256": "d3525fdb277d27729f1acfaadd37c1f0ea8f7454bd072433ec3869d9d7fc8ab5"
   },
-  "generated_at": "2026-08-04T03:14:41.451109+00:00",
+  "generated_at": "2026-08-04T05:24:42.508861+00:00",
   "job": "Quena",
   "printable_3mf": {
     "file": "Quena.gcode.3mf",
-    "sha256": "24fe16e15f9392931cbee4e6c29cce0099b317d445190b0c9c175b23e3810af1"
+    "sha256": "61cd306e675bf7abf9fd2ef6e8898d5abadc34cdd4ed934e35a0e844b230b3cc"
   },
   "project": {
     "file": "Quena.3mf",
-    "sha256": "c447af955d72273f7318ceefbbdcb08a7e80814353e16acb4489c7115aca2786"
+    "sha256": "62593898a2710cac57522cb4f757a9ba2978a29addbc36c8328ce08d7185cc62"
   },
   "schema_version": 1,
   "slicer": {
@@ -21,22 +21,22 @@
   "validation": {
     "bbox_mm": {
       "depth": 45.69999694824219,
-      "height": 239.85000610351562,
+      "height": 241.25,
       "width": 42.820003509521484,
       "x": 106.58999633789062,
       "y": 105.1500015258789,
-      "z": -3.051757857974735e-06
+      "z": 0.0
     },
     "filament_change_times": 0,
     "filaments": [
       {
         "filament_id": "GFB60",
         "id": 1,
-        "main_used_g": 19.611709594726562,
-        "total_used_g": 19.611709594726562
+        "main_used_g": 19.8603458404541,
+        "total_used_g": 19.8603458404541
       }
     ],
-    "layers": 1191,
+    "layers": 1206,
     "multi_material": false,
     "prime_tower": false,
     "sparse_infill_density_percent": 25.0,

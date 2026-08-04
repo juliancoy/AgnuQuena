@@ -221,6 +221,9 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
         connectors["tube_joint_overlap_mm"],
         "connectors.tube_joint_overlap_mm",
     )
+    tube_joint_connector_part = connectors["tube_joint_connector_part"]
+    if tube_joint_connector_part != 2:
+        raise DesignError("connectors.tube_joint_connector_part must be 2")
     transition = positive(
         connectors["angled_transition_mm"],
         "connectors.angled_transition_mm",
@@ -482,6 +485,10 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
         constraints["minimum_part_end_ligament_mm"],
         "manufacturing_constraints.minimum_part_end_ligament_mm",
     )
+    minimum_sleeve_clearance = positive(
+        constraints["minimum_sleeve_to_hole_clearance_mm"],
+        "manufacturing_constraints.minimum_sleeve_to_hole_clearance_mm",
+    )
     maximum_print_height = positive(
         constraints["maximum_print_height_mm"],
         "manufacturing_constraints.maximum_print_height_mm",
@@ -511,10 +518,21 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
                 "end_mm": end_ligament,
             }
         )
-        if min(start_ligament, end_ligament) < minimum_end_ligament - 1e-9:
+        start_requirement = (
+            minimum_sleeve_clearance if segment_index == 1 else minimum_end_ligament
+        )
+        end_requirement = (
+            minimum_sleeve_clearance if segment_index == 0 else minimum_end_ligament
+        )
+        if start_ligament < start_requirement - 1e-9:
             violations.append(
-                f"hole {hole['name']} leaves less than {minimum_end_ligament:g} mm "
-                f"at a part end"
+                f"hole {hole['name']} leaves less than {start_requirement:g} mm "
+                f"at the start of part {segment_index + 1}"
+            )
+        if end_ligament < end_requirement - 1e-9:
+            violations.append(
+                f"hole {hole['name']} leaves less than {end_requirement:g} mm "
+                f"at the end of part {segment_index + 1}"
             )
 
     for segment_index, (segment_start, segment_end) in enumerate(segment_bounds):
@@ -546,13 +564,33 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
                     f"{ligament:.3f} mm axial ligament"
                 )
 
+    sleeve_start = tube_part_1_length - tube_joint_overlap
+    sleeve_end = tube_part_1_length
+    sleeve_clearances = []
+    for hole in holes:
+        half_width = hole["profile_axial_width_mm"] / 2.0
+        hole_start = hole["physical_z_mm"] - half_width
+        hole_end = hole["physical_z_mm"] + half_width
+        if hole_end <= sleeve_start:
+            clearance = sleeve_start - hole_end
+        elif hole_start >= sleeve_end:
+            clearance = hole_start - sleeve_end
+        else:
+            clearance = -min(hole_end, sleeve_end) + max(hole_start, sleeve_start)
+        sleeve_clearances.append({"hole": hole["name"], "mm": clearance})
+        if clearance < minimum_sleeve_clearance - 1e-9:
+            violations.append(
+                f"tube-joint sleeve is only {clearance:.3f} mm from hole "
+                f"{hole['name']}; minimum is {minimum_sleeve_clearance:g} mm"
+            )
+
     def connector_extra(overlap: float) -> float:
         return overlap - insert_tolerance + transition - 2.0
 
     print_heights = {
         "mouthpiece": mouthpiece_total + connector_extra(mouthpiece_overlap),
-        "tube_1": tube_part_1_length + connector_extra(tube_joint_overlap),
-        "tube_2": tube_part_2_length,
+        "tube_1": tube_part_1_length,
+        "tube_2": tube_part_2_length + tube_joint_overlap,
     }
     for part_name, height in print_heights.items():
         if height > maximum_print_height + 1e-9:
@@ -588,6 +626,7 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
         "accent_ring_z": accent_ring,
         "mouthpiece_overlap": mouthpiece_overlap,
         "tube_joint_overlap": tube_joint_overlap,
+        "tube_joint_connector_part": tube_joint_connector_part,
         "non_mouthpiece_acoustic_length": non_mouthpiece_length,
         "tube_part_1_length": tube_part_1_length,
         "tube_part_2_length": tube_part_2_length,
@@ -632,6 +671,7 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
         "connectors": {
             "mouthpiece_overlap_mm": mouthpiece_overlap,
             "tube_joint_overlap_mm": tube_joint_overlap,
+            "tube_joint_connector_part": tube_joint_connector_part,
             "radial_clearance_mm": radial_clearance,
             "diametral_clearance_mm": radial_clearance * 2.0,
             "outer_diameter_mm": outer_diameter
@@ -675,6 +715,10 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
             "minimum_axial_ligament_mm": min(
                 item["mm"] for item in axial_ligaments
             ),
+            "sleeve_clearances": sleeve_clearances,
+            "minimum_sleeve_to_hole_clearance_mm": min(
+                item["mm"] for item in sleeve_clearances
+            ),
             "maximum_profile_width_mm": max(
                 hole["profile_circumferential_width_mm"] for hole in holes
             ),
@@ -715,6 +759,7 @@ def render_scad(spec: dict[str, Any], params: dict[str, float]) -> str:
         "accent_ring_z",
         "mouthpiece_overlap",
         "tube_joint_overlap",
+        "tube_joint_connector_part",
         "non_mouthpiece_acoustic_length",
         "tube_part_1_length",
         "tube_part_2_length",

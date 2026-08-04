@@ -46,32 +46,32 @@ OBSOLETE_VIEWER_EXPORTS = (
 
 EXPECTED = {
     "QuenaCasePrintInPlace.stl": {
-        "size": (251.45, 113.948, 19.4),
+        "size": (252.85, 113.948, 19.4),
         "min_triangles": 18000,
         "components": 2,
     },
     "QuenaCaseTwoColorPrintInPlace.stl": {
-        "size": (251.45, 113.948, 19.4),
+        "size": (252.85, 113.948, 19.4),
         "min_triangles": 18000,
         "components": 2,
     },
     "QuenaCaseBottom.stl": {
-        "size": (251.45, 61.3, 19.4),
+        "size": (252.85, 61.3, 19.4),
         "min_triangles": 2200,
         "components": 1,
     },
     "QuenaCaseLid.stl": {
-        "size": (251.45, 62.448, 19.3),
+        "size": (252.85, 62.448, 19.3),
         "min_triangles": 1200,
         "components": 1,
     },
     "QuenaCaseArtwork.stl": {
-        "size": (242.35, 105.341, 0.2),
+        "size": (243.75, 105.341, 0.2),
         "min_triangles": 35000,
         "components": 31,
     },
     "QuenaCaseAssembly.stl": {
-        "size": (251.45, 62.448, 28.8),
+        "size": (252.85, 62.448, 28.8),
         "min_triangles": 18000,
         "components": 2,
     },
@@ -80,10 +80,10 @@ EXPECTED = {
 LID_SWEEP_MAX_DEG = 180
 CONTACT_TOLERANCE_MM = 0.05
 CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
-# Canonical 32 mm mouthpiece pocket, 8 mm short-row gaps, 1.5 mm bed-edge
+# Canonical 32 mm mouthpiece pocket, 5.3 mm short-row gaps, 1.5 mm bed-edge
 # rounding, retention border, swapped artwork faces, two flourishes, and
 # enclosed round hinge ends, and complete spherical latch nubs.
-EXPECTED_CASE_VOLUME_MM3 = 262_208.06
+EXPECTED_CASE_VOLUME_MM3 = 261_864.03
 CASE_VOLUME_TOLERANCE_MM3 = 10.0
 # OpenSCAD's ASCII STL coordinate quantization accumulates a sub-voxel volume
 # difference after the rigid 180-degree print-pose transform of rounded shells.
@@ -407,6 +407,7 @@ difference() {{
 
 def run_channel_layout_checks() -> None:
     horizontal_land = scad_scalar("short_row_min_gap")
+    actual_horizontal_land = scad_scalar("short_row_gap")
     vertical_land = scad_scalar("row_gap")
     edge_land = scad_scalar("channel_edge_land")
     deck_h = scad_scalar("channel_deck_h")
@@ -432,6 +433,15 @@ def run_channel_layout_checks() -> None:
     retention_lid_clearance = scad_scalar("retention_lid_clearance")
     slot_xs = [scad_scalar(f"slot_xs[{i}]") for i in range(3)]
     profile_lengths = [scad_scalar(f"profile_lengths[{i}]") for i in range(3)]
+    profile_cut_spans = [scad_scalar(f"profile_cut_spans[{i}]") for i in range(3)]
+    case_inner_l = scad_scalar("case_inner_l")
+    connector_sides = [
+        int(scad_scalar(f"slot_connector_sides[{i}]")) for i in range(3)
+    ]
+    connector_owner = int(scad_scalar("tube_joint_connector_part"))
+    tube_part_1_length = scad_scalar("tube_part_1_length")
+    tube_part_2_length = scad_scalar("tube_part_2_length")
+    connector_extra = scad_scalar("connector_extra_l(1)")
 
     source = (ROOT / "QuenaCase.scad").read_text(encoding="utf-8")
     if "module cantilever_retainer" in source:
@@ -469,23 +479,46 @@ def run_channel_layout_checks() -> None:
     if "lid_retention_relief();" not in source:
         raise AssertionError("lid does not remove the continuous ridge envelope")
 
-    if horizontal_land < 8.0:
+    if horizontal_land < 5.3:
         raise AssertionError(
             f"horizontal channel land is only {horizontal_land:.2f} mm"
         )
+    if actual_horizontal_land < horizontal_land - 0.01:
+        raise AssertionError("short-row distribution is below its minimum land")
     if vertical_land < 2.5:
         raise AssertionError(f"vertical channel land is only {vertical_land:.2f} mm")
     if edge_land < 2.5:
         raise AssertionError(f"channel perimeter land is only {edge_land:.2f} mm")
+    if connector_owner != 2 or connector_sides != [0, -1, 1]:
+        raise AssertionError("tube-joint sleeve and case pocket must belong to P2")
+    if not math.isclose(profile_lengths[0], tube_part_1_length, abs_tol=0.01):
+        raise AssertionError("P1 case channel still includes the moved joint sleeve")
+    if not math.isclose(
+        profile_lengths[1], tube_part_2_length + connector_extra, abs_tol=0.01
+    ):
+        raise AssertionError("P2 case channel does not include its lower joint sleeve")
 
-    p1_left = slot_xs[0] - profile_lengths[0] / 2
-    p1_right = slot_xs[0] + profile_lengths[0] / 2
-    p2_left = slot_xs[1] - profile_lengths[1] / 2
-    mouth_right = slot_xs[2] + profile_lengths[2] / 2
-    if not math.isclose(p2_left, p1_left, abs_tol=0.01):
-        raise AssertionError("P2 and P1 left profile edges are not aligned")
-    if not math.isclose(mouth_right, p1_right, abs_tol=0.01):
-        raise AssertionError("mouthpiece and P1 right profile edges are not aligned")
+    p2_left = slot_xs[1] - profile_cut_spans[1] / 2
+    p2_right = slot_xs[1] + profile_cut_spans[1] / 2
+    mouth_left = slot_xs[2] - profile_cut_spans[2] / 2
+    mouth_right = slot_xs[2] + profile_cut_spans[2] / 2
+    distribution_gaps = (
+        p2_left + case_inner_l / 2,
+        mouth_left - p2_right,
+        case_inner_l / 2 - mouth_right,
+    )
+    if any(
+        not math.isclose(gap, actual_horizontal_land, abs_tol=0.01)
+        for gap in distribution_gaps
+    ):
+        raise AssertionError(
+            f"short-row distribution gaps differ: {distribution_gaps}"
+        )
+    p1_edge_land = (case_inner_l - profile_cut_spans[0]) / 2
+    if p1_edge_land < edge_land - 0.01:
+        raise AssertionError(
+            f"P1 perimeter land is only {p1_edge_land:.2f} mm"
+        )
     if not 0.02 <= deck_shell_overlap <= 0.10:
         raise AssertionError("channel bed needs a small printable shell overlap")
     if not math.isclose(
@@ -496,13 +529,14 @@ def run_channel_layout_checks() -> None:
         raise AssertionError("channel bed leaves a moat at the bottom shell edge")
     print(
         "QuenaCase channel layout: ok, "
-        f"{horizontal_land:.1f} mm minimum horizontal distribution gap, "
+        f"{actual_horizontal_land:.2f} mm horizontal distribution gap, "
         f"{vertical_land:.1f} mm vertical land, "
         f"{edge_land:.1f} mm perimeter land, "
         f"{deck_h:.2f} mm single raised bed aligned to the shell, "
         f"{equator_pass:.2f} mm past equator, "
         f"{snap_interference:.2f} mm diametral snap interference along the "
-        "continuous raised lip, aligned P2/P1/mouthpiece outer edges, "
+        "continuous raised lip, P2-owned joint sleeve, "
+        "equal short-row edge and center lands, "
         f"{axial_clearance:.2f} mm axial and {radial_clearance:.2f} mm radial clearance"
     )
 

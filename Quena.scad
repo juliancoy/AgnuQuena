@@ -115,20 +115,38 @@ module piece(pieceno, yfactor, z=0){
     translate([0,-yfactor * od,z]){
         difference() {
             translate([0, 0, -part_start[pieceno]]) tube();
+            // Isolate the segment body at its local Z=0. Connector geometry
+            // is added afterward and may intentionally extend below it.
+            translate([0, 0, -cube_cut / 2])
+                cube([cube_cut, cube_cut, cube_cut], center = true);
             if(pieceno<len(part_lengths) - 1)
                 translate([0, 0, part_lengths[pieceno]-accent_ring_z]) cylinder(h = total_height, d = od * 1.1);    // top cut
             if(pieceno==len(part_lengths) - 1)
                 translate([0, 0, part_lengths[pieceno]]) cylinder(h = total_height, d = od * 1.1);    // top cut
-            translate([0,0,-e]) sleve_wide_outer(
-                part_start[pieceno] / total_height,
-                pieceno == 0 ? mouthpiece_overlap : tube_joint_overlap,
-                0
-            ); // bottom insert
+            if (pieceno == 0)
+                translate([0,0,-e]) sleve_wide_outer(
+                    part_start[pieceno] / total_height,
+                    pieceno == 0 ? mouthpiece_overlap : tube_joint_overlap,
+                    0
+                ); // plain mating end under an upstream outer sleeve
         }
-        if(pieceno < len(part_lengths) - 1){ // top connector insert
+        if (pieceno == len(part_lengths) - 1) { // P2 lower outer sleeve
             difference() {
-                color("green") translate([0, 0, part_lengths[pieceno]-accent_ring_z]) sleve_wide_outer((part_lengths[pieceno]) / total_height, tube_joint_overlap, connector_radial_clearance, insert_z_tolerance);
-                tube_negative();
+                union() {
+                    color("green")
+                        lower_tube_joint_sleeve(
+                            part_start[pieceno] / total_height,
+                            tube_joint_overlap,
+                            connector_radial_clearance
+                        );
+                    // Turn the otherwise coplanar sleeve/body interface into
+                    // a real printable solid without changing the fit face.
+                    cylinder(
+                        h = e * 10,
+                        d = od + (shell_width + connector_radial_clearance) * 2
+                    );
+                }
+                translate([0, 0, -part_start[pieceno]]) tube_negative();
             }
         }
         height_to_cut = height_to_cut + part_lengths[pieceno];
@@ -165,11 +183,39 @@ module piecewise(){
 }
 
 module printable_piece(pieceno, yfactor=0) {
+    bed_offset = tube_joint_connector_part == 2 && pieceno == 1
+        ? tube_joint_overlap
+        : 0;
     difference(){
-        piece(pieceno, yfactor);
+        translate([0, 0, bed_offset]) piece(pieceno, yfactor);
         translate([0,0,-cube_cut/2])
         cube([cube_cut,cube_cut,cube_cut], center=true);
     }
+}
+
+module lower_tube_joint_sleeve(
+    joint_height_normalized,
+    overlap,
+    radial_clearance=0
+) {
+    far_height = joint_height_normalized - overlap / total_height;
+    joint_od = od * (1 - joint_height_normalized)
+        + odo * joint_height_normalized;
+    far_od = od * (1 - far_height) + odo * far_height;
+    translate([0, 0, -overlap])
+        difference() {
+            cylinder(
+                h = overlap + e * 10,
+                d1 = far_od + (shell_width + radial_clearance) * 2,
+                d2 = joint_od + (shell_width + radial_clearance) * 2
+            );
+            translate([0, 0, -e])
+                cylinder(
+                    h = overlap + e * 12,
+                    d1 = far_od + radial_clearance * 2,
+                    d2 = joint_od + radial_clearance * 2
+                );
+        }
 }
 
 
@@ -200,9 +246,16 @@ module inner_curve_ring(i=0){
 }
 
 // to keep a constant diameter across the part, this comes out
-module sleve_wide_outer(height_on_tube_normalized, overlap, radial_clearance=0, ztolerence=0) {
+module sleve_wide_outer(
+    height_on_tube_normalized,
+    overlap,
+    radial_clearance=0,
+    ztolerence=0,
+    direction=1
+) {
     odlb = od * (1 - height_on_tube_normalized) + odo * height_on_tube_normalized; // outer diameter linear interpolate bottom
-    odlt = od * (1 - (height_on_tube_normalized + overlap/total_height)) + odo * (height_on_tube_normalized + overlap/total_height); // outer diameter linear interpolate top
+    far_height = height_on_tube_normalized + direction * overlap / total_height;
+    odlt = od * (1 - far_height) + odo * far_height; // outer diameter at the sleeve's far end
 
     translate([0,0,-2])
     difference(){
@@ -279,7 +332,10 @@ if (export_part == "part1") {
 } else if (export_part == "part2") {
     printable_piece(0);
 } else if (export_part == "part3") {
-    printable_piece(1);
+    // Preserve P2's joint-relative origin for assembly consumers. Slicers
+    // place this standalone mesh on the bed automatically; the combined
+    // layout uses printable_piece() to lift its lower sleeve to Z=0.
+    piece(1, 0);
 } else {
     translate([0,25,0]) mouthpiece();
     for (i = [0 : len(part_lengths) - 1]) {

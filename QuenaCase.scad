@@ -78,7 +78,7 @@ row_gap = 2.5;
 row_pitch = max_channel_d + row_gap;
 // The longer mouthpiece connector still leaves a generous land while keeping
 // the complete print-in-place case within the 256 mm target bed.
-short_row_min_gap = 8;
+short_row_min_gap = 5.3;
 channel_edge_land = 2.5;
 // The main bed stops just past the tube equator; a continuous raised lip below
 // reaches the light-snap height without making either complete shell taller.
@@ -94,17 +94,22 @@ connector_backset = angled_transition_z + 2;
 connector_expand_start = 2;
 slot_lengths = [tube_part_1_length, tube_part_2_length, mouthpiece_total_length];
 slot_names = ["TUBE 1", "TUBE 2", "MOUTH"];
-slot_has_connector = [true, false, true];
-slot_connector_overlaps = [tube_joint_overlap, 0, mouthpiece_overlap];
+// -1 places an outer sleeve before the stored body, +1 after it. The tube
+// joint sleeve belongs to P2 and extends back over P1 when assembled.
+slot_connector_sides = [0, -1, 1];
+slot_has_connector = [false, true, true];
+slot_connector_overlaps = [0, tube_joint_overlap, mouthpiece_overlap];
 function connector_expand_end(i) =
     slot_connector_overlaps[i] - insert_z_tolerance - 2;
-function connector_extra_l(i) = connector_expand_end(i) + angled_transition_z;
+function connector_extra_l(i) = slot_connector_sides[i] < 0
+    ? slot_connector_overlaps[i]
+    : connector_expand_end(i) + angled_transition_z;
 profile_lengths = [
-    tube_part_1_length + connector_extra_l(0),
-    tube_part_2_length,
+    tube_part_1_length,
+    tube_part_2_length + connector_extra_l(1),
     mouthpiece_total_length + connector_extra_l(2)
 ];
-profile_max_ds = [connector_channel_d, channel_d, connector_channel_d];
+profile_max_ds = [channel_d, connector_channel_d, connector_channel_d];
 // Each recess has only the specified total axial play, shared between its ends.
 profile_cut_spans = [
     profile_lengths[0] + axial_clearance,
@@ -331,12 +336,14 @@ module lid_thumb_grip() {
         ], thumb_grip_rib_h / 2);
 }
 
-// Align the short-row outer profile edges with the long P1 profile. This makes
-// P2 begin exactly where P1 begins and the mouthpiece end exactly where P1
-// ends, while leaving the remaining space as a generous center separation.
-short_tube_cut_center = -profile_cut_spans[0] / 2
+// Distribute the short row across the available inner length with the same
+// printable land at the left edge, between its two parts, and at the right
+// edge. This remains valid when a longer connector makes the short row the
+// dimension that controls the case length.
+short_row_gap = (case_inner_l - profile_cut_spans[1] - profile_cut_spans[2]) / 3;
+short_tube_cut_center = -case_inner_l / 2 + short_row_gap
     + profile_cut_spans[1] / 2;
-mouth_cut_center = profile_cut_spans[0] / 2
+mouth_cut_center = case_inner_l / 2 - short_row_gap
     - profile_cut_spans[2] / 2;
 slot_xs = [
     // Keep the longest tube body centered axially.  Its connector and free-end
@@ -353,9 +360,19 @@ function slot_y(i) = slot_ys[i];
 function slot_rot_z(i) = slot_rot_zs[i];
 function profile_l(i) = profile_lengths[i];
 function profile_d(i) = profile_max_ds[i];
-function body_x0(i) = -profile_l(i) / 2;
+function body_x0(i) = -profile_l(i) / 2
+    + (slot_connector_sides[i] < 0 ? connector_extra_l(i) : 0);
 function body_x1(i) = body_x0(i) + slot_lengths[i];
-function connector_x1(i) = body_x1(i) + connector_extra_l(i);
+function connector_x0(i) = body_x0(i)
+    - (slot_connector_sides[i] < 0 ? connector_extra_l(i) : 0);
+function connector_x1(i) = body_x1(i)
+    + (slot_connector_sides[i] > 0 ? connector_extra_l(i) : 0);
+function profile_x0(i) = slot_connector_sides[i] < 0
+    ? connector_x0(i)
+    : body_x0(i);
+function profile_x1(i) = slot_connector_sides[i] > 0
+    ? connector_x1(i)
+    : body_x1(i);
 module rounded_box(size, r) {
     hull() {
         for (x = [-size[0] / 2 + r, size[0] / 2 - r])
@@ -590,71 +607,68 @@ module profiled_segment(x1, x2, d1, d2) {
             );
 }
 
+module stored_profile_envelope(
+    i,
+    normal_d,
+    expanded_d,
+    terminal_extension = 0
+) {
+    x0 = body_x0(i);
+    x1 = body_x1(i);
+    side = slot_connector_sides[i];
+
+    if (side < 0) {
+        cx0 = connector_x0(i);
+        profiled_segment(
+            cx0 - terminal_extension,
+            x0,
+            expanded_d,
+            expanded_d
+        );
+        profiled_segment(x0, x1 + terminal_extension, normal_d, normal_d);
+    } else if (side > 0) {
+        cx1 = connector_x1(i);
+        profiled_segment(x0 - terminal_extension, x1 - connector_backset, normal_d, normal_d);
+        profiled_segment(
+            x1 - connector_backset,
+            x1 - connector_expand_start,
+            normal_d,
+            expanded_d
+        );
+        profiled_segment(
+            x1 - connector_expand_start,
+            x1 + connector_expand_end(i),
+            expanded_d,
+            expanded_d
+        );
+        profiled_segment(x1 + connector_expand_end(i), cx1, expanded_d, normal_d);
+        profiled_segment(cx1, cx1 + terminal_extension, normal_d, normal_d);
+    } else {
+        profiled_segment(
+            x0 - terminal_extension,
+            x1 + terminal_extension,
+            normal_d,
+            normal_d
+        );
+    }
+}
+
 module profiled_channel_cut(
     i,
     extra_depth = 0,
     flat_relief = true,
     diameter_offset = 0
 ) {
-    x0 = body_x0(i);
-    x1 = body_x1(i);
-    x2 = connector_x1(i);
-    cut_x0 = x0 - end_clearance;
-    cut_x1 = (slot_has_connector[i] ? x2 : x1) + end_clearance;
+    cut_x0 = profile_x0(i) - end_clearance;
+    cut_x1 = profile_x1(i) + end_clearance;
 
     union() {
-        profiled_segment(
-            cut_x0 - bore_end_overlap,
-            x0,
+        stored_profile_envelope(
+            i,
             channel_d + diameter_offset,
-            channel_d + diameter_offset
+            connector_channel_d + diameter_offset,
+            end_clearance + bore_end_overlap
         );
-
-        if (slot_has_connector[i]) {
-            profiled_segment(
-                x0,
-                x1 - connector_backset,
-                channel_d + diameter_offset,
-                channel_d + diameter_offset
-            );
-            profiled_segment(
-                x1 - connector_backset,
-                x1 - connector_expand_start,
-                channel_d + diameter_offset,
-                connector_channel_d + diameter_offset
-            );
-            profiled_segment(
-                x1 - connector_expand_start,
-                x1 + connector_expand_end(i),
-                connector_channel_d + diameter_offset,
-                connector_channel_d + diameter_offset
-            );
-            profiled_segment(
-                x1 + connector_expand_end(i),
-                x2,
-                connector_channel_d + diameter_offset,
-                channel_d + diameter_offset
-            );
-            profiled_segment(
-                x2,
-                cut_x1 + bore_end_overlap,
-                channel_d + diameter_offset,
-                channel_d + diameter_offset
-            );
-        } else {
-            profiled_segment(
-                x0,
-                x1,
-                channel_d + diameter_offset,
-                channel_d + diameter_offset
-            );
-            profiled_segment(
-                x1,
-                cut_x1 + bore_end_overlap,
-                channel_d + diameter_offset,
-                channel_d + diameter_offset
-            );
-        }
 
         // Open only the material above the cradle lip.  The relief must begin
         // at equator_pass, not below the tube centerline, so the cylindrical
@@ -732,35 +746,7 @@ module lid_retention_relief() {
 // stored flute bodies and expanded connector regions, without channel
 // clearance, and are intentionally independent of preview-only geometry.
 module stored_part_proxy(i) {
-    x0 = body_x0(i);
-    x1 = body_x1(i);
-    x2 = connector_x1(i);
-
-    union() {
-        if (slot_has_connector[i]) {
-            profiled_segment(x0, x1 - connector_backset, od, od);
-            profiled_segment(
-                x1 - connector_backset,
-                x1 - connector_expand_start,
-                od,
-                connector_d
-            );
-            profiled_segment(
-                x1 - connector_expand_start,
-                x1 + connector_expand_end(i),
-                connector_d,
-                connector_d
-            );
-            profiled_segment(
-                x1 + connector_expand_end(i),
-                x2,
-                connector_d,
-                od
-            );
-        } else {
-            profiled_segment(x0, x1, od, od);
-        }
-    }
+    stored_profile_envelope(i, od, connector_d);
 }
 
 module stored_parts_proxy() {

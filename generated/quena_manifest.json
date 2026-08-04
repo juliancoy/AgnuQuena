@@ -4,7 +4,8 @@
     "mouthpiece_overlap_mm": 32.0,
     "outer_diameter_mm": 20.700000000000003,
     "radial_clearance_mm": 0.0,
-    "tube_joint_overlap_mm": 7.0,
+    "tube_joint_connector_part": 2,
+    "tube_joint_overlap_mm": 15.0,
     "wall_width_mm": 0.8
   },
   "design_id": "agnuquena-g",
@@ -49,7 +50,7 @@
       "physical_z_mm": 305.753,
       "position": {
         "axial_adjust_mm": -7.592,
-        "local_offset_mm": 73.503,
+        "local_offset_mm": 64.503,
         "mode": "lower_hand",
         "part": 2
       },
@@ -83,7 +84,7 @@
       "physical_z_mm": 275.0,
       "position": {
         "axial_adjust_mm": -8.2595,
-        "local_offset_mm": 42.75,
+        "local_offset_mm": 33.75,
         "mode": "lower_hand",
         "part": 2
       },
@@ -117,7 +118,7 @@
       "physical_z_mm": 253.174,
       "position": {
         "axial_adjust_mm": 0.0,
-        "local_offset_mm": 20.924,
+        "local_offset_mm": 11.924,
         "mode": "lower_hand",
         "part": 2
       },
@@ -262,53 +263,81 @@
         5.0,
         12.0
       ],
-      "maximum_print_height_mm": 240.0,
+      "maximum_print_height_mm": 245.0,
       "maximum_profile_width_mm": 13.0,
       "minimum_axial_ligament_mm": 12.0,
-      "minimum_part_end_ligament_mm": 10.0
+      "minimum_part_end_ligament_mm": 10.0,
+      "minimum_sleeve_to_hole_clearance_mm": 4.0
     },
     "end_ligaments": [
       {
         "end_mm": 64.64774515351907,
         "hole": "A",
         "part": 2,
-        "start_mm": 69.2092285231709
+        "start_mm": 60.20922852317091
       },
       {
         "end_mm": 94.62309543049335,
         "hole": "B",
         "part": 2,
-        "start_mm": 37.6785788001452
+        "start_mm": 28.678578800145203
       },
       {
         "end_mm": 116.86893086378329,
         "hole": "C",
         "part": 2,
-        "start_mm": 16.2724142334352
+        "start_mm": 7.2724142334351995
       },
       {
-        "end_mm": 10.128857886761569,
+        "end_mm": 19.12885788676157,
         "hole": "D",
         "part": 1,
         "start_mm": 212.1023420006373
       },
       {
-        "end_mm": 39.473576890114416,
+        "end_mm": 48.473576890114416,
         "hole": "E",
         "part": 1,
         "start_mm": 182.18512013370722
       },
       {
-        "end_mm": 68.54913380468696,
+        "end_mm": 77.54913380468696,
         "hole": "F#",
         "part": 1,
         "start_mm": 153.08093807595583
       }
     ],
-    "maximum_print_height_mm": 239.85,
+    "maximum_print_height_mm": 241.25,
     "maximum_profile_width_mm": 10.61992811935722,
     "minimum_axial_ligament_mm": 12.1029930335804,
-    "minimum_end_ligament_mm": 10.128857886761569,
+    "minimum_end_ligament_mm": 7.2724142334351995,
+    "minimum_sleeve_to_hole_clearance_mm": 4.12885788676158,
+    "sleeve_clearances": [
+      {
+        "hole": "A",
+        "mm": 60.20922852317091
+      },
+      {
+        "hole": "B",
+        "mm": 28.678578800145203
+      },
+      {
+        "hole": "C",
+        "mm": 7.2724142334351995
+      },
+      {
+        "hole": "D",
+        "mm": 4.12885788676158
+      },
+      {
+        "hole": "E",
+        "mm": 33.4735768901144
+      },
+      {
+        "hole": "F#",
+        "mm": 62.54913380468696
+      }
+    ],
     "status": "passed"
   },
   "parts": [
@@ -318,20 +347,20 @@
       "print_height_mm": 62.6
     },
     {
-      "length_mm": 232.25,
+      "length_mm": 241.25,
       "name": "tube_1",
-      "print_height_mm": 239.85,
+      "print_height_mm": 241.25,
       "start_z_mm": 0.0
     },
     {
-      "length_mm": 142.44451663034812,
+      "length_mm": 133.44451663034812,
       "name": "tube_2",
-      "print_height_mm": 142.44451663034812,
-      "start_z_mm": 232.25
+      "print_height_mm": 148.44451663034812,
+      "start_z_mm": 241.25
     }
   ],
   "schema_version": 1,
-  "spec_sha256": "74390b153be537b29967f0e3c263f01ff98ae7e49238b635318caecb377f7aa4",
+  "spec_sha256": "7a5be4d5fcc11ae19114969f2a0dae9f556bb1a15ad0b820fda51e613e63caec",
   "tone_hole_profile": {
     "axial_scale": 1.0,
     "circumferential_scale": 1.0,

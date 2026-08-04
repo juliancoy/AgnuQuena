@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import subprocess
 import sys
@@ -153,6 +154,39 @@ def validate_rounded_mouthpiece_lip(
     return (outer_diameter_mm - bore_diameter_mm) / 4.0
 
 
+def validate_tube_joint_owner(
+    results: list[dict[str, object]],
+    generated_manifest: dict[str, object],
+) -> None:
+    by_part = {str(result["part"]): result for result in results}
+    if not {"tube1", "tube2"} <= by_part.keys():
+        return
+    connector = generated_manifest["connectors"]
+    if connector["tube_joint_connector_part"] != 2:
+        raise RuntimeError("production tube-joint sleeve must belong to P2")
+    parts = {part["name"]: part for part in generated_manifest["parts"]}
+    overlap = float(connector["tube_joint_overlap_mm"])
+    connector_extra = overlap
+    tube1_bounds = by_part["tube1"]["bounds_mm"]
+    tube2_bounds = by_part["tube2"]["bounds_mm"]
+    if not math.isclose(float(tube1_bounds[0][2]), 0.0, abs_tol=0.01):
+        raise RuntimeError("P1 unexpectedly owns geometry below its body origin")
+    if not math.isclose(
+        float(tube1_bounds[1][2]),
+        float(parts["tube_1"]["length_mm"]),
+        abs_tol=0.01,
+    ):
+        raise RuntimeError("P1 still carries the tube-joint sleeve")
+    if not math.isclose(float(tube2_bounds[0][2]), -connector_extra, abs_tol=0.01):
+        raise RuntimeError("P2 lower sleeve does not span the required joint overlap")
+    if not math.isclose(
+        float(tube2_bounds[1][2]),
+        float(parts["tube_2"]["length_mm"]),
+        abs_tol=0.01,
+    ):
+        raise RuntimeError("P2 body origin or free end moved unexpectedly")
+
+
 def atomic_write_text(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(
@@ -203,6 +237,8 @@ def main() -> int:
             f"validated {filename}: watertight, "
             f"height={result['extents_mm'][2]:.3f} mm"
         )
+
+    validate_tube_joint_owner(results, generated_manifest)
 
     export_manifest = {
         "schema_version": 1,

@@ -1,48 +1,48 @@
 {
   "schema_version": 1,
   "design_id": "agnuquena-g",
-  "spec_sha256": "55dfac2107cad61a9453b23b4b23e9d9ef3dd663b32248d6a0ce1b0ba2945141",
+  "spec_sha256": "7a5be4d5fcc11ae19114969f2a0dae9f556bb1a15ad0b820fda51e613e63caec",
   "assembly": {
     "file": "QuenaProductionAssembly.stl",
-    "sha256": "42e542ce73465ce8223e6a82b5f5219393b048da93fef52455d9bff14f974506",
+    "sha256": "be4e1609a28f0461ee9693c25df99435fa75fa2666ecfbdded43181809213038",
     "bounds_mm": [
       [
-        -10.35,
-        -10.35,
+        -10.350000000000001,
+        -10.350000000000001,
         0.0
       ],
       [
-        10.35,
-        10.35,
-        404.695
+        10.350000000000001,
+        10.350000000000001,
+        404.69451663
       ]
     ],
-    "faces": 18030,
-    "vertices": 9003
+    "faces": 17632,
+    "vertices": 8804
   },
   "parts": [
     {
       "file": "QuenaMouthpiece.stl",
-      "sha256": "075ef9b5eaa0bc4f6def2452aabee10c4af87ce886223cb7fa9d8aa3cc4886ef",
+      "sha256": "ac3c92f1c47fbe7989f57709be64ea4f2b9786b6e1f867233c6b31d26143de1e",
       "z_offset_mm": 0.0,
       "assembly_rotation_z_degrees": 0.0
     },
     {
       "file": "QuenaTube1.stl",
-      "sha256": "23c6dc6d427b6803f670bd5fee0e0de430fee76e9dab10aee3855de15f442c02",
+      "sha256": "791e973b1457a984701cbbe5d6087f045dcc58a1ee3270fc0bca37c4968c5151",
       "z_offset_mm": 30.0,
       "assembly_rotation_z_degrees": 90.0
     },
     {
       "file": "QuenaTube2.stl",
-      "sha256": "63f7e9452c0d13f5b05c127bdd3809b28061353d362de833b364a7a56a0e517d",
-      "z_offset_mm": 252.5,
+      "sha256": "6d8660e1987476a5dd91375e87cf172df429dd7bc806b143e43b75818c236a2d",
+      "z_offset_mm": 271.25,
       "assembly_rotation_z_degrees": -90.0
     }
   ],
   "solver_mask": {
     "file": "QuenaProductionSolidMask.u8",
-    "sha256": "b8074557e4b5b9ab97b740fe3e09b2a455244f1ca55cde742d30a6d735d1efbb",
+    "sha256": "b00f8e94e07562983541fb88188a01bc2723429d752f2d73d2330574caedd8a4",
     "grid": [
       48,
       48,
@@ -50,7 +50,7 @@
     ],
     "cell_mm": 1.0,
     "z_origin_mm": -12.0,
-    "solid_cells": 50925,
+    "solid_cells": 51862,
     "derivation": "production STL triangle-surface sampling",
     "samples_per_square_mm": 60,
     "random_seed": 10899025
