@@ -3,8 +3,12 @@
     "file": "Quena.gcode",
     "sha256": "6a11397bbe242db951ee9d5c383abe54cf550366dfcb36add19fe04f14f343b1"
   },
-  "generated_at": "2026-08-03T20:31:36.414476+00:00",
+  "generated_at": "2026-08-03T23:54:13.266790+00:00",
   "job": "Quena",
+  "printable_3mf": {
+    "file": "Quena.gcode.3mf",
+    "sha256": "2abec3a9858207fad9e716d095a81468aa443650b561541c91eda3cbaed3f614"
+  },
   "project": {
     "file": "Quena.3mf",
     "sha256": "c447af955d72273f7318ceefbbdcb08a7e80814353e16acb4489c7115aca2786"

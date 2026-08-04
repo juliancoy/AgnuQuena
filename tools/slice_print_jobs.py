@@ -12,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -191,6 +192,7 @@ def slice_job(job: PrintJob, bambu_version: str) -> None:
         raise RuntimeError(f"missing generated project: {job.project.name}")
     with tempfile.TemporaryDirectory(prefix=f".{job.name}_slice_", dir=ROOT) as temp_dir:
         staging = Path(temp_dir)
+        sliced_project_path = staging / f"{job.name}.gcode.3mf"
         invocation = command(
             "--debug",
             "1",
@@ -198,6 +200,8 @@ def slice_job(job: PrintJob, bambu_version: str) -> None:
             "0",
             "--outputdir",
             staging,
+            "--export-3mf",
+            sliced_project_path.name,
             job.project,
         )
         print("+", " ".join(invocation), flush=True)
@@ -214,18 +218,30 @@ def slice_job(job: PrintJob, bambu_version: str) -> None:
             )
         result_path = staging / "result.json"
         gcode_path = staging / "plate_1.gcode"
-        if not result_path.exists() or not gcode_path.exists():
+        if (
+            not result_path.exists()
+            or not gcode_path.exists()
+            or not sliced_project_path.exists()
+        ):
             raise RuntimeError(f"{job.name}: Bambu Studio did not produce slice artifacts")
         result = json.loads(result_path.read_text(encoding="utf-8"))
         gcode = gcode_path.read_text(encoding="utf-8")
         summary = validate_slice(job, result, gcode)
+        with zipfile.ZipFile(sliced_project_path) as archive:
+            embedded_gcode = archive.read("Metadata/plate_1.gcode")
+        if embedded_gcode != gcode_path.read_bytes():
+            raise RuntimeError(
+                f"{job.name}: pre-sliced 3MF does not contain the validated G-code"
+            )
 
         output = OUTPUT_ROOT
         project_output = output / job.project.name
         gcode_output = output / job.gcode_name
+        sliced_project_output = output / sliced_project_path.name
         result_output = output / f"{job.name}.result.json"
         atomic_copy(job.project, project_output)
         atomic_copy(gcode_path, gcode_output)
+        atomic_copy(sliced_project_path, sliced_project_output)
         atomic_copy(result_path, result_output)
         manifest = {
             "schema_version": 1,
@@ -233,6 +249,10 @@ def slice_job(job: PrintJob, bambu_version: str) -> None:
             "job": job.name,
             "slicer": {"application": "Bambu Studio", "version": bambu_version},
             "project": {"file": project_output.name, "sha256": sha256(project_output)},
+            "printable_3mf": {
+                "file": sliced_project_output.name,
+                "sha256": sha256(sliced_project_output),
+            },
             "gcode": {"file": gcode_output.name, "sha256": sha256(gcode_output)},
             "validation": summary,
         }
@@ -243,7 +263,7 @@ def slice_job(job: PrintJob, bambu_version: str) -> None:
         )
         os.replace(temporary_manifest, manifest_path)
         print(
-            f"{job.name}: {gcode_output.relative_to(ROOT)}; "
+            f"{job.name}: {sliced_project_output.relative_to(ROOT)}; "
             f"{summary['layers']} layers; SHA-256 {manifest['gcode']['sha256']}",
             flush=True,
         )

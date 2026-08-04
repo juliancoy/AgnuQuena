@@ -155,6 +155,7 @@ def main() -> None:
         and marker.read_text(encoding="utf-8").strip() == source_commit
     ):
         print(f"BambuStudio {version} is already built from {source_commit[:12]}")
+        print("Launch the validated runtime with `./bambu-studio`.")
         shutil.rmtree(STAGING_RUNTIME, ignore_errors=True)
         install_network_plugin()
         return
@@ -232,6 +233,7 @@ def main() -> None:
         f"BambuStudio {version} built from {source_commit[:12]}: "
         f"{binary.relative_to(ROOT)}"
     )
+    print("Launch the validated runtime with `./bambu-studio`.")
     install_network_plugin()
 
 

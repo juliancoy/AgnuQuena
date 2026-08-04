@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Render AgnuQuena case STLs and nine-view review sheets."""
+"""Render selected AgnuQuena case meshes and optional review sheets."""
 
 from __future__ import annotations
 
@@ -24,10 +24,9 @@ OPENSCAD_SOURCE = ROOT / "openscad" / "CMakeLists.txt"
 SCAD = ROOT / "QuenaCase.scad"
 RENDERER = Path(__file__).resolve()
 LOGO_VECTORIZER = ROOT / "tools" / "vectorize_case_logo.py"
-PROJECT_BUILDER = ROOT / "tools" / "build_case_3mf.py"
 STL_WORKERS = 4
 
-STL_PARTS = [
+MESHES = [
     # Canonical production export: both exterior backs on the bed, with the
     # captive hinge already assembled at 180 degrees.
     ("print_in_place", ROOT / "QuenaCasePrintInPlace.stl", True),
@@ -38,29 +37,26 @@ STL_PARTS = [
         ROOT / "QuenaCaseTwoColorPrintInPlace.stl",
         True,
     ),
-    # Everything below is auxiliary validation/coupon output. The complete
-    # printable case itself remains the single STL above. Browser mechanics
-    # uses model-space meshes so rendering and collision share the exact hinge
-    # coordinates without undoing print transforms.
-    ("bottom", ROOT / "QuenaCaseBottomViewer.stl", True),
-    ("lid", ROOT / "QuenaCaseLidViewer.stl", True),
-    ("case_logo", ROOT / "QuenaCaseLogoViewer.stl", True),
-    ("case_engraving_viewer", ROOT / "QuenaCaseEngravingViewer.stl", True),
+    # Canonical model-space components are shared by engineering validation
+    # and the browser. A separate print-pose STL is unavoidable because its
+    # lid is rigidly rotated 180 degrees onto the build plate.
+    ("bottom", ROOT / "QuenaCaseBottom.stl", True),
+    ("lid", ROOT / "QuenaCaseLid.stl", True),
+    ("case_logo", ROOT / "QuenaCaseLogo.stl", True),
+    ("case_engraving", ROOT / "QuenaCaseEngraving.stl", True),
     ("case_artwork_print", ROOT / "QuenaCaseArtwork.stl", True),
-    ("hinge_coupon", ROOT / "QuenaCaseHingeCoupon.stl", False),
-    ("full_hinge_coupon", ROOT / "QuenaCaseFullHingeCoupon.stl", False),
-    ("latch_coupon", ROOT / "QuenaCaseLatchCoupon.stl", False),
     ("assembly", ROOT / "QuenaCaseAssembly.stl", True),
 ]
 
-VIEW_SHEETS = [
+VIEWS = [
     ("assembly", ROOT / "QuenaCaseAssembly_9views.png"),
     ("print_in_place", ROOT / "QuenaCasePrintInPlace_9views.png"),
     ("lid_hinge_closeup", ROOT / "QuenaCaseLidHingeCloseup_9views.png"),
-    ("hinge_coupon", ROOT / "QuenaCaseHingeCoupon_9views.png"),
-    ("full_hinge_coupon", ROOT / "QuenaCaseFullHingeCoupon_9views.png"),
-    ("latch_coupon", ROOT / "QuenaCaseLatchCoupon_9views.png"),
 ]
+
+DEFAULT_MESH = "print_in_place"
+MESH_BY_NAME = {part: (output, copy_to_site) for part, output, copy_to_site in MESHES}
+VIEW_BY_NAME = {part: output for part, output in VIEWS}
 
 CAMERAS = [
     "0,0,0,65,0,25,360",
@@ -202,13 +198,15 @@ def render_stl(part: str, output: Path, *, force: bool = False) -> None:
     print(f"Rendered {output.relative_to(ROOT)} in {elapsed:.1f}s")
 
 
-def render_all_stls(*, force: bool = False) -> None:
-    worker_count = min(STL_WORKERS, len(STL_PARTS))
-    print(f"Rendering {len(STL_PARTS)} STLs with {worker_count} workers")
+def render_meshes(parts: list[str], *, force: bool = False) -> None:
+    worker_count = min(STL_WORKERS, len(parts))
+    print(f"Rendering {len(parts)} STL(s) with {worker_count} worker(s)")
     with ThreadPoolExecutor(max_workers=worker_count) as executor:
         futures = [
-            executor.submit(render_stl, part, output, force=force)
-            for part, output, _ in STL_PARTS
+            executor.submit(
+                render_stl, part, MESH_BY_NAME[part][0], force=force
+            )
+            for part in parts
         ]
         for future in futures:
             future.result()
@@ -281,13 +279,14 @@ def render_view_sheet(part: str, output: Path, *, force: bool = False) -> None:
         print(output.relative_to(ROOT))
 
 
-def copy_site_assets() -> None:
+def copy_site_assets(parts: list[str]) -> None:
     for asset_dir in (
         ROOT / "website" / "assets",
         ROOT / "site-hosting" / "public" / "assets",
     ):
         asset_dir.mkdir(parents=True, exist_ok=True)
-        for _, output, copy_to_site in STL_PARTS:
+        for part in parts:
+            output, copy_to_site = MESH_BY_NAME[part]
             if copy_to_site:
                 target = asset_dir / output.name
                 if not target.exists() or not filecmp.cmp(
@@ -299,24 +298,53 @@ def copy_site_assets() -> None:
                     print(f"Skipping identical site asset: {target.relative_to(ROOT)}")
 
 
+def list_outputs() -> None:
+    print("Meshes (select with --mesh NAME; repeat as needed):")
+    for part, output, _ in MESHES:
+        default = " [default]" if part == DEFAULT_MESH else " [optional]"
+        print(f"  {part:<24} {output.name}{default}")
+    print("Review sheets (all optional; select with --view NAME):")
+    for part, output in VIEWS:
+        print(f"  {part:<24} {output.name} [optional]")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--stls", action="store_true", help="render STL files")
-    parser.add_argument("--views", action="store_true", help="render nine-view PNG sheets")
+    parser.add_argument(
+        "--mesh",
+        action="append",
+        choices=MESH_BY_NAME,
+        help="render one mesh; may be repeated",
+    )
+    parser.add_argument(
+        "--view",
+        action="append",
+        choices=VIEW_BY_NAME,
+        help="render one nine-view PNG sheet; may be repeated",
+    )
+    parser.add_argument("--all-meshes", action="store_true", help="render every mesh")
+    parser.add_argument("--all-views", action="store_true", help="render every review sheet")
+    parser.add_argument("--list", action="store_true", help="list selectable outputs and exit")
     parser.add_argument("--force", action="store_true", help="regenerate current outputs")
     args = parser.parse_args()
 
-    render_stls = args.stls or not args.views
-    render_views = args.views or not args.stls
+    if args.list:
+        list_outputs()
+        return
 
-    if render_stls:
+    mesh_parts = list(MESH_BY_NAME) if args.all_meshes else (args.mesh or [])
+    view_parts = list(VIEW_BY_NAME) if args.all_views else (args.view or [])
+    if not mesh_parts and not view_parts:
+        mesh_parts = [DEFAULT_MESH]
+
+    if mesh_parts:
         run(["python3", str(LOGO_VECTORIZER)])
-        render_all_stls(force=args.force)
-        copy_site_assets()
-        run(["python3", str(PROJECT_BUILDER)])
+        render_meshes(mesh_parts, force=args.force)
+        copy_site_assets(mesh_parts)
 
-    if render_views:
-        for part, output in VIEW_SHEETS:
+    if view_parts:
+        for part in view_parts:
+            output = VIEW_BY_NAME[part]
             render_view_sheet(part, output, force=args.force)
 
 

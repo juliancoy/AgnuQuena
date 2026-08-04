@@ -16,7 +16,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -78,6 +79,8 @@ input {
 .panel {
   padding: 18px;
   border-width: 0 0 0 1px;
+  max-height: 100vh;
+  overflow-y: auto;
 }
 
 h1 {
@@ -117,6 +120,54 @@ button:hover {
 
 input[type="range"] {
   width: 100%;
+}
+
+.appearance {
+  margin: 0 0 22px;
+  border-top: 1px solid rgba(24, 32, 38, 0.12);
+  padding-top: 12px;
+}
+
+.appearance summary {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mesh-appearance {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.mesh-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px 34px;
+  align-items: center;
+  gap: 6px;
+}
+
+.mesh-control label {
+  min-width: 0;
+  overflow: hidden;
+  color: #4b565e;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mesh-control select,
+.mesh-control input[type="color"] {
+  height: 30px;
+  min-width: 0;
+  border: 1px solid #a9b1b4;
+  border-radius: 5px;
+  background: #f8faf9;
+}
+
+.mesh-control input[type="color"] {
+  width: 34px;
+  padding: 2px;
 }
 
 .metrics {

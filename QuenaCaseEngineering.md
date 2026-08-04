@@ -60,18 +60,16 @@ Critical dimensions:
 - `0.40 mm` required release travel.
 - Five low rounded grip ribs in a centered `30 mm` thumb zone.
 
-Print `QuenaCaseLatchCoupon.stl` before relying on the full case latch. Its two
-components are representative fragments of the production lid and bottom,
-not a third latch part. It checks button entry, cup opening, seated fit,
-retention, and release force.
+The two nub spheres are added after all tongue, hinge, and ornament relief
+booleans. No subtractive operation is allowed to flatten or hollow either nub.
 
 Run `python3 tools/model_latch_snap.py --material all` to screen actuation. For
 ABS, each tongue moves `0.40 mm`; the cantilever model predicts `0.73%` root
 strain, `8.7-17.5 N` release force per point, and `4.13x` strain margin. The
 conservative simultaneous two-point bound is `17.5-34.9 N`, though normal
-opening should unzip the points progressively. All screened materials pass. The coupon
-remains useful because it includes the complete flex length and root, but the
-full case remains the final check for closing alignment and user access.
+opening should unzip the points progressively. All screened materials pass.
+The full case is the physical check for closing alignment, user access, and
+release force; no separate coupon meshes are maintained.
 
 ## Retention Features
 
@@ -118,7 +116,8 @@ asymmetric.
 Run:
 
 ```sh
-python3 tools/render_case_assets.py --stls
+python3 tools/render_case_assets.py --all-meshes
+python3 tools/build_case_3mf.py
 python3 tools/test_case_stls.py
 python3 tools/test_case_browser.py
 python3 tools/test_case_bambu.py
@@ -235,11 +234,15 @@ print contract. It contains one assembly with:
   `1 mm` brim is limited to the active colour layer and ends at `Z=0.2`.
 
 The two-colour slice has one material transition. With only one AMS HT,
-mapping the artwork filament to the unpowered external spool uses Bambu
-Studio's external-spool swapping workflow: the printer pauses and the operator
-must manually unload that spool at the prompted transition before printing
-continues from the AMS. It is still not an unattended two-colour configuration,
+map black filament 2 to External and yellow filament 1 to the AMS HT in the
+Bambu Studio 2.8 send dialog. Its mixed external/AMS workflow pauses for the
+operator to unload the unpowered external path, then continues from the AMS.
+It is still not an unattended two-colour configuration,
 but the single-layer artwork minimizes the intervention and purge waste.
+
+`bambu-slice-output/QuenaCase.gcode.3mf` contains the validated slice and opens
+directly in Preview. Use it for printing so the desktop application does not
+need to run the unstable Linux GUI Slice action.
 
 `QuenaCaseSingleFilament.3mf` is the one-material alternative. It contains only
 `QuenaCasePrintInPlace.stl` on filament 1, so the logo and mandala/flourish
@@ -273,10 +276,10 @@ side when centered. Disable brims, skirts, and automatic support; confirm the
 retained P1S plate placement and printer-specific exclusion zones before
 starting the full print.
 
-The former `QuenaCaseBottom.stl` and `QuenaCaseLid.stl` snap-assembly exports
-are intentionally removed. They contained the obsolete open C-bearing and must
-not be used for this design; the model-space `*Viewer.stl` files are collision
-test inputs, not separately printable case halves.
+`QuenaCaseBottom.stl` and `QuenaCaseLid.stl` are the canonical model-space
+components used by both the browser and engineering validation. The combined
+print-in-place STL remains separate because its lid must be rigidly rotated
+180 degrees into the build-plate pose.
 
 Use normal first-layer compensation rather than globally shrinking the hinge
 gap. Avoid elephant-foot expansion into the 0.60 mm shell separation. After
@@ -284,33 +287,17 @@ the bed and part are fully cool, flex the two halves oppositely along the hinge
 line to break any wisps, then rotate progressively from the center toward both
 ends. Do not drive a blade or wire through the bearings.
 
-Print `QuenaCaseHingeCoupon.stl` before printing the full case. The coupon is a
-`46 x 28 mm` crop of the actual production assembly, not a parallel hinge
-approximation. It includes the same closed round bearing, axle flat,
-radial and axial clearances, shell backs, and first-layer gap. It requires no
-supports. Use it to confirm clean release and free rotation before committing
-to the complete case.
-
-`QuenaCaseFullHingeCoupon.stl` is the full-width hinge coupon. It uses the same
-alternating seven-bearing/eight-web layout and axial capture as the case.
-
 - `QuenaCasePrintInPlace.stl`: `71624` triangles,
   `251.5 x 113.9 x 19.3 mm`, `2` connected components.
 - `QuenaCaseTwoColorPrintInPlace.stl`: `71644` triangles,
   `251.5 x 113.9 x 19.3 mm`, `2` connected components.
 - `QuenaCaseArtwork.stl`: `44492` triangles, `242.4 x 105.3 x 0.2 mm`,
   `31` connected artwork components.
-- `QuenaCaseHingeCoupon.stl`: `3194` triangles, `46.0 x 28.0 x 19.3 mm`,
-  `2` connected components.
-- `QuenaCaseFullHingeCoupon.stl`: `16232` triangles,
-  `243.5 x 28.0 x 19.3 mm`, `2` connected components.
-- `QuenaCaseFullHingeCoupon_9views.png`: `1500 x 1101 px`.
-- `QuenaCaseBottomViewer.stl`: `17742` triangles,
+- `QuenaCaseBottom.stl`: `17742` triangles,
   `251.5 x 61.3 x 19.3 mm`, `1` connected component.
-- `QuenaCaseLidViewer.stl`: `53882` triangles,
+- `QuenaCaseLid.stl`: `53882` triangles,
   `251.5 x 62.4 x 19.3 mm`, `1` connected component.
 - `QuenaCaseLatch.stl`: `56.0 x 8.3 x 11.6 mm`.
-- `QuenaCaseLatchCoupon.stl`: `182.0 x 34.0 x 18.9 mm`.
 - `QuenaCaseAssembly.stl`: `71626` triangles, `251.5 x 62.4 x 28.8 mm`.
 - Closed overlap check: empty intersection.
 - Hinge sweep check: passes from `0` to `180` degrees around
@@ -318,16 +305,24 @@ alternating seven-bearing/eight-web layout and axial capture as the case.
 - Loaded hinge sweep: passes all `18` clearance-limit poses for all `3` stored
   part envelopes from `0` to `180` degrees.
 
-Use the coupon to verify first-motion release, free rotation, and acceptable
-play. If it fuses, adjust the canonical radial or axial clearance and rerender;
-do not hand-fit the full production case or add a hidden slicer-only gap.
+Verify first-motion release, free rotation, and acceptable play on the full
+print. If it fuses, adjust the canonical radial or axial clearance and
+rerender; do not hand-fit the case or add a hidden slicer-only gap.
+
+## Selective Output
+
+Running `python3 tools/render_case_assets.py` produces only the primary
+`QuenaCasePrintInPlace.stl`. Run it with `--list` to show every other mesh and
+review sheet; those outputs are optional and selected with repeatable `--mesh`
+and `--view` arguments. `--all-meshes` and `--all-views` are reserved for full
+validation. Coupon outputs are not generated.
 
 ## Nine-View Review
 
 Run:
 
 ```sh
-python3 tools/render_case_assets.py --views
+python3 tools/render_case_assets.py --all-views
 ```
 
 This regenerates:
@@ -335,12 +330,9 @@ This regenerates:
 - `QuenaCaseAssembly_9views.png`
 - `QuenaCasePrintInPlace_9views.png`
 - `QuenaCaseLidHingeCloseup_9views.png`
-- `QuenaCaseHingeCoupon_9views.png`
-- `QuenaCaseFullHingeCoupon_9views.png`
-- `QuenaCaseLatchCoupon_9views.png`
 
 Each sheet is a 3x3 camera sweep at `1500 x 1101 px`. Use these views to catch
-framing, hinge, latch, and coupon regressions before slicing.
+framing, hinge, and latch regressions before slicing.
 
 The lid-hinge close-up sheet targets the integral axle, alternating support
 webs, D-flat, and both axle ends without whole-part auto-framing.

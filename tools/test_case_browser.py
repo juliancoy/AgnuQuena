@@ -36,10 +36,10 @@ def sha256(path: Path) -> str:
 
 def verify_viewer_assets() -> None:
     for name in (
-        "QuenaCaseBottomViewer.stl",
-        "QuenaCaseEngravingViewer.stl",
-        "QuenaCaseLogoViewer.stl",
-        "QuenaCaseLidViewer.stl",
+        "QuenaCaseBottom.stl",
+        "QuenaCaseEngraving.stl",
+        "QuenaCaseLogo.stl",
+        "QuenaCaseLid.stl",
         "QuenaTube1.stl",
         "QuenaTube2.stl",
         "QuenaMouthpiece.stl",
@@ -112,10 +112,26 @@ def verify_browser_slot_alignment() -> None:
         raise AssertionError("case browser must open on the exterior artwork view")
     if "const contacts = updateContactHighlight();" not in source:
         raise AssertionError("case browser contact readout must include latch highlights")
-    if '"./assets/QuenaCaseEngravingViewer.stl"' not in source:
+    if '"./assets/QuenaCaseEngraving.stl"' not in source:
         raise AssertionError("case browser does not load the canonical engraving mesh")
-    if "materialEngraving" not in source:
-        raise AssertionError("case browser does not give the engraving its own material")
+    for token in (
+        "meshAppearances",
+        "setMeshAppearance",
+        "MeshPhongMaterial",
+        "MeshToonMaterial",
+        "MeshPhysicalMaterial",
+        "ShaderMaterial",
+        '"brushed-metal"',
+        '"hologram"',
+        "RoomEnvironment",
+        "ACESFilmicToneMapping",
+        "ShadowMaterial",
+        "Studio reflection floor",
+    ):
+        if token not in source:
+            raise AssertionError(
+                f"case browser lacks per-mesh appearance support: {token}"
+            )
     matches = re.findall(
         rf'asset:\s*"([^"]+)",\s*x:\s*({NUMBER}),\s*y:\s*({NUMBER}),\s*'
         rf'z:\s*({NUMBER}),\s*bodyX0:\s*({NUMBER}),\s*rotationZ:\s*({NUMBER})',
@@ -226,6 +242,20 @@ def main() -> None:
         raise AssertionError("browser logo and mandala decorations do not have distinct colors")
     if result.get("engravingContrastsWithLid") is not True:
         raise AssertionError("case engraving color does not contrast with the lid")
+    if int(result.get("appearanceControlCount", 0)) != 7:
+        raise AssertionError("browser does not expose one appearance control per mesh")
+    if result.get("appearanceSelectionWorks") is not True:
+        raise AssertionError("browser shader and color selection did not update a mesh")
+    if result.get("studioLightingConfigured") is not True:
+        raise AssertionError("browser studio environment or soft-shadow rig is incomplete")
+    if result.get("studioSurfaceConfigured") is not True:
+        raise AssertionError("browser reflective floor or shadow catcher is incomplete")
+    if result.get("sweepControlsWork") is not True:
+        raise AssertionError("browser Run Sweep control does not start from zero")
+    if result.get("pauseControlWorks") is not True:
+        raise AssertionError("browser Pause control does not stop the sweep")
+    if result.get("animationLoopAdvanced") is not True:
+        raise AssertionError("browser animation loop did not advance after initial render")
     if result.get("pass") is not True:
         raise AssertionError(f"case browser self-test failed: {result}")
     print(

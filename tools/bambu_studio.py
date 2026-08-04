@@ -53,9 +53,30 @@ def environment() -> dict[str, str]:
     return env
 
 
+def gui_environment() -> dict[str, str]:
+    """Return the runtime environment for the Linux desktop application."""
+    env = environment()
+    # WebKitGTK's DMA-BUF renderer corrupts memory on this NVIDIA/X11 display.
+    # This leaves Bambu Studio's OpenGL model canvas hardware accelerated.
+    env["WEBKIT_DISABLE_DMABUF_RENDERER"] = "1"
+    return env
+
+
 def command(*arguments: str | Path) -> list[str]:
     require()
     return [str(BINARY), *(str(argument) for argument in arguments)]
+
+
+def absolute_existing_paths(
+    arguments: list[str], *, cwd: Path | None = None
+) -> list[str]:
+    """Resolve existing relative inputs before Bambu Studio changes directory."""
+    base = cwd or Path.cwd()
+    resolved: list[str] = []
+    for argument in arguments:
+        candidate = base / argument
+        resolved.append(str(candidate.resolve()) if candidate.exists() else argument)
+    return resolved
 
 
 def version() -> str:

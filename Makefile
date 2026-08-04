@@ -1,4 +1,7 @@
-.PHONY: bambu-studio-setup case-single-export quena-generate quena-check quena-test quena-validate quena-export print-export print-slice
+.PHONY: bambu-studio bambu-studio-setup case-single-export quena-generate quena-check quena-test quena-validate quena-export print-export print-slice
+
+bambu-studio:
+	./bambu-studio
 
 bambu-studio-setup:
 	python3 tools/setup_bambu_studio.py

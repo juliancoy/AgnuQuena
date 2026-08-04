@@ -8,9 +8,9 @@ $fn = 64;
 include <generated/quena_parameters.scad>
 include <generated/case_logo_dimensions.scad>
 
-// Select "bottom", "mandala_panel", "lid", "case_engraving_viewer", "print_in_place",
-// "print_in_place_two_color", "case_logo", "case_artwork_print", "hinge_coupon",
-// "full_hinge_coupon", "latch", "latch_coupon", "assembly", "preview", or "none".
+// Select "bottom", "mandala_panel", "lid", "case_engraving", "print_in_place",
+// "print_in_place_two_color", "case_logo", "case_artwork_print", "latch",
+// "assembly", "preview", or "none".
 // Override from the CLI with:
 // openscad -D 'part="print_in_place"' -o QuenaCasePrintInPlace.stl QuenaCase.scad
 part = is_undef(part) ? "preview" : part;
@@ -1193,20 +1193,29 @@ module lid_harmonica_latch() {
     }
 }
 
-module lid_simple_latch() {
+module lid_simple_latch_tongues() {
     local_nub_z = latch_nub_z - lid_closed_z;
     tongue_bottom_z = local_nub_z - 0.6;
+
+    for (xc = latch_point_xs)
+        smooth_latch_tongue(xc, latch_tongue_y, tongue_bottom_z);
+}
+
+module lid_simple_latch_nubs() {
+    local_nub_z = latch_nub_z - lid_closed_z;
     inner_y = latch_tongue_y - latch_tongue_t / 2;
 
     for (xc = latch_point_xs)
-        union() {
-            smooth_latch_tongue(xc, latch_tongue_y, tongue_bottom_z);
-            translate([
-                xc,
-                inner_y + latch_nub_r - latch_nub_protrusion,
-                local_nub_z
-            ]) sphere(r = latch_nub_r);
-        }
+        translate([
+            xc,
+            inner_y + latch_nub_r - latch_nub_protrusion,
+            local_nub_z
+        ]) sphere(r = latch_nub_r);
+}
+
+module lid_simple_latch() {
+    lid_simple_latch_tongues();
+    lid_simple_latch_nubs();
 }
 
 module bottom_simple_latch_indent_cut() {
@@ -1388,12 +1397,15 @@ module lid_assembly(
         difference() {
             union() {
                 lid_case(with_ornament_recess, ornament_depth);
-                lid_simple_latch();
+                lid_simple_latch_tongues();
                 lid_thumb_grip();
             }
             lid_bottom_hinge_relief();
             lid_simple_latch_relief_cuts();
         }
+        // Add the complete spherical nubs after every subtractive operation.
+        // The tongue pocket must never flatten or hollow their inner faces.
+        lid_simple_latch_nubs();
         lid_hinge();
     }
 }
@@ -1445,215 +1457,6 @@ module print_in_place_case(
     lid_in_print_pose() lid_assembly(true, ornament_depth);
 }
 
-module print_in_place_hinge_coupon(span = 46) {
-    // Crop the actual production assembly rather than maintaining a parallel
-    // coupon approximation. Both moving components remain on the bed.
-    intersection() {
-        print_in_place_case();
-        translate([0, hinge_axis_y, 10])
-            cube([span, 28, 20], center = true);
-    }
-}
-
-module hinge_coupon() {
-    coupon_span = 60;
-    coupon_base_l = coupon_span + 12;
-    coupon_base_w = 18;
-    coupon_base_h = 3;
-    coupon_wall_t = hinge_tab_t;
-    coupon_wall_h = hinge_bearing_outer_d + 4;
-    coupon_axis_z = coupon_base_h + hinge_bearing_outer_d / 2 + 2;
-    coupon_gap_y = 18;
-    second_half_y = coupon_base_w + coupon_gap_y;
-    bearing_segments = [[-7.25, 7.25]];
-    axle_support_segments = [[-22.75, -8.25], [8.25, 22.75]];
-
-    module coupon_label(label_text, y) {
-        translate([-coupon_base_l / 2 + 4, y - coupon_base_w / 2 + 2.8, coupon_base_h - 0.15])
-            linear_extrude(height = 0.5)
-                text(label_text, size = 4, halign = "left", valign = "bottom");
-    }
-
-    module coupon_bearing_half(y) {
-        translate([0, y, 0])
-        union() {
-            translate([-coupon_base_l / 2, -coupon_base_w / 2, 0])
-                cube([coupon_base_l, coupon_base_w, coupon_base_h]);
-            for (segment = bearing_segments) {
-                local_y = -coupon_base_w / 2 + coupon_wall_t;
-                difference() {
-                    union() {
-                        translate([
-                            (segment[0] + segment[1]) / 2,
-                            -coupon_base_w / 2 + coupon_wall_t / 2,
-                            coupon_base_h + coupon_wall_h / 2
-                        ]) cube([
-                            segment[1] - segment[0],
-                            coupon_wall_t,
-                            coupon_wall_h
-                        ], center = true);
-                        hinge_bearing_at(
-                            segment[0], segment[1], local_y, coupon_axis_z
-                        );
-                    }
-                    translate([0, local_y, coupon_axis_z])
-                        x_cylinder_between(
-                            segment[0] - 0.2,
-                            segment[1] + 0.2,
-                            hinge_bearing_bore_d
-                        );
-                    hinge_bearing_slot(
-                        segment[0], segment[1], local_y, coupon_axis_z
-                    );
-                }
-            }
-            coupon_label("CASE BEARINGS", 0);
-        }
-    }
-
-    module coupon_axle_half(y) {
-        local_y = -coupon_base_w / 2 + coupon_wall_t;
-        translate([0, y, 0]) union() {
-            translate([-coupon_base_l / 2, -coupon_base_w / 2, 0])
-                cube([coupon_base_l, coupon_base_w, coupon_base_h]);
-            hinge_axle_at(
-                -22.75, 22.75, local_y, coupon_axis_z, hinge_axle_d, -1
-            );
-            for (segment = axle_support_segments) {
-                support_h = coupon_axis_z - coupon_base_h
-                    + hinge_axle_d / 2;
-                translate([
-                    (segment[0] + segment[1]) / 2,
-                    -coupon_base_w / 2 + hinge_tab_t / 2,
-                    coupon_base_h + support_h / 2
-                ]) cube([
-                    segment[1] - segment[0],
-                    hinge_tab_t,
-                    support_h
-                ], center = true);
-            }
-            coupon_label("LID AXLE", 0);
-        }
-    }
-
-    coupon_axle_half(0);
-    coupon_bearing_half(second_half_y);
-}
-
-module full_hinge_coupon() {
-    coupon_base_h = 3;
-    coupon_base_w = 18;
-    coupon_gap_y = 20;
-    coupon_bottom_y = 0;
-    coupon_lid_y = coupon_base_w + coupon_gap_y;
-    coupon_axis_z = coupon_base_h + hinge_bearing_outer_d / 2 + 2;
-    coupon_span = hinge_span;
-
-    module full_coupon_bearing_half(y) {
-        translate([0, y, 0])
-        union() {
-            translate([-coupon_span / 2 - 6, -coupon_base_w / 2, 0])
-                cube([coupon_span + 12, coupon_base_w, coupon_base_h]);
-            for (segment = hinge_bearing_segments) {
-                local_y = -coupon_base_w / 2 + hinge_tab_t;
-                difference() {
-                    union() {
-                        translate([
-                            (segment[0] + segment[1]) / 2,
-                            -coupon_base_w / 2 + hinge_tab_t / 2,
-                            coupon_base_h
-                                + (hinge_bearing_outer_d + 4) / 2
-                        ]) cube([
-                            segment[1] - segment[0],
-                            hinge_tab_t,
-                            hinge_bearing_outer_d + 4
-                        ], center = true);
-                        hinge_bearing_at(
-                            segment[0], segment[1], local_y, coupon_axis_z
-                        );
-                    }
-                    translate([0, local_y, coupon_axis_z])
-                        x_cylinder_between(
-                            segment[0] - 0.2,
-                            segment[1] + 0.2,
-                            hinge_bearing_bore_d
-                        );
-                    hinge_bearing_slot(
-                        segment[0], segment[1], local_y, coupon_axis_z
-                    );
-                }
-            }
-        }
-    }
-
-    module full_coupon_axle_half(y) {
-        local_y = -coupon_base_w / 2 + hinge_tab_t;
-        translate([0, y, 0]) union() {
-            translate([-coupon_span / 2 - 6, -coupon_base_w / 2, 0])
-                cube([coupon_span + 12, coupon_base_w, coupon_base_h]);
-            hinge_axle_at(
-                hinge_axle_x1,
-                hinge_axle_x2,
-                local_y,
-                coupon_axis_z,
-                hinge_axle_d,
-                -1
-            );
-            for (segment = hinge_axle_support_segments) {
-                support_h = coupon_axis_z - coupon_base_h
-                    + hinge_axle_d / 2;
-                translate([
-                    (segment[0] + segment[1]) / 2,
-                    -coupon_base_w / 2 + hinge_tab_t / 2,
-                    coupon_base_h + support_h / 2
-                ]) cube([
-                    segment[1] - segment[0],
-                    hinge_tab_t,
-                    support_h
-                ], center = true);
-            }
-        }
-    }
-
-    full_coupon_axle_half(coupon_lid_y);
-    full_coupon_bearing_half(coupon_bottom_y);
-}
-
-module latch_coupon() {
-    coupon_w = latch_point_xs[len(latch_point_xs) - 1] - latch_point_xs[0]
-        + latch_tongue_w + 20;
-    wall_h = latch_tongue_flex_l + 3;
-    lid_face_y = -12;
-    bottom_face_y = 12;
-
-    // Lid fragment: full production flex length, root thickness, and nub.
-    union() {
-        translate([0, lid_face_y - 3, wall_h - 3])
-            rounded_box([coupon_w, 6, 3], 1.0);
-        for (xc = latch_point_xs) {
-            smooth_latch_tongue(
-                xc,
-                lid_face_y - latch_tongue_t / 2,
-                0.8
-            );
-            translate([xc,
-                lid_face_y + latch_nub_r - latch_nub_protrusion,
-                latch_nub_r + 0.8]) sphere(r = latch_nub_r);
-        }
-        translate([0, lid_face_y - case_outer_w / 2, 0])
-            lid_thumb_grip();
-    }
-
-    // Bottom fragment: a realistic wall section with only the shallow dimple.
-    difference() {
-        translate([0, bottom_face_y + 2, 0])
-            rounded_box([coupon_w, 4, wall_h], 1.0);
-        for (xc = latch_point_xs)
-            translate([xc,
-                bottom_face_y - latch_nub_r + latch_indent_depth,
-                latch_nub_r + 0.8]) sphere(r = latch_nub_r + 0.05);
-    }
-}
 if (part == "none") {
 } else if (part == "bottom") {
     bottom_assembly();
@@ -1661,20 +1464,14 @@ if (part == "none") {
     mandala_panel_2d();
 } else if (part == "lid") {
     lid_assembly();
-} else if (part == "case_engraving_viewer") {
+} else if (part == "case_engraving") {
     lid_ornament_inlay();
 } else if (part == "case_logo") {
     bottom_logo_inlay();
 } else if (part == "case_artwork_print") {
     case_artwork_in_print_pose();
-} else if (part == "hinge_coupon") {
-    print_in_place_hinge_coupon();
-} else if (part == "full_hinge_coupon") {
-    print_in_place_hinge_coupon(hinge_span + 12);
 } else if (part == "latch") {
     lid_simple_latch();
-} else if (part == "latch_coupon") {
-    latch_coupon();
 } else if (part == "assembly") {
     closed_assembly_case();
 } else if (part == "print_in_place_two_color") {

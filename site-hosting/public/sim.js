@@ -1,13 +1,14 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js";
 import { OrbitControls } from "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/controls/OrbitControls.js";
 import { STLLoader } from "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/loaders/STLLoader.js";
+import { RoomEnvironment } from "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/environments/RoomEnvironment.js";
 import { MeshBVH } from "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.9.5/build/index.module.js";
 
 const MM_TO_M = 0.001;
 const DEG = Math.PI / 180;
 const MAX_SWEEP_DEG = 180;
 const INITIAL_ANGLE_DEG = 180;
-const ASSET_REVISION = "decorations-v2";
+const ASSET_REVISION = "complete-latch-nubs-v2";
 
 const dims = {
   hingeAxis: { x: 0, y: -28.35, z: 14.40 },
@@ -17,7 +18,7 @@ const dims = {
     y: 27.2,
     localZ: -2.35,
     radius: 2.0,
-    releaseAngle: 3,
+    releaseAngle: 4,
   },
   quenaSlots: [
     { asset: "QuenaTube1.stl", x: 0, y: -11.9, z: 12.95, bodyX0: -119.925, rotationZ: 0, outwardRoll: 270, openingAxis: [0, -1, 0] },
@@ -35,6 +36,7 @@ const ui = {
   play: document.querySelector("#play"),
   pause: document.querySelector("#pause"),
   reset: document.querySelector("#reset"),
+  meshAppearance: document.querySelector("#meshAppearance"),
 };
 
 let runningSweep = false;
@@ -43,6 +45,7 @@ let targetAngle = INITIAL_ANGLE_DEG;
 let sweepAngle = INITIAL_ANGLE_DEG;
 let firstCollision = null;
 let lastTime = performance.now();
+let animationFrameCount = 0;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xe8eadf);
@@ -50,6 +53,17 @@ scene.background = new THREE.Color(0xe8eadf);
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.08;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+const environmentGenerator = new THREE.PMREMGenerator(renderer);
+const studioRoom = new RoomEnvironment();
+scene.environment = environmentGenerator.fromScene(studioRoom, 0.04).texture;
+studioRoom.dispose();
+environmentGenerator.dispose();
 
 const camera = new THREE.PerspectiveCamera(38, 1, 0.01, 4);
 camera.position.set(0, 0.38, -0.28);
@@ -59,10 +73,50 @@ const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, -0.015, 0.05);
 controls.enableDamping = true;
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0x6f7c82, 2.5));
-const sun = new THREE.DirectionalLight(0xffffff, 2.2);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x6f7c82, 1.15));
+const sun = new THREE.DirectionalLight(0xfff7e8, 3.2);
 sun.position.set(0.25, -0.35, 0.45);
-scene.add(sun);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 0.05;
+sun.shadow.camera.far = 1.5;
+sun.shadow.camera.left = -0.34;
+sun.shadow.camera.right = 0.34;
+sun.shadow.camera.top = 0.34;
+sun.shadow.camera.bottom = -0.34;
+sun.shadow.bias = -0.00008;
+sun.shadow.normalBias = 0.0015;
+sun.target.position.set(0, 0, 0.025);
+scene.add(sun, sun.target);
+
+const fill = new THREE.DirectionalLight(0xbfd8ff, 1.1);
+fill.position.set(-0.32, 0.2, 0.24);
+scene.add(fill);
+
+const floorGeometry = new THREE.PlaneGeometry(1.2, 1.2);
+const reflectionFloor = new THREE.Mesh(
+  floorGeometry,
+  new THREE.MeshPhysicalMaterial({
+    color: 0xb8c0bc,
+    metalness: 0.32,
+    roughness: 0.2,
+    clearcoat: 0.65,
+    clearcoatRoughness: 0.16,
+    envMapIntensity: 0.72,
+  }),
+);
+reflectionFloor.name = "Studio reflection floor";
+reflectionFloor.position.z = -0.0025;
+reflectionFloor.receiveShadow = true;
+
+const shadowCatcher = new THREE.Mesh(
+  floorGeometry.clone(),
+  new THREE.ShadowMaterial({ color: 0x24302e, opacity: 0.2 }),
+);
+shadowCatcher.name = "Studio shadow catcher";
+shadowCatcher.position.z = -0.002;
+shadowCatcher.receiveShadow = true;
+scene.add(reflectionFloor, shadowCatcher);
 
 const materialBottom = new THREE.MeshStandardMaterial({ color: 0x2f6f99, roughness: 0.64 });
 const materialLid = new THREE.MeshStandardMaterial({ color: 0x7fa7b8, roughness: 0.58 });
@@ -81,6 +135,188 @@ const materialQuena = new THREE.MeshStandardMaterial({
   roughness: 0.5,
   metalness: 0.03,
 });
+const meshAppearances = new Map();
+
+function makeMaterial(shader, color) {
+  const common = { color: new THREE.Color(color), side: THREE.DoubleSide };
+  if (shader === "brushed-metal") {
+    return new THREE.MeshPhysicalMaterial({
+      ...common,
+      metalness: 0.92,
+      roughness: 0.3,
+      clearcoat: 0.25,
+      clearcoatRoughness: 0.22,
+      anisotropy: 0.7,
+    });
+  }
+  if (shader === "polished-metal") {
+    return new THREE.MeshPhysicalMaterial({
+      ...common,
+      metalness: 1,
+      roughness: 0.06,
+      clearcoat: 1,
+      clearcoatRoughness: 0.04,
+    });
+  }
+  if (shader === "iridescent") {
+    return new THREE.MeshPhysicalMaterial({
+      ...common,
+      metalness: 0.58,
+      roughness: 0.18,
+      clearcoat: 1,
+      iridescence: 1,
+      iridescenceIOR: 1.6,
+      iridescenceThicknessRange: [120, 900],
+    });
+  }
+  if (shader === "pearl") {
+    return new THREE.MeshPhysicalMaterial({
+      ...common,
+      metalness: 0.05,
+      roughness: 0.24,
+      clearcoat: 1,
+      sheen: 1,
+      sheenColor: new THREE.Color(color).offsetHSL(0.08, 0.1, 0.2),
+      iridescence: 0.4,
+      iridescenceThicknessRange: [100, 420],
+    });
+  }
+  if (shader === "glass") {
+    return new THREE.MeshPhysicalMaterial({
+      ...common,
+      metalness: 0,
+      roughness: 0.08,
+      transmission: 0.9,
+      thickness: 0.8,
+      ior: 1.46,
+      transparent: true,
+      opacity: 0.68,
+      depthWrite: false,
+    });
+  }
+  if (shader === "emissive") {
+    return new THREE.MeshStandardMaterial({
+      ...common,
+      roughness: 0.3,
+      emissive: new THREE.Color(color),
+      emissiveIntensity: 1.8,
+      toneMapped: false,
+    });
+  }
+  if (shader === "xray") {
+    return new THREE.MeshBasicMaterial({
+      ...common,
+      transparent: true,
+      opacity: 0.28,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+    });
+  }
+  if (shader === "hologram") {
+    return new THREE.ShaderMaterial({
+      side: THREE.DoubleSide,
+      transparent: true,
+      depthWrite: false,
+      blending: THREE.AdditiveBlending,
+      uniforms: {
+        baseColor: { value: new THREE.Color(color) },
+        time: { value: 0 },
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        varying vec3 vWorldPosition;
+        void main() {
+          vNormal = normalize(mat3(modelMatrix) * normal);
+          vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+          vWorldPosition = worldPosition.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 baseColor;
+        uniform float time;
+        varying vec3 vNormal;
+        varying vec3 vWorldPosition;
+        void main() {
+          vec3 viewDirection = normalize(cameraPosition - vWorldPosition);
+          float fresnel = pow(1.0 - abs(dot(normalize(vNormal), viewDirection)), 2.2);
+          float scan = 0.5 + 0.5 * sin(vWorldPosition.z * 420.0 - time * 5.0);
+          vec3 rainbow = 0.5 + 0.5 * cos(
+            6.28318 * (fresnel + vec3(0.0, 0.33, 0.67) + time * 0.04)
+          );
+          vec3 glow = mix(baseColor, rainbow, 0.62) * (0.55 + fresnel + scan * 0.22);
+          gl_FragColor = vec4(glow, 0.38 + fresnel * 0.52);
+        }
+      `,
+    });
+  }
+  if (shader === "phong") {
+    return new THREE.MeshPhongMaterial({ ...common, shininess: 80 });
+  }
+  if (shader === "toon") return new THREE.MeshToonMaterial(common);
+  if (shader === "normal") return new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+  if (shader === "wireframe") {
+    return new THREE.MeshBasicMaterial({ ...common, wireframe: true });
+  }
+  return new THREE.MeshStandardMaterial({ ...common, roughness: 0.55, metalness: 0.02 });
+}
+
+function registerMeshAppearance(id, label, mesh, color, shader = "standard") {
+  meshAppearances.set(id, { id, label, mesh, color, shader });
+}
+
+function setMeshAppearance(id, shader, color) {
+  const entry = meshAppearances.get(id);
+  if (!entry) throw new Error(`Unknown mesh: ${id}`);
+  const previous = entry.mesh.material;
+  entry.shader = shader;
+  entry.color = color;
+  entry.mesh.material = makeMaterial(shader, color);
+  if (previous && previous !== entry.mesh.material) previous.dispose();
+}
+
+function buildAppearanceControls() {
+  ui.meshAppearance.replaceChildren();
+  for (const entry of meshAppearances.values()) {
+    const row = document.createElement("div");
+    row.className = "mesh-control";
+    row.dataset.mesh = entry.id;
+    const label = document.createElement("label");
+    label.textContent = entry.label;
+    const shader = document.createElement("select");
+    shader.setAttribute("aria-label", `${entry.label} shader`);
+    for (const [value, text] of [
+      ["standard", "Standard"],
+      ["brushed-metal", "Brushed metal"],
+      ["polished-metal", "Polished metal"],
+      ["iridescent", "Iridescent metal"],
+      ["pearl", "Pearlescent"],
+      ["glass", "Tinted glass"],
+      ["emissive", "Neon glow"],
+      ["hologram", "Hologram"],
+      ["xray", "X-ray"],
+      ["phong", "Phong"],
+      ["toon", "Toon"],
+      ["normal", "Normals"],
+      ["wireframe", "Wireframe"],
+    ]) {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = text;
+      option.selected = value === entry.shader;
+      shader.append(option);
+    }
+    const color = document.createElement("input");
+    color.type = "color";
+    color.value = entry.color;
+    color.setAttribute("aria-label", `${entry.label} color`);
+    const apply = () => setMeshAppearance(entry.id, shader.value, color.value);
+    shader.addEventListener("change", apply);
+    color.addEventListener("input", apply);
+    row.append(label, shader, color);
+    ui.meshAppearance.append(row);
+  }
+}
 
 const bottomMesh = new THREE.Group();
 const lidMesh = new THREE.Group();
@@ -145,24 +381,28 @@ async function loadStl(path, material) {
 }
 
 async function buildVisuals() {
-  bottomStl = await loadStl("./assets/QuenaCaseBottomViewer.stl", materialBottom);
+  bottomStl = await loadStl("./assets/QuenaCaseBottom.stl", materialBottom);
+  registerMeshAppearance("case-bottom", "Case bottom", bottomStl, "#2f6f99");
   bottomStl.geometry.boundsTree = new MeshBVH(bottomStl.geometry);
   bottomMesh.add(bottomStl);
 
-  logoStl = await loadStl("./assets/QuenaCaseLogoViewer.stl", materialLogo);
+  logoStl = await loadStl("./assets/QuenaCaseLogo.stl", materialLogo);
+  registerMeshAppearance("case-logo", "Bottom logo", logoStl, "#ff6680");
   logoStl.renderOrder = 2;
   bottomMesh.add(logoStl);
 
-  lidStl = await loadStl("./assets/QuenaCaseLidViewer.stl", materialLid);
+  lidStl = await loadStl("./assets/QuenaCaseLid.stl", materialLid);
+  registerMeshAppearance("case-lid", "Case lid", lidStl, "#7fa7b8");
   lidStl.geometry.boundsTree = new MeshBVH(lidStl.geometry);
   lidStl.position.copy(lidLocalHinge().multiplyScalar(-1));
   lidMesh.position.copy(hingeWorld());
   lidMesh.add(lidStl);
 
   engravingStl = await loadStl(
-    "./assets/QuenaCaseEngravingViewer.stl",
+    "./assets/QuenaCaseEngraving.stl",
     materialEngraving,
   );
+  registerMeshAppearance("case-engraving", "Lid engraving", engravingStl, "#ffdf78");
   engravingStl.position.copy(lidStl.position);
   engravingStl.renderOrder = 2;
   lidMesh.add(engravingStl);
@@ -187,8 +427,14 @@ async function buildVisuals() {
   latchContactMarkers.visible = false;
   lidStl.add(latchContactMarkers);
 
-  for (const slot of dims.quenaSlots) {
-    const part = await loadStl(`./assets/${slot.asset}`, materialQuena);
+  for (const [index, slot] of dims.quenaSlots.entries()) {
+    const part = await loadStl(`./assets/${slot.asset}`, materialQuena.clone());
+    registerMeshAppearance(
+      `quena-${index + 1}`,
+      slot.asset.replace(".stl", ""),
+      part,
+      "#c98b3c",
+    );
     part.rotation.set(0, 90 * DEG, slot.rotationZ * DEG, "ZXY");
     part.rotateOnAxis(new THREE.Vector3(0, 0, 1), slot.outwardRoll * DEG);
     part.userData.openingAxis = slot.openingAxis;
@@ -202,6 +448,7 @@ async function buildVisuals() {
   }
 
   scene.updateMatrixWorld(true);
+  buildAppearanceControls();
 }
 
 function setLidAngle(angleDeg, worldOffset = new THREE.Vector3()) {
@@ -286,7 +533,7 @@ function resize() {
   }
 }
 
-function animate(now) {
+function animate(now, scheduleNext = true) {
   const dt = Math.min((now - lastTime) / 1000, 0.05);
   lastTime = now;
 
@@ -307,10 +554,17 @@ function animate(now) {
   }
   updateUi(displayAngle, contacts);
 
+  for (const entry of meshAppearances.values()) {
+    if (entry.mesh.material.uniforms?.time) {
+      entry.mesh.material.uniforms.time.value = now / 1000;
+    }
+  }
+
   controls.update();
   resize();
   renderer.render(scene, camera);
-  requestAnimationFrame(animate);
+  animationFrameCount += 1;
+  if (scheduleNext) requestAnimationFrame(animate);
 }
 
 function wireControls() {
@@ -351,6 +605,14 @@ async function main() {
   setLidAngle(targetAngle);
   wireControls();
   window.__agnuquenaCase = {
+    getViewState() {
+      return {
+        animationFrameCount,
+        cameraPosition: camera.position.toArray(),
+        currentLidAngle,
+        runningSweep,
+      };
+    },
     setAngle(angle) {
       setLidAngle(Number(angle));
       return updateContactHighlight();
@@ -396,26 +658,61 @@ async function main() {
         && engravingStl.parent === lidMesh
         && engravingStl.geometry.attributes.position.count > 0;
       const engravingColorDelta = new THREE.Vector3(
-        materialEngraving.color.r - materialLid.color.r,
-        materialEngraving.color.g - materialLid.color.g,
-        materialEngraving.color.b - materialLid.color.b,
+        engravingStl.material.color.r - lidStl.material.color.r,
+        engravingStl.material.color.g - lidStl.material.color.g,
+        engravingStl.material.color.b - lidStl.material.color.b,
       );
       const engravingContrastsWithLid = engravingColorDelta.length() > 0.25;
       const logoVisible = logoStl.visible
         && logoStl.parent === bottomMesh
         && logoStl.geometry.attributes.position.count > 0;
       const logoColorDelta = new THREE.Vector3(
-        materialLogo.color.r - materialBottom.color.r,
-        materialLogo.color.g - materialBottom.color.g,
-        materialLogo.color.b - materialBottom.color.b,
+        logoStl.material.color.r - bottomStl.material.color.r,
+        logoStl.material.color.g - bottomStl.material.color.g,
+        logoStl.material.color.b - bottomStl.material.color.b,
       );
       const decorationColorDelta = new THREE.Vector3(
-        materialLogo.color.r - materialEngraving.color.r,
-        materialLogo.color.g - materialEngraving.color.g,
-        materialLogo.color.b - materialEngraving.color.b,
+        logoStl.material.color.r - engravingStl.material.color.r,
+        logoStl.material.color.g - engravingStl.material.color.g,
+        logoStl.material.color.b - engravingStl.material.color.b,
       );
       const decorationsHaveDistinctColors = logoColorDelta.length() > 0.25
         && decorationColorDelta.length() > 0.25;
+      const appearanceControlCount = ui.meshAppearance.querySelectorAll(
+        ".mesh-control",
+      ).length;
+      const originalBottomShader = meshAppearances.get("case-bottom").shader;
+      const originalBottomColor = meshAppearances.get("case-bottom").color;
+      setMeshAppearance("case-bottom", "brushed-metal", "#123456");
+      const metalSelectionWorks = bottomStl.material.type === "MeshPhysicalMaterial"
+        && bottomStl.material.metalness === 0.92
+        && bottomStl.material.color.getHexString() === "123456";
+      setMeshAppearance("case-bottom", "hologram", "#654321");
+      renderer.compile(scene, camera);
+      const funSelectionWorks = bottomStl.material.type === "ShaderMaterial"
+        && bottomStl.material.uniforms.baseColor.value.getHexString() === "654321";
+      const appearanceSelectionWorks = metalSelectionWorks && funSelectionWorks;
+      const studioLightingConfigured = scene.environment?.isTexture === true
+        && renderer.toneMapping === THREE.ACESFilmicToneMapping
+        && renderer.shadowMap.enabled
+        && sun.castShadow;
+      const studioSurfaceConfigured = reflectionFloor.parent === scene
+        && reflectionFloor.material.type === "MeshPhysicalMaterial"
+        && reflectionFloor.material.roughness === 0.2
+        && reflectionFloor.receiveShadow
+        && shadowCatcher.parent === scene
+        && shadowCatcher.receiveShadow;
+      ui.play.click();
+      const sweepControlsWork = runningSweep
+        && !manualMode
+        && sweepAngle === 0
+        && currentLidAngle === 0;
+      ui.pause.click();
+      const pauseControlWorks = !runningSweep;
+      const framesBeforeProbe = animationFrameCount;
+      animate(performance.now() + 16, false);
+      const animationLoopAdvanced = animationFrameCount === framesBeforeProbe + 1;
+      setMeshAppearance("case-bottom", originalBottomShader, originalBottomColor);
       const result = {
         pass: closedLatchContact
           && latchReleaseAngle != null
@@ -427,7 +724,14 @@ async function main() {
           && engravingVisible
           && engravingContrastsWithLid
           && logoVisible
-          && decorationsHaveDistinctColors,
+          && decorationsHaveDistinctColors
+          && appearanceControlCount === meshAppearances.size
+          && appearanceSelectionWorks
+          && studioLightingConfigured
+          && studioSurfaceConfigured
+          && sweepControlsWork
+          && pauseControlWorks
+          && animationLoopAdvanced,
         closedLatchContact,
         latchReleaseAngle,
         firstSurfaceContactAfterRelease,
@@ -440,6 +744,13 @@ async function main() {
         engravingContrastsWithLid,
         logoVisible,
         decorationsHaveDistinctColors,
+        appearanceControlCount,
+        appearanceSelectionWorks,
+        studioLightingConfigured,
+        studioSurfaceConfigured,
+        sweepControlsWork,
+        pauseControlWorks,
+        animationLoopAdvanced,
       };
       document.body.dataset.caseSweepResult = JSON.stringify(result);
       setLidAngle(0);

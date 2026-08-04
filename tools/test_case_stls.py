@@ -26,15 +26,21 @@ import trimesh
 ROOT = Path(__file__).resolve().parents[1]
 OPENSCAD = Path(os.environ.get("AGNUQUENA_OPENSCAD", ROOT / "tools" / "openscad"))
 
-OBSOLETE_SPLIT_EXPORTS = (
-    "QuenaCaseBottom.stl",
-    "QuenaCaseLid.stl",
+OBSOLETE_VIEWER_EXPORTS = (
+    "QuenaCaseBottomViewer.stl",
+    "QuenaCaseLidViewer.stl",
+    "QuenaCaseLogoViewer.stl",
+    "QuenaCaseEngravingViewer.stl",
     "QuenaCaseLidLogo.stl",
-    "website/assets/QuenaCaseBottom.stl",
-    "website/assets/QuenaCaseLid.stl",
+    "website/assets/QuenaCaseBottomViewer.stl",
+    "website/assets/QuenaCaseLidViewer.stl",
+    "website/assets/QuenaCaseLogoViewer.stl",
+    "website/assets/QuenaCaseEngravingViewer.stl",
     "website/assets/QuenaCaseLidLogo.stl",
-    "site-hosting/public/assets/QuenaCaseBottom.stl",
-    "site-hosting/public/assets/QuenaCaseLid.stl",
+    "site-hosting/public/assets/QuenaCaseBottomViewer.stl",
+    "site-hosting/public/assets/QuenaCaseLidViewer.stl",
+    "site-hosting/public/assets/QuenaCaseLogoViewer.stl",
+    "site-hosting/public/assets/QuenaCaseEngravingViewer.stl",
     "site-hosting/public/assets/QuenaCaseLidLogo.stl",
 )
 
@@ -49,12 +55,12 @@ EXPECTED = {
         "min_triangles": 18000,
         "components": 2,
     },
-    "QuenaCaseBottomViewer.stl": {
+    "QuenaCaseBottom.stl": {
         "size": (251.45, 61.3, 19.4),
         "min_triangles": 2200,
         "components": 1,
     },
-    "QuenaCaseLidViewer.stl": {
+    "QuenaCaseLid.stl": {
         "size": (251.45, 62.448, 19.3),
         "min_triangles": 1200,
         "components": 1,
@@ -63,21 +69,6 @@ EXPECTED = {
         "size": (242.35, 105.341, 0.2),
         "min_triangles": 35000,
         "components": 31,
-    },
-    "QuenaCaseHingeCoupon.stl": {
-        "size": (46.0, 28.0, 19.4),
-        "min_triangles": 900,
-        "components": 2,
-    },
-    "QuenaCaseFullHingeCoupon.stl": {
-        "size": (243.5, 28.0, 19.4),
-        "min_triangles": 4500,
-        "components": 2,
-    },
-    "QuenaCaseLatchCoupon.stl": {
-        "size": (182.0, 34.0, 18.9),
-        "min_triangles": 1600,
-        "components": 7,
     },
     "QuenaCaseAssembly.stl": {
         "size": (251.45, 62.448, 28.8),
@@ -91,8 +82,8 @@ CONTACT_TOLERANCE_MM = 0.05
 CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
 # Canonical 32 mm mouthpiece pocket, 8 mm short-row gaps, 1.5 mm bed-edge
 # rounding, retention border, swapped artwork faces, two flourishes, and
-# enclosed round hinge ends.
-EXPECTED_CASE_VOLUME_MM3 = 262_388.33
+# enclosed round hinge ends, and complete spherical latch nubs.
+EXPECTED_CASE_VOLUME_MM3 = 262_402.37
 CASE_VOLUME_TOLERANCE_MM3 = 10.0
 # OpenSCAD's ASCII STL coordinate quantization accumulates a sub-voxel volume
 # difference after the rigid 180-degree print-pose transform of rounded shells.
@@ -358,6 +349,62 @@ def run_latch_design_checks() -> None:
           f"{root_blend:.2f} mm bonded root, {free_l:.2f} mm free span")
 
 
+def run_latch_nub_completeness_check() -> None:
+    """Prove the final lid contains every point of both intended nub spheres."""
+    with tempfile.TemporaryDirectory(prefix="quena_latch_nubs_") as temp_dir:
+        temp_path = Path(temp_dir)
+        scad_path = temp_path / "missing_latch_nubs.scad"
+        missing_stl = temp_path / "missing_latch_nubs.stl"
+        scad_path.write_text(
+            f"""
+include <{ROOT / "QuenaCase.scad"}>;
+difference() {{
+  lid_simple_latch_nubs();
+  lid_assembly();
+}}
+""".lstrip(),
+            encoding="utf-8",
+        )
+        result = subprocess.run(
+            [
+                str(OPENSCAD),
+                "--backend=Manifold",
+                "-D",
+                'part="none"',
+                "-o",
+                str(missing_stl),
+                str(scad_path),
+            ],
+            check=False,
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        if "Current top level object is empty" in result.stdout:
+            print("QuenaCase latch nubs: ok, both spheres are complete")
+            return
+        if result.returncode:
+            raise AssertionError(
+                "QuenaCase latch nub completeness render failed\n" + result.stdout
+            )
+        if not missing_stl.exists() or missing_stl.stat().st_size <= 84:
+            print("QuenaCase latch nubs: ok, both spheres are complete")
+            return
+
+        missing = trimesh.load(missing_stl, force="mesh")
+        missing_volume = abs(float(missing.volume))
+        # Manifold can emit zero-volume tetrahedral debris where coincident
+        # nub and lid faces cancel exactly. It is not missing solid material.
+        if missing_volume <= 1e-6:
+            print("QuenaCase latch nubs: ok, both spheres are complete")
+            return
+        raise AssertionError(
+            "QuenaCase latch nubs are clipped: "
+            f"{missing_volume:.3f} mm^3 missing, "
+            f"bounds={missing.bounds.tolist()}"
+        )
+
+
 def run_channel_layout_checks() -> None:
     horizontal_land = scad_scalar("short_row_min_gap")
     vertical_land = scad_scalar("row_gap")
@@ -481,7 +528,7 @@ def run_exterior_design_checks() -> None:
     if "round_bottom = true" not in source or "round_top = true" not in source:
         raise AssertionError("both bed-facing case backs are not edge-rounded")
 
-    lid = trimesh.load(ROOT / "QuenaCaseLidViewer.stl", force="mesh")
+    lid = trimesh.load(ROOT / "QuenaCaseLid.stl", force="mesh")
     lid_outer_h = scad_scalar("lid_outer_h")
     ornament_floor_vertices = int(
         (abs(lid.vertices[:, 2] - (lid_outer_h - depth)) <= 0.01).sum()
@@ -490,8 +537,8 @@ def run_exterior_design_checks() -> None:
         raise AssertionError("rendered lid lacks the detailed ornament floor")
 
     for name, use_max_z in (
-        ("QuenaCaseBottomViewer.stl", False),
-        ("QuenaCaseLidViewer.stl", True),
+        ("QuenaCaseBottom.stl", False),
+        ("QuenaCaseLid.stl", True),
     ):
         mesh = trimesh.load(ROOT / name, force="mesh", process=False)
         bed_z = float(mesh.bounds[int(use_max_z)][2])
@@ -691,10 +738,10 @@ intersection() {{
 
 
 def run_mesh_checks() -> None:
-    stale_exports = [name for name in OBSOLETE_SPLIT_EXPORTS if (ROOT / name).exists()]
+    stale_exports = [name for name in OBSOLETE_VIEWER_EXPORTS if (ROOT / name).exists()]
     if stale_exports:
         raise AssertionError(
-            "obsolete C-bearing half exports remain: " + ", ".join(stale_exports)
+            "obsolete viewer-only exports remain: " + ", ".join(stale_exports)
         )
 
     for name, expected in EXPECTED.items():
@@ -734,12 +781,12 @@ def run_mesh_checks() -> None:
                 raise AssertionError("print-in-place export exceeds the 256 mm target bed")
 
             # The production STL must contain both complete case halves, not a
-            # hinge-only assembly or cropped coupon. Compare physical volume;
+            # hinge-only assembly or cropped subset. Compare physical volume;
             # Manifold may retessellate a rigidly transformed CSG result without
             # changing the represented solid.
             source_halves = [
-                trimesh.load(ROOT / "QuenaCaseBottomViewer.stl", force="mesh"),
-                trimesh.load(ROOT / "QuenaCaseLidViewer.stl", force="mesh"),
+                trimesh.load(ROOT / "QuenaCaseBottom.stl", force="mesh"),
+                trimesh.load(ROOT / "QuenaCaseLid.stl", force="mesh"),
             ]
             production_halves = sorted(moving_halves, key=lambda half: len(half.faces))
             source_halves.sort(key=lambda half: len(half.faces))
@@ -756,7 +803,7 @@ def run_mesh_checks() -> None:
                     "print-in-place STL does not contain both complete case halves"
                 )
 
-        if name == "QuenaCaseBottomViewer.stl":
+        if name == "QuenaCaseBottom.stl":
             # At the center bearing, a complete print-in-place knuckle has an
             # outer closed section and a second closed loop around its bore. A
             # radial C-slot merges those loops and must never return.
@@ -778,7 +825,7 @@ def run_mesh_checks() -> None:
 
     case_volume = sum(
         abs(float(trimesh.load(ROOT / name, force="mesh").volume))
-        for name in ("QuenaCaseBottomViewer.stl", "QuenaCaseLidViewer.stl")
+        for name in ("QuenaCaseBottom.stl", "QuenaCaseLid.stl")
     )
     volume_delta = case_volume - EXPECTED_CASE_VOLUME_MM3
     if abs(volume_delta) > CASE_VOLUME_TOLERANCE_MM3:
@@ -1151,6 +1198,7 @@ def main() -> None:
     run_hinge_end_roundness_check()
     run_stator_roundness_check()
     run_latch_design_checks()
+    run_latch_nub_completeness_check()
     run_channel_layout_checks()
     run_exterior_design_checks()
     run_mesh_checks()

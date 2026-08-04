@@ -21,7 +21,8 @@ def run(*args: str) -> None:
 
 def render_and_validate_stls() -> None:
     """Render STLs before validating the newly generated meshes."""
-    run("tools/render_case_assets.py", "--stls")
+    run("tools/render_case_assets.py", "--all-meshes")
+    run("tools/build_case_3mf.py")
     run("tools/test_case_stls.py")
     run("tools/test_case_browser.py")
 
@@ -29,7 +30,7 @@ def render_and_validate_stls() -> None:
 def main() -> None:
     jobs: tuple[Callable[[], None], ...] = (
         render_and_validate_stls,
-        lambda: run("tools/render_case_assets.py", "--views"),
+        lambda: run("tools/render_case_assets.py", "--all-views"),
         lambda: run("tools/model_latch_snap.py", "--material", "all"),
         lambda: run("tools/simulate_case_inversion.py"),
     )
