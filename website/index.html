@@ -3,8 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eef4f0">
   <title>AgnuQuena Case Hinge Simulation</title>
   <link rel="icon" href="data:,">
+  <script src="./theme.js"></script>
   <link rel="stylesheet" href="./styles.css">
   <script type="importmap">
     {
@@ -16,7 +18,10 @@
   </script>
 </head>
 <body>
-  <a href="./acoustics.html" style="position:fixed;z-index:10;top:14px;left:14px;padding:9px 12px;border:1px solid rgba(24,32,38,.18);border-radius:6px;background:rgba(255,255,255,.9);color:#182026;font:600 12px Inter,sans-serif;text-decoration:none;box-shadow:0 6px 20px rgba(24,32,38,.1)">Open Acoustic Lab</a>
+  <div class="page-actions">
+    <a href="./acoustics.html">Open Acoustic Lab</a>
+    <button type="button" data-theme-toggle aria-label="Toggle night mode">Night mode</button>
+  </div>
   <main class="app">
     <section class="viewport">
       <canvas id="scene"></canvas>
@@ -91,6 +96,6 @@
     </aside>
   </main>
 
-  <script type="module" src="./sim.js?v=25"></script>
+  <script type="module" src="./sim.js?v=26"></script>
 </body>
 </html>

@@ -20,6 +20,7 @@ ROOT = Path(__file__).resolve().parent
 WEB_ROOT = ROOT / "website"
 SERVER_SCRIPT = ROOT / "docker" / "static-server.mjs"
 SCREENSHOT = ROOT / "build" / "selenium" / "acoustic-lab.png"
+CASE_SCREENSHOT = ROOT / "build" / "selenium" / "case-hinge.png"
 
 PROJECT_LABEL = "org.agnuquena.browser-lab"
 PROJECT_LABEL_VALUE = "managed"
@@ -314,14 +315,14 @@ return {
     raise LauncherError(f"The acoustic lab did not become ready: {state}")
 
 
-def capture_screenshot(webdriver: str, session_id: str) -> Path:
+def capture_screenshot(webdriver: str, session_id: str, destination: Path = SCREENSHOT) -> Path:
     response = http_json("GET", f"{webdriver}/session/{session_id}/screenshot")
     encoded = webdriver_value(response)
     if not isinstance(encoded, str):
         raise LauncherError("Selenium did not return a PNG screenshot.")
-    SCREENSHOT.parent.mkdir(parents=True, exist_ok=True)
-    SCREENSHOT.write_bytes(base64.b64decode(encoded))
-    return SCREENSHOT
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(base64.b64decode(encoded))
+    return destination
 
 
 def run_smoke_test(selenium_port: int, require_webgpu: bool) -> dict[str, Any]:
@@ -340,6 +341,38 @@ def run_smoke_test(selenium_port: int, require_webgpu: bool) -> dict[str, Any]:
         state = wait_for_lab(webdriver, session_id)
         if state.get("title") != "AgnuQuena Acoustic Lab":
             raise LauncherError(f"Unexpected page title: {state.get('title')!r}")
+        theme_contract = execute_script(
+            webdriver,
+            session_id,
+            """
+const button = document.querySelector("[data-theme-toggle]");
+const before = document.documentElement.dataset.theme;
+const beforeBackground = getComputedStyle(document.body).background;
+button?.click();
+const after = document.documentElement.dataset.theme;
+const afterBackground = getComputedStyle(document.body).background;
+const stored = localStorage.getItem("agnuquena-theme");
+button?.click();
+return {
+  hasToggle: Boolean(button),
+  before,
+  after,
+  stored,
+  restored: document.documentElement.dataset.theme,
+  colorsChanged: beforeBackground !== afterBackground,
+};
+""",
+        )
+        if (
+            not isinstance(theme_contract, dict)
+            or not theme_contract.get("hasToggle")
+            or theme_contract.get("before") == theme_contract.get("after")
+            or theme_contract.get("stored") != theme_contract.get("after")
+            or theme_contract.get("restored") != theme_contract.get("before")
+            or not theme_contract.get("colorsChanged")
+        ):
+            raise LauncherError(f"The Acoustic Lab theme toggle is not live: {theme_contract}")
+        state["theme"] = theme_contract
         if (
             not state.get("modelCanvas")
             or state.get("modelCanvases") != 1
@@ -636,7 +669,76 @@ return true;
 """,
         )
         time.sleep(1)
+        execute_script(
+            webdriver,
+            session_id,
+            """
+if (document.documentElement.dataset.theme !== "dark") {
+  document.querySelector("[data-theme-toggle]").click();
+}
+return document.documentElement.dataset.theme;
+""",
+        )
         state["screenshot"] = str(capture_screenshot(webdriver, session_id))
+        webdriver_value(
+            http_json(
+                "POST",
+                f"{webdriver}/session/{session_id}/url",
+                {"url": f"http://{WEB_ALIAS}:8080/index.html"},
+                timeout=30,
+            )
+        )
+        deadline = time.monotonic() + 30
+        case_theme: dict[str, Any] = {}
+        while time.monotonic() < deadline:
+            value = execute_script(
+                webdriver,
+                session_id,
+                """
+const button = document.querySelector("[data-theme-toggle]");
+const canvas = document.querySelector("#scene");
+return {
+  ready: document.readyState === "complete"
+    && canvas?.width > 0
+    && canvas?.height > 0
+    && Boolean(window.__agnuquenaCase)
+    && document.querySelectorAll(".mesh-control").length > 0,
+  title: document.title,
+  theme: document.documentElement.dataset.theme,
+  stored: localStorage.getItem("agnuquena-theme"),
+  buttonText: button?.textContent.trim(),
+  meshControls: document.querySelectorAll(".mesh-control").length,
+  viewportBackground: getComputedStyle(document.querySelector(".viewport")).backgroundColor,
+};
+""",
+            )
+            if isinstance(value, dict):
+                case_theme = value
+                if value.get("ready"):
+                    break
+            time.sleep(0.5)
+        if (
+            not case_theme.get("ready")
+            or case_theme.get("title") != "AgnuQuena Case Hinge Simulation"
+            or case_theme.get("theme") != "dark"
+            or case_theme.get("stored") != "dark"
+            or case_theme.get("buttonText") != "Day mode"
+        ):
+            raise LauncherError(f"Night mode did not carry to the Case Hinge Simulation: {case_theme}")
+        case_self_test = execute_script(
+            webdriver,
+            session_id,
+            "return window.__agnuquenaCase.runClearanceSelfTest();",
+        )
+        if (
+            not isinstance(case_self_test, dict)
+            or not case_self_test.get("pass")
+            or not case_self_test.get("studioSurfaceConfigured")
+        ):
+            raise LauncherError(f"The floorless hinge scene failed its self-test: {case_self_test}")
+        state["caseTheme"] = case_theme
+        state["caseSelfTest"] = case_self_test
+        state["caseScreenshot"] = str(capture_screenshot(webdriver, session_id, CASE_SCREENSHOT))
         return state
     finally:
         try:

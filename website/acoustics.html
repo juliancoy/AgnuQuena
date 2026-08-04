@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#071715">
   <title>AgnuQuena Acoustic Lab</title>
   <link rel="icon" href="data:,">
+  <script src="./theme.js"></script>
   <link rel="stylesheet" href="./acoustics.css">
   <script type="importmap">
     {
@@ -28,9 +29,12 @@
       <a class="active" href="./acoustics.html">Air simulation</a>
       <a href="./index.html">Case mechanics</a>
     </nav>
-    <div id="gpuBadge" class="status checking">
-      <span></span>
-      Detecting WebGPU
+    <div class="header-actions">
+      <button class="theme-toggle" type="button" data-theme-toggle aria-label="Toggle night mode">Night mode</button>
+      <div id="gpuBadge" class="status checking">
+        <span></span>
+        Detecting WebGPU
+      </div>
     </div>
   </header>
 

@@ -12,9 +12,43 @@
   --accent: #ffb55f;
   --mint: #69e0b4;
   --blue: #4386ff;
+  --body-glow: rgba(52, 139, 111, 0.16);
+  --field-bg: #0b1d1a;
+  --card-bg: linear-gradient(145deg, rgba(15, 42, 37, 0.94), rgba(8, 27, 24, 0.96));
+  --control-bg: rgba(216, 239, 230, 0.04);
+  --control-hover: rgba(216, 239, 230, 0.08);
+  --canvas-bg: radial-gradient(circle at 50% 45%, #12332d, #020b0a 72%);
+  --canvas-ink: rgba(221, 241, 233, 0.62);
+  --canvas-dim: rgba(221, 241, 233, 0.45);
+  --proof-bg: rgba(2, 11, 10, 0.82);
+  --scope-bg: #071512;
   font-family: "Manrope", sans-serif;
   background: var(--ground);
   color: var(--ink);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --ink: #183029;
+  --muted: #536c63;
+  --dim: #738a82;
+  --line: rgba(34, 78, 65, 0.16);
+  --panel: #f8fbf9;
+  --panel-2: #f0f6f3;
+  --ground: #eef4f0;
+  --accent: #b85e0d;
+  --mint: #167a5c;
+  --blue: #245fd2;
+  --body-glow: rgba(85, 176, 143, 0.18);
+  --field-bg: #ffffff;
+  --card-bg: linear-gradient(145deg, rgba(255, 255, 255, 0.97), rgba(239, 247, 243, 0.98));
+  --control-bg: rgba(23, 83, 64, 0.035);
+  --control-hover: rgba(23, 83, 64, 0.08);
+  --canvas-bg: radial-gradient(circle at 50% 45%, #dcebe5, #aebfb8 72%);
+  --canvas-ink: rgba(18, 49, 40, 0.72);
+  --canvas-dim: rgba(18, 49, 40, 0.58);
+  --proof-bg: rgba(244, 250, 247, 0.88);
+  --scope-bg: #f7fbf9;
 }
 
 * {
@@ -29,7 +63,7 @@ body {
   margin: 0;
   min-width: 320px;
   background:
-    radial-gradient(circle at 75% -10%, rgba(52, 139, 111, 0.16), transparent 36rem),
+    radial-gradient(circle at 75% -10%, var(--body-glow), transparent 36rem),
     var(--ground);
 }
 
@@ -88,7 +122,7 @@ select {
   padding: 0 8px;
   border: 1px solid rgba(173, 210, 196, 0.2);
   border-radius: 2px;
-  background: #0b1d1a;
+  background: var(--field-bg);
   color: var(--ink);
   font-family: "DM Mono", monospace;
   font-size: 10px;
@@ -219,6 +253,23 @@ nav a.active::after {
   text-transform: uppercase;
 }
 
+.header-actions {
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.theme-toggle {
+  min-height: 32px;
+  padding: 0 11px;
+  color: var(--muted);
+  font-family: "DM Mono", monospace;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .status span {
   width: 7px;
   height: 7px;
@@ -307,7 +358,7 @@ h2 {
 .geometry-card {
   overflow: hidden;
   border: 1px solid var(--line);
-  background: linear-gradient(145deg, rgba(15, 42, 37, 0.94), rgba(8, 27, 24, 0.96));
+  background: var(--card-bg);
 }
 
 .simulation-card,
@@ -358,7 +409,7 @@ h2 {
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  color: rgba(221, 241, 233, 0.62);
+  color: var(--canvas-ink);
   font-family: "DM Mono", monospace;
   font-size: 9px;
   text-transform: uppercase;
@@ -383,7 +434,7 @@ h2 {
 .axis-label {
   position: absolute;
   bottom: 12px;
-  color: rgba(221, 241, 233, 0.45);
+  color: var(--canvas-dim);
   font-family: "DM Mono", monospace;
   font-size: 8px;
   letter-spacing: 0.1em;
@@ -406,13 +457,13 @@ button {
   padding: 0 16px;
   border: 1px solid rgba(173, 210, 196, 0.22);
   border-radius: 2px;
-  background: rgba(216, 239, 230, 0.04);
+  background: var(--control-bg);
   cursor: pointer;
 }
 
 button:hover {
   border-color: rgba(173, 210, 196, 0.48);
-  background: rgba(216, 239, 230, 0.08);
+  background: var(--control-hover);
 }
 
 button.primary {
@@ -496,7 +547,7 @@ select {
   padding: 0 12px;
   border: 1px solid rgba(173, 210, 196, 0.2);
   border-radius: 2px;
-  background: #0b1d1a;
+  background: var(--field-bg);
 }
 
 fieldset {
@@ -611,7 +662,7 @@ dd {
   min-height: clamp(480px, 50vw, 680px);
   overflow: hidden;
   border: 1px solid rgba(122, 187, 162, 0.1);
-  background: radial-gradient(circle at 50% 45%, #12332d, #020b0a 72%);
+  background: var(--canvas-bg);
 }
 
 #productionCanvas {
@@ -628,7 +679,7 @@ dd {
   gap: 4px;
   padding: 10px 12px;
   border: 1px solid rgba(105, 224, 180, 0.2);
-  background: rgba(2, 11, 10, 0.82);
+  background: var(--proof-bg);
   font-family: "DM Mono", monospace;
   font-size: 9px;
   text-align: right;
@@ -976,7 +1027,7 @@ main {
   height: 104px;
   border: 1px solid rgba(173, 210, 196, 0.18);
   border-radius: 3px;
-  background: #071512;
+  background: var(--scope-bg);
 }
 
 .edge-scope-zero {

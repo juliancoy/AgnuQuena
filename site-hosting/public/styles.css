@@ -1,8 +1,32 @@
 :root {
   color-scheme: light;
+  --ink: #182026;
+  --muted: #5b656d;
+  --panel: rgba(255, 255, 255, 0.92);
+  --ground: #eef0e8;
+  --viewport: #e7e8dc;
+  --button: #f8faf9;
+  --button-hover: #edf3f2;
+  --border: rgba(24, 32, 38, 0.14);
+  --control-border: #9ca7ad;
+  --shadow: rgba(24, 32, 38, 0.12);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #eef0e8;
-  color: #182026;
+  background: var(--ground);
+  color: var(--ink);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ink: #e7f5ef;
+  --muted: #9bb0a8;
+  --panel: rgba(10, 29, 26, 0.94);
+  --ground: #061411;
+  --viewport: #091b18;
+  --button: #102824;
+  --button-hover: #17332e;
+  --border: rgba(174, 214, 198, 0.18);
+  --control-border: #557068;
+  --shadow: rgba(0, 0, 0, 0.3);
 }
 
 * {
@@ -30,7 +54,7 @@ select {
 .viewport {
   position: relative;
   min-height: 100vh;
-  background: #e7e8dc;
+  background: var(--viewport);
 }
 
 #scene {
@@ -51,9 +75,9 @@ select {
 
 .hud > div,
 .panel {
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(24, 32, 38, 0.14);
-  box-shadow: 0 10px 28px rgba(24, 32, 38, 0.12);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 10px 28px var(--shadow);
 }
 
 .hud > div {
@@ -65,7 +89,7 @@ select {
 .metrics span,
 .slider span {
   display: block;
-  color: #5b656d;
+  color: var(--muted);
   font-size: 12px;
   line-height: 1.2;
 }
@@ -101,15 +125,15 @@ h1 {
 
 button {
   height: 38px;
-  border: 1px solid #9ca7ad;
+  border: 1px solid var(--control-border);
   border-radius: 6px;
-  background: #f8faf9;
-  color: #182026;
+  background: var(--button);
+  color: var(--ink);
   cursor: pointer;
 }
 
 button:hover {
-  background: #edf3f2;
+  background: var(--button-hover);
 }
 
 .slider {
@@ -124,7 +148,7 @@ input[type="range"] {
 
 .appearance {
   margin: 0 0 22px;
-  border-top: 1px solid rgba(24, 32, 38, 0.12);
+  border-top: 1px solid var(--border);
   padding-top: 12px;
 }
 
@@ -150,7 +174,7 @@ input[type="range"] {
 .mesh-control label {
   min-width: 0;
   overflow: hidden;
-  color: #4b565e;
+  color: var(--muted);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -160,9 +184,9 @@ input[type="range"] {
 .mesh-control input[type="color"] {
   height: 30px;
   min-width: 0;
-  border: 1px solid #a9b1b4;
+  border: 1px solid var(--control-border);
   border-radius: 5px;
-  background: #f8faf9;
+  background: var(--button);
 }
 
 .mesh-control input[type="color"] {
@@ -177,7 +201,7 @@ input[type="range"] {
 
 .metrics div {
   padding: 10px 0;
-  border-top: 1px solid rgba(24, 32, 38, 0.12);
+  border-top: 1px solid var(--border);
 }
 
 .metrics strong {
@@ -188,9 +212,42 @@ input[type="range"] {
 
 .note {
   margin: 20px 0 0;
-  color: #4b565e;
+  color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+a {
+  color: #2875c7;
+}
+
+:root[data-theme="dark"] a {
+  color: #7ec8ff;
+}
+
+.page-actions {
+  position: fixed;
+  z-index: 10;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  gap: 8px;
+}
+
+.page-actions a,
+.page-actions button {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 6px 20px var(--shadow);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
 }
 
 @media (max-width: 860px) {

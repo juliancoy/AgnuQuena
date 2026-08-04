@@ -48,7 +48,11 @@ let lastTime = performance.now();
 let animationFrameCount = 0;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xe8eadf);
+function updateSceneTheme(theme = document.documentElement.dataset.theme) {
+  scene.background = new THREE.Color(theme === "dark" ? 0x091b18 : 0xe8eadf);
+}
+updateSceneTheme();
+window.addEventListener("agnuquena-themechange", (event) => updateSceneTheme(event.detail.theme));
 
 const canvas = document.querySelector("#scene");
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -93,30 +97,14 @@ const fill = new THREE.DirectionalLight(0xbfd8ff, 1.1);
 fill.position.set(-0.32, 0.2, 0.24);
 scene.add(fill);
 
-const floorGeometry = new THREE.PlaneGeometry(1.2, 1.2);
-const reflectionFloor = new THREE.Mesh(
-  floorGeometry,
-  new THREE.MeshPhysicalMaterial({
-    color: 0xb8c0bc,
-    metalness: 0.32,
-    roughness: 0.2,
-    clearcoat: 0.65,
-    clearcoatRoughness: 0.16,
-    envMapIntensity: 0.72,
-  }),
-);
-reflectionFloor.name = "Studio reflection floor";
-reflectionFloor.position.z = -0.0025;
-reflectionFloor.receiveShadow = true;
-
 const shadowCatcher = new THREE.Mesh(
-  floorGeometry.clone(),
+  new THREE.PlaneGeometry(1.2, 1.2),
   new THREE.ShadowMaterial({ color: 0x24302e, opacity: 0.2 }),
 );
 shadowCatcher.name = "Studio shadow catcher";
 shadowCatcher.position.z = -0.002;
 shadowCatcher.receiveShadow = true;
-scene.add(reflectionFloor, shadowCatcher);
+scene.add(shadowCatcher);
 
 const materialBottom = new THREE.MeshStandardMaterial({ color: 0x2f6f99, roughness: 0.64 });
 const materialLid = new THREE.MeshStandardMaterial({ color: 0x7fa7b8, roughness: 0.58 });
@@ -696,11 +684,9 @@ async function main() {
         && renderer.toneMapping === THREE.ACESFilmicToneMapping
         && renderer.shadowMap.enabled
         && sun.castShadow;
-      const studioSurfaceConfigured = reflectionFloor.parent === scene
-        && reflectionFloor.material.type === "MeshPhysicalMaterial"
-        && reflectionFloor.material.roughness === 0.2
-        && reflectionFloor.receiveShadow
-        && shadowCatcher.parent === scene
+      const studioSurfaceConfigured = shadowCatcher.parent === scene
+        && shadowCatcher.material.type === "ShadowMaterial"
+        && shadowCatcher.material.transparent
         && shadowCatcher.receiveShadow;
       ui.play.click();
       const sweepControlsWork = runningSweep

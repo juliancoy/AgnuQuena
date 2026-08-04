@@ -44,9 +44,18 @@ def project_settings(*, two_color: bool) -> dict[str, object]:
             "nozzle_diameter": ["0.4"],
             "layer_height": "0.2",
             "initial_layer_print_height": "0.2",
-            "wall_loops": "3",
+            "wall_loops": "2",
+            "top_shell_layers": "2",
+            "bottom_shell_layers": "2",
+            "only_one_wall_top": "1",
+            # The P1S standard profile uses 200 mm/s. Use a conservative
+            # 120 mm/s for broad cosmetic walls while its existing 50% small-
+            # perimeter rule keeps hinge and latch details at 60 mm/s.
+            "outer_wall_speed": ["120", "120"],
             "sparse_infill_density": "10%",
-            "sparse_infill_pattern": "grid",
+            # Bambu Studio's internal enum name for Rectilinear is "zig-zag".
+            "sparse_infill_pattern": "zig-zag",
+            "infill_combination": "1",
             "elefant_foot_compensation": "0.15",
             "enable_support": "0",
             "enforce_support_layers": "0",

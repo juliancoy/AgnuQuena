@@ -29,7 +29,22 @@ end_clearance = axial_clearance / 2;
 // removes a coplanar cut face that can leave the cylindrical bore visibly
 // stopping short of the terminal wall after tessellation/export.
 bore_end_overlap = 0.08;
-wall = 3;
+// Neighboring straight and tapered profile segments must overlap as solids;
+// merely sharing an end face can leave open STL fragments at a raised lip.
+profile_segment_overlap = 0.04;
+// Match the broad shell exactly to the two perimeter paths in the bundled
+// Bambu profile. Adjacent rounded-rectangle extrusions overlap by
+// layer_height * (1 - PI/4), which is Bambu Studio's Flow::spacing() rule. A
+// wall that falls between path counts makes the slicer weave slow gap fill
+// between otherwise continuous perimeters.
+outer_perimeter_width = 0.42;
+inner_perimeter_width = 0.45;
+slicing_layer_height = 0.2;
+perimeter_path_overlap = slicing_layer_height * (1 - PI / 4);
+wall = outer_perimeter_width + inner_perimeter_width - perimeter_path_overlap;
+// Keep the original envelope and retain 3 mm of material only where the rim,
+// hinge and friction-fit latch transfer load into the shell.
+structural_margin = 3;
 floor_thickness = 2.8;
 lid_roof_thickness = 2.8;
 // A broad plan-view radius removes the formerly abrupt luggage-case corners
@@ -65,21 +80,15 @@ row_pitch = max_channel_d + row_gap;
 // the complete print-in-place case within the 256 mm target bed.
 short_row_min_gap = 8;
 channel_edge_land = 2.5;
-// The single interior bed rises just past the tube equator.  It replaces the
-// former deck, separate cradle blocks, and cantilever retention features.
+// The main bed stops just past the tube equator; a continuous raised lip below
+// reaches the light-snap height without making either complete shell taller.
 equator_pass = 0.8;
 flute_seat_depth = 0.5;
 channel_deck_h = max_channel_d / 2 + equator_pass;
-// Five short curved border sections rise farther around the stored parts than
-// the continuous cradle. Their aperture is slightly narrower than each flute
-// diameter, giving positive retention without turning the full channel length
-// into a high-force press fit. Matching, clearance-expanded material is
-// removed from the lid so the closed envelope and total case mass stay nearly
-// unchanged.
 retention_lip_overrun = 3.0;
-retention_clip_w = 14;
-retention_clip_border = 2.0;
-retention_clip_root_overlap = 0.4;
+retention_ridge_wall = wall;
+retention_ridge_root_overlap = 0.4;
+retention_ridge_fusion_overlap = 0.04;
 retention_lid_clearance = 0.25;
 connector_backset = angled_transition_z + 2;
 connector_expand_start = 2;
@@ -110,8 +119,15 @@ case_inner_l = max(
     short_row_min_length
 );
 case_inner_w = row_pitch + max_channel_d + channel_edge_land * 2;
-case_outer_l = case_inner_l + wall * 2;
-case_outer_w = case_inner_w + wall * 2;
+case_outer_l = case_inner_l + structural_margin * 2;
+case_outer_w = case_inner_w + structural_margin * 2;
+shell_inner_l = case_outer_l - wall * 2;
+shell_inner_w = case_outer_w - wall * 2;
+// Meet the raised bed directly against the shell's inner face.  A small
+// overlap avoids a coplanar seam while keeping both printed edges aligned.
+deck_shell_overlap = 0.04;
+channel_deck_l = shell_inner_l + deck_shell_overlap * 2;
+channel_deck_w = shell_inner_w + deck_shell_overlap * 2;
 case_outer_h = floor_thickness + channel_deck_h;
 lid_outer_h = case_outer_h;
 // Seat every flute section 0.5 mm below the nominal half-depth.  The raised
@@ -340,14 +356,6 @@ function profile_d(i) = profile_max_ds[i];
 function body_x0(i) = -profile_l(i) / 2;
 function body_x1(i) = body_x0(i) + slot_lengths[i];
 function connector_x1(i) = body_x1(i) + connector_extra_l(i);
-retention_clip_centers = [
-    [body_x0(0) + slot_lengths[0] * 0.28,
-     body_x0(0) + slot_lengths[0] * 0.72],
-    [body_x0(1) + slot_lengths[1] * 0.28,
-     body_x0(1) + slot_lengths[1] * 0.72],
-    [body_x0(2) + slot_lengths[2] * 0.5]
-];
-
 module rounded_box(size, r) {
     hull() {
         for (x = [-size[0] / 2 + r, size[0] / 2 - r])
@@ -574,7 +582,12 @@ module bottom_logo_recess(depth = logo_inlay_depth) {
 module profiled_segment(x1, x2, d1, d2) {
     translate([(x1 + x2) / 2, 0, 0])
         rotate([0, 90, 0])
-            cylinder(h = x2 - x1, d1 = d1, d2 = d2, center = true);
+            cylinder(
+                h = x2 - x1 + profile_segment_overlap * 2,
+                d1 = d1,
+                d2 = d2,
+                center = true
+            );
 }
 
 module profiled_channel_cut(
@@ -670,31 +683,45 @@ module all_channel_cuts(extra_depth = 0, flat_relief = true) {
                 profiled_channel_cut(i, extra_depth, flat_relief);
 }
 
-module retention_clip_local(i, cavity = false) {
+module retention_ridge_local(i, cavity = false) {
     clearance = cavity ? retention_lid_clearance : 0;
-    local_z0 = case_outer_h - slot_z - retention_clip_root_overlap - clearance;
+    local_z0 = case_outer_h - slot_z
+        - retention_ridge_root_overlap - clearance;
     local_z1 = retention_lip_overrun + clearance;
-    outer_w = profile_d(i) + 2 * (retention_clip_border + clearance);
+    ridge_l = profile_cut_spans[i]
+        + 2 * (retention_ridge_wall + clearance);
+    ridge_w = profile_d(i)
+        + 2 * (retention_ridge_wall + clearance);
 
-    for (xc = retention_clip_centers[i])
-        difference() {
-            translate([xc, 0, (local_z0 + local_z1) / 2])
-                cube([
-                    retention_clip_w + 2 * clearance,
-                    outer_w,
-                    local_z1 - local_z0
-                ], center = true);
-            // Reducing the channel diameter expands the receiving relief
-            // inward as well as outward, providing real FDM assembly clearance.
-            profiled_channel_cut(i, 0, false, -2 * clearance);
-        }
+    module ridge_envelope() {
+        translate([0, 0, (local_z0 + local_z1) / 2])
+            cube([ridge_l, ridge_w, local_z1 - local_z0], center = true);
+    }
+
+    if (cavity) {
+        // The lid already removes the complete cylindrical tube channel.
+        // Removing the expanded outer envelope here gives every transition
+        // positive clearance without reproducing coplanar profile faces.
+        ridge_envelope();
+    } else difference() {
+        ridge_envelope();
+        // Overlap the bottom lip into the existing cradle by 0.02 mm radially
+        // so the two regions remain one printable solid.
+        translate([retention_ridge_fusion_overlap / 2, 0, 0])
+            profiled_channel_cut(
+                i,
+                0,
+                false,
+                -2 * clearance - retention_ridge_fusion_overlap
+            );
+    }
 }
 
 module retention_border(cavity = false) {
     for (i = [0 : 2])
         translate([slot_x(i), slot_y(i), slot_z])
             rotate([0, 0, slot_rot_z(i)])
-                retention_clip_local(i, cavity);
+                retention_ridge_local(i, cavity);
 }
 
 module lid_retention_relief() {
@@ -744,12 +771,13 @@ module stored_parts_proxy() {
 }
 
 module bottom_channel_deck() {
-    // One continuous, visually simple bed forms every half-cylinder cradle.
+    // One continuous bed forms every half-cylinder cradle and meets the shell
+    // directly; do not leave an open moat between their vertical edges.
     difference() {
         translate([0, 0, floor_thickness])
             rounded_box(
-                [case_inner_l + 0.4, case_inner_w + 0.4, channel_deck_h],
-                max(corner_r - wall + 0.2, 1)
+                [channel_deck_l, channel_deck_w, channel_deck_h],
+                max(corner_r - wall + deck_shell_overlap, 1)
             );
         all_channel_cuts(channel_deck_h + 1);
     }
@@ -1253,17 +1281,17 @@ module lid_simple_latch_relief_cuts() {
         for (side = [-1, 1])
             translate([
                 xc + side * (latch_tongue_root_w / 2 + 0.35),
-                case_outer_w / 2 - wall / 2,
+                case_outer_w / 2 - structural_margin / 2,
                 relief_bottom
-            ]) cube([0.7, wall + 1.0, relief_h]);
+            ]) cube([0.7, structural_margin + 1.0, relief_h]);
         // Hidden pocket behind the tongue provides outward release travel.
         translate([
             xc - latch_tongue_root_w / 2 - 0.4,
-            case_outer_w / 2 - wall - 0.2,
+            case_outer_w / 2 - structural_margin - 0.2,
             relief_bottom
         ]) cube([
             latch_tongue_root_w + 0.8,
-            wall - latch_tongue_t + 0.25,
+            structural_margin - latch_tongue_t + 0.25,
             relief_h
         ]);
     }
@@ -1296,13 +1324,13 @@ module latch_socket_knuckles() {
 module bottom_rim() {
     translate([0, 0, case_outer_h])
     difference() {
-        rounded_box([case_outer_l - wall * 1.4, case_outer_w - wall * 1.4, rim_h], max(corner_r - wall, 1));
+        rounded_box([case_outer_l - structural_margin * 1.4, case_outer_w - structural_margin * 1.4, rim_h], max(corner_r - structural_margin, 1));
         translate([0, 0, -0.01])
             rounded_box([
-                case_outer_l - wall * 1.4 - rim_wall * 2,
-                case_outer_w - wall * 1.4 - rim_wall * 2,
+                case_outer_l - structural_margin * 1.4 - rim_wall * 2,
+                case_outer_w - structural_margin * 1.4 - rim_wall * 2,
                 rim_h + 0.02
-            ], max(corner_r - wall - rim_wall, 1));
+            ], max(corner_r - structural_margin - rim_wall, 1));
     }
 }
 
@@ -1310,17 +1338,34 @@ module lid_rim_socket() {
     translate([0, 0, -0.01])
     difference() {
         rounded_box([
-            case_outer_l - wall * 1.4 + rim_clearance * 2,
-            case_outer_w - wall * 1.4 + rim_clearance * 2,
+            case_outer_l - structural_margin * 1.4 + rim_clearance * 2,
+            case_outer_w - structural_margin * 1.4 + rim_clearance * 2,
             rim_h + 0.02
-        ], max(corner_r - wall + rim_clearance, 1));
+        ], max(corner_r - structural_margin + rim_clearance, 1));
         translate([0, 0, -0.01])
             rounded_box([
-                case_outer_l - wall * 1.4 - rim_wall * 2 - rim_clearance * 2,
-                case_outer_w - wall * 1.4 - rim_wall * 2 - rim_clearance * 2,
+                case_outer_l - structural_margin * 1.4 - rim_wall * 2 - rim_clearance * 2,
+                case_outer_w - structural_margin * 1.4 - rim_wall * 2 - rim_clearance * 2,
                 rim_h + 0.04
-            ], max(corner_r - wall - rim_wall - rim_clearance, 1));
+            ], max(corner_r - structural_margin - rim_wall - rim_clearance, 1));
     }
+}
+
+module bottom_latch_receiver_reinforcement() {
+    // The friction-fit tongue intentionally collides with its indent.  Keep
+    // the old 3 mm receiver thickness locally so tightening the broad shell
+    // cannot shave off either the indent or the mating nub.
+    receiver_w = latch_tongue_root_w + 1.0;
+    for (xc = latch_point_xs)
+        translate([
+            xc - receiver_w / 2,
+            case_outer_w / 2 - structural_margin,
+            floor_thickness
+        ]) cube([
+            receiver_w,
+            structural_margin - wall + 0.02,
+            case_outer_h - floor_thickness
+        ]);
 }
 
 module bottom_case_core(
@@ -1338,10 +1383,14 @@ module bottom_case_core(
                     );
                 }
                 translate([0, 0, floor_thickness])
-                    rounded_box([case_inner_l, case_inner_w, case_outer_h + 2], max(corner_r - wall, 1));
+                    rounded_box(
+                        [shell_inner_l, shell_inner_w, case_outer_h + 2],
+                        max(corner_r - wall, 1)
+                    );
                 all_channel_cuts(4);
             }
             bottom_channel_deck();
+            bottom_latch_receiver_reinforcement();
             retention_border();
         }
         // Apply the moving lid envelope after the complete bottom interior is

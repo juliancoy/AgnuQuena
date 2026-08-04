@@ -228,8 +228,26 @@ print contract. It contains one assembly with:
 
 - `QuenaCaseTwoColorPrintInPlace.stl` assigned to yellow ABS / AMS slot 1.
 - `QuenaCaseArtwork.stl` assigned to black ABS / AMS slot 2.
-- `0.20 mm` layers, three walls, `10%` grid infill, and `0.15 mm`
-  elephant-foot compensation.
+- `0.20 mm` layers, two `0.42-0.45 mm` wall lines, two-layer top and bottom
+  skins, `10%` rectilinear infill combined across compatible layers, and
+  `0.15 mm` elephant-foot compensation. This reduces repeated perimeter and
+  sparse-infill travel without changing the one-layer artwork, hinge, latch,
+  or print-in-place clearances.
+- The straight OpenSCAD shell is `0.827 mm`, the deposited envelope of the
+  `0.42 + 0.45 mm` perimeter pair after Bambu's rounded-extrusion overlap at a
+  `0.20 mm` layer height. The original `3 mm` structural margin remains local
+  to the hinge, rim, and both friction-fit latch receivers; the mating nubs and
+  their intentional closed-case collision are unchanged.
+- The bottom channel bed meets the shell's inner face with a `0.04 mm`
+  modeling overlap. Its printed edge is aligned with the perimeter, removing
+  the open moat that previously separated the two regions.
+- A continuous `0.827 mm` lip rises locally to `3.0 mm` past each tube
+  centerline while the main bed and shell retain their original height. Its
+  opening provides the light snap without isolated clips; the lid is lowered
+  locally with `0.25 mm` matching relief around the complete profile.
+- Broad outer walls run at a conservative `120 mm/s`, below the P1S standard
+  profile's `200 mm/s`; the inherited `50%` small-perimeter rule keeps hinge,
+  latch, and ornament details at `60 mm/s`.
 - Supports, brims, and skirts disabled; a compact `20 mm` prime tower with a
   `1 mm` brim is limited to the active colour layer and ends at `Z=0.2`.
 

@@ -83,7 +83,7 @@ CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
 # Canonical 32 mm mouthpiece pocket, 8 mm short-row gaps, 1.5 mm bed-edge
 # rounding, retention border, swapped artwork faces, two flourishes, and
 # enclosed round hinge ends, and complete spherical latch nubs.
-EXPECTED_CASE_VOLUME_MM3 = 262_402.37
+EXPECTED_CASE_VOLUME_MM3 = 262_208.06
 CASE_VOLUME_TOLERANCE_MM3 = 10.0
 # OpenSCAD's ASCII STL coordinate quantization accumulates a sub-voxel volume
 # difference after the rigid 180-degree print-pose transform of rounded shells.
@@ -410,6 +410,11 @@ def run_channel_layout_checks() -> None:
     vertical_land = scad_scalar("row_gap")
     edge_land = scad_scalar("channel_edge_land")
     deck_h = scad_scalar("channel_deck_h")
+    deck_l = scad_scalar("channel_deck_l")
+    deck_w = scad_scalar("channel_deck_w")
+    shell_inner_l = scad_scalar("shell_inner_l")
+    shell_inner_w = scad_scalar("shell_inner_w")
+    deck_shell_overlap = scad_scalar("deck_shell_overlap")
     tube_d = scad_scalar("id") + 2 * scad_scalar("shell_width")
     channel_d = tube_d + 2 * scad_scalar("part_clearance")
     connector_d = tube_d + 2 * (
@@ -419,9 +424,11 @@ def run_channel_layout_checks() -> None:
     equator_pass = scad_scalar("equator_pass")
     axial_clearance = scad_scalar("axial_clearance")
     radial_clearance = scad_scalar("part_clearance")
+    profile_segment_overlap = scad_scalar("profile_segment_overlap")
     retention_overrun = scad_scalar("retention_lip_overrun")
-    retention_clip_w = scad_scalar("retention_clip_w")
-    retention_root_overlap = scad_scalar("retention_clip_root_overlap")
+    retention_ridge_wall = scad_scalar("retention_ridge_wall")
+    retention_root_overlap = scad_scalar("retention_ridge_root_overlap")
+    retention_fusion_overlap = scad_scalar("retention_ridge_fusion_overlap")
     retention_lid_clearance = scad_scalar("retention_lid_clearance")
     slot_xs = [scad_scalar(f"slot_xs[{i}]") for i in range(3)]
     profile_lengths = [scad_scalar(f"profile_lengths[{i}]") for i in range(3)]
@@ -437,8 +444,10 @@ def run_channel_layout_checks() -> None:
         raise AssertionError(f"axial clearance {axial_clearance:.2f} mm is too loose")
     if radial_clearance > 0.4:
         raise AssertionError(f"radial clearance {radial_clearance:.2f} mm is too loose")
+    if not 0.02 <= profile_segment_overlap <= 0.08:
+        raise AssertionError("profile transitions lack a printable solid overlap")
 
-    channel_r = channel_d / 2
+    channel_r = (channel_d - retention_fusion_overlap) / 2
     part_r = tube_d / 2
     opening_half_w = math.sqrt(channel_r**2 - retention_overrun**2)
     snap_interference = 2 * (part_r - opening_half_w)
@@ -447,14 +456,18 @@ def run_channel_layout_checks() -> None:
             f"retention border diametral interference {snap_interference:.2f} mm "
             "is outside the light-snap range"
         )
-    if retention_clip_w > 16:
-        raise AssertionError("retention clips are too long for a low-force snap fit")
+    if retention_ridge_wall < scad_scalar("wall") - 0.01:
+        raise AssertionError("continuous retention ridge is thinner than the shell")
+    if not 0.02 <= retention_fusion_overlap <= 0.08:
+        raise AssertionError("continuous retention ridge fusion overlap is unsuitable")
     if retention_root_overlap < 0.3:
-        raise AssertionError("retention clips lack a fused root overlap")
+        raise AssertionError("continuous retention ridge lacks a fused root overlap")
     if retention_lid_clearance < 0.2:
         raise AssertionError("lid retention relief lacks printable clearance")
+    if "retention_clip" in source:
+        raise AssertionError("isolated retention clips remain in the continuous cradle")
     if "lid_retention_relief();" not in source:
-        raise AssertionError("lid does not remove the transferred retention border")
+        raise AssertionError("lid does not remove the continuous ridge envelope")
 
     if horizontal_land < 8.0:
         raise AssertionError(
@@ -473,15 +486,23 @@ def run_channel_layout_checks() -> None:
         raise AssertionError("P2 and P1 left profile edges are not aligned")
     if not math.isclose(mouth_right, p1_right, abs_tol=0.01):
         raise AssertionError("mouthpiece and P1 right profile edges are not aligned")
+    if not 0.02 <= deck_shell_overlap <= 0.10:
+        raise AssertionError("channel bed needs a small printable shell overlap")
+    if not math.isclose(
+        deck_l, shell_inner_l + deck_shell_overlap * 2, abs_tol=0.001
+    ) or not math.isclose(
+        deck_w, shell_inner_w + deck_shell_overlap * 2, abs_tol=0.001
+    ):
+        raise AssertionError("channel bed leaves a moat at the bottom shell edge")
     print(
         "QuenaCase channel layout: ok, "
         f"{horizontal_land:.1f} mm minimum horizontal distribution gap, "
         f"{vertical_land:.1f} mm vertical land, "
         f"{edge_land:.1f} mm perimeter land, "
-        f"{deck_h:.2f} mm single raised bed, "
+        f"{deck_h:.2f} mm single raised bed aligned to the shell, "
         f"{equator_pass:.2f} mm past equator, "
-        f"{snap_interference:.2f} mm diametral snap interference across "
-        f"{retention_clip_w:.1f} mm clips, aligned P2/P1/mouthpiece outer edges, "
+        f"{snap_interference:.2f} mm diametral snap interference along the "
+        "continuous raised lip, aligned P2/P1/mouthpiece outer edges, "
         f"{axial_clearance:.2f} mm axial and {radial_clearance:.2f} mm radial clearance"
     )
 
@@ -494,6 +515,13 @@ def run_exterior_design_checks() -> None:
     floor = scad_scalar("floor_thickness")
     edge_r = scad_scalar("bed_edge_r")
     case_l = scad_scalar("case_outer_l")
+    wall = scad_scalar("wall")
+    outer_perimeter_width = scad_scalar("outer_perimeter_width")
+    inner_perimeter_width = scad_scalar("inner_perimeter_width")
+    slicing_layer_height = scad_scalar("slicing_layer_height")
+    perimeter_path_overlap = scad_scalar("perimeter_path_overlap")
+    structural_margin = scad_scalar("structural_margin")
+    latch_tongue_t = scad_scalar("latch_tongue_t")
     source = (ROOT / "QuenaCase.scad").read_text(encoding="utf-8")
 
     if corner_r < 12:
@@ -508,6 +536,21 @@ def run_exterior_design_checks() -> None:
         raise AssertionError("bottom ornament leaves insufficient floor thickness")
     if edge_r < 1.0 or edge_r > floor - 1.0 + 0.01:
         raise AssertionError("bed-facing edge radius is not printable within the shell")
+    if not math.isclose(
+        wall,
+        outer_perimeter_width + inner_perimeter_width - perimeter_path_overlap,
+        abs_tol=0.001,
+    ):
+        raise AssertionError("broad shell does not close with exactly two perimeter lines")
+    expected_overlap = slicing_layer_height * (1 - math.pi / 4)
+    if not math.isclose(perimeter_path_overlap, expected_overlap, abs_tol=0.001):
+        raise AssertionError("OpenSCAD shell does not use Bambu's extrusion spacing rule")
+    if not math.isclose(wall, 0.827, abs_tol=0.001):
+        raise AssertionError("broad shell no longer matches the bundled Bambu line widths")
+    if structural_margin < latch_tongue_t + 1.0:
+        raise AssertionError("local latch receiver cannot contain its friction-fit pocket")
+    if "bottom_latch_receiver_reinforcement();" not in source:
+        raise AssertionError("thin shell removed the friction-fit latch reinforcement")
     if "for (x = mandala_centers)" not in source:
         raise AssertionError("mandala ornament is not procedurally repeated")
     if "flourish_2d();" not in source:
@@ -527,6 +570,13 @@ def run_exterior_design_checks() -> None:
         raise AssertionError("case logo is reflected, reversing the title and continent")
     if "round_bottom = true" not in source or "round_top = true" not in source:
         raise AssertionError("both bed-facing case backs are not edge-rounded")
+    print(
+        "QuenaCase shell: ok, "
+        f"{wall:.2f} mm broad walls close with "
+        f"{outer_perimeter_width:.2f} + {inner_perimeter_width:.2f} mm "
+        f"overlapping paths, "
+        f"{structural_margin:.2f} mm retained at friction-fit receivers"
+    )
 
     lid = trimesh.load(ROOT / "QuenaCaseLid.stl", force="mesh")
     lid_outer_h = scad_scalar("lid_outer_h")
@@ -883,7 +933,17 @@ def run_color_project_checks() -> None:
             encoding="utf-8",
         )
         subprocess.run(
-            [str(OPENSCAD), "-D", 'part="none"', "-o", str(solid_stl), str(solid_scad)],
+            [
+                str(OPENSCAD),
+                "--backend=Manifold",
+                "--export-format",
+                "asciistl",
+                "-D",
+                'part="none"',
+                "-o",
+                str(solid_stl),
+                str(solid_scad),
+            ],
             check=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
@@ -944,6 +1004,20 @@ def run_color_project_checks() -> None:
         raise AssertionError("case 3MF materials must both be ABS")
     if settings.get("filament_colour") != ["#FFF144", "#000000"]:
         raise AssertionError("case 3MF materials must be yellow and black")
+    expected_fast_settings = {
+        "wall_loops": "2",
+        "top_shell_layers": "2",
+        "bottom_shell_layers": "2",
+        "sparse_infill_density": "10%",
+        "sparse_infill_pattern": "zig-zag",
+        "infill_combination": "1",
+        "outer_wall_speed": ["120", "120"],
+    }
+    for key, expected in expected_fast_settings.items():
+        if settings.get(key) != expected:
+            raise AssertionError(
+                f"case 3MF must set {key}={expected}, got {settings.get(key)}"
+            )
     if settings.get("prime_tower_width") != "20":
         raise AssertionError("case 3MF prime tower must use the compact 20 mm width")
     if settings.get("wipe_tower_no_sparse_layers") != "1":
@@ -960,8 +1034,15 @@ def run_color_project_checks() -> None:
             "QuenaCaseArtwork.stl",
         )
     )
-    if project_face_counts != source_face_counts:
-        raise AssertionError("case 3MF meshes differ from the canonical STL inputs")
+    face_cleanup = [
+        source - project
+        for source, project in zip(source_face_counts, project_face_counts)
+    ]
+    if any(removed < 0 or removed > 16 for removed in face_cleanup):
+        raise AssertionError(
+            "case 3MF meshes differ beyond Bambu's degenerate-facet cleanup: "
+            f"removed={face_cleanup}"
+        )
     if 'transform="1 0 0 0 1 0 0 0 1 128 156.685 0"' not in model:
         raise AssertionError("case 3MF is not centered in the validated P1S plate pose")
 
@@ -982,8 +1063,13 @@ def run_color_project_checks() -> None:
     deep_body_faces = len(
         trimesh.load(ROOT / "QuenaCasePrintInPlace.stl", force="mesh").faces
     )
-    if single_face_counts != [deep_body_faces]:
-        raise AssertionError("single-filament 3MF mesh differs from its canonical STL")
+    if (
+        len(single_face_counts) != 1
+        or not 0 <= deep_body_faces - single_face_counts[0] <= 16
+    ):
+        raise AssertionError(
+            "single-filament 3MF differs beyond Bambu's degenerate-facet cleanup"
+        )
     print(
         "QuenaCase colour project: ok, upright upper-panel logo and lower-panel "
         "mandala/flourish inlays traced for a 0.4 mm nozzle, one 0.2 mm colour "

@@ -65,10 +65,16 @@ def main() -> None:
             "Bambu slice does not use both AMS filaments as expected: "
             f"ids={filament_ids}, changes={plate.get('filament_change_times')}"
         )
-    if result.get("wall_loops") != 3 or not math.isclose(
+    if result.get("wall_loops") != 2 or not math.isclose(
         float(result.get("sparse_infill_density", -1)), 10.0, abs_tol=0.01
     ):
-        raise AssertionError("Bambu slice did not retain the case strength profile")
+        raise AssertionError("Bambu slice did not retain the fast case profile")
+    gap_fill_seconds = float(plate["feature_type_times"].get("Gap infill", 0.0))
+    if gap_fill_seconds > 150.0:
+        raise AssertionError(
+            "Bambu generated excessive detail gap fill around the case features: "
+            f"{gap_fill_seconds:.1f} s"
+        )
     bbox = plate["objects"][0]["bbox"]
     expected_bbox = {
         "x": 2.275,
@@ -92,6 +98,13 @@ def main() -> None:
     require_header(gcode, "prime_tower_width", "20")
     require_header(gcode, "prime_tower_brim_width", "1")
     require_header(gcode, "wipe_tower_no_sparse_layers", "1")
+    require_header(gcode, "wall_loops", "2")
+    require_header(gcode, "top_shell_layers", "2")
+    require_header(gcode, "bottom_shell_layers", "2")
+    require_header(gcode, "sparse_infill_density", "10%")
+    require_header(gcode, "sparse_infill_pattern", "zig-zag")
+    require_header(gcode, "infill_combination", "1")
+    require_header(gcode, "outer_wall_speed", "120")
     if re.search(r"^; FEATURE: .*Support", gcode, re.MULTILINE | re.IGNORECASE):
         raise AssertionError("Bambu generated support toolpaths for the support-free case")
 
@@ -123,7 +136,10 @@ def main() -> None:
 
     print(
         "QuenaCase Bambu slice: ok, P1S plate, 96 layers, 2 ABS filaments, "
-        "1 change, one-layer black logo/mandala/flourish inlays, "
+        "2 walls, 2-layer skins, 10% combined rectilinear infill, "
+        "120 mm/s broad outer walls, 1 change, "
+        f"{gap_fill_seconds:.1f} s detail-only gap fill, "
+        "one-layer black logo/mandala/flourish inlays, "
         "20 mm tower ending at Z=0.2, "
         "no supports/brim/skirt"
     )

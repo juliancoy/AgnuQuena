@@ -126,12 +126,14 @@ def verify_browser_slot_alignment() -> None:
         "RoomEnvironment",
         "ACESFilmicToneMapping",
         "ShadowMaterial",
-        "Studio reflection floor",
+        "Studio shadow catcher",
     ):
         if token not in source:
             raise AssertionError(
                 f"case browser lacks per-mesh appearance support: {token}"
             )
+    if "Studio reflection floor" in source:
+        raise AssertionError("case browser must not render a visible studio floor")
     matches = re.findall(
         rf'asset:\s*"([^"]+)",\s*x:\s*({NUMBER}),\s*y:\s*({NUMBER}),\s*'
         rf'z:\s*({NUMBER}),\s*bodyX0:\s*({NUMBER}),\s*rotationZ:\s*({NUMBER})',
@@ -249,7 +251,7 @@ def main() -> None:
     if result.get("studioLightingConfigured") is not True:
         raise AssertionError("browser studio environment or soft-shadow rig is incomplete")
     if result.get("studioSurfaceConfigured") is not True:
-        raise AssertionError("browser reflective floor or shadow catcher is incomplete")
+        raise AssertionError("browser transparent shadow catcher is incomplete")
     if result.get("sweepControlsWork") is not True:
         raise AssertionError("browser Run Sweep control does not start from zero")
     if result.get("pauseControlWorks") is not True:
