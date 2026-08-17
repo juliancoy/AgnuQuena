@@ -22,8 +22,8 @@ const dims = {
   },
   quenaSlots: [
     { asset: "QuenaTube1.stl", x: 0, y: -11.9, z: 12.95, bodyX0: -120.625, rotationZ: 0, outwardRoll: 270, openingAxis: [0, -1, 0] },
-    { asset: "QuenaTube2.stl", x: -37.3676, y: 11.9, z: 12.95, bodyX0: -59.2223, rotationZ: 0, outwardRoll: 90, openingAxis: [0, 1, 0] },
-    { asset: "QuenaMouthpiece.stl", x: 80.2898, y: 11.9, z: 12.95, bodyX0: -31.3, rotationZ: 180, outwardRoll: 180, openingAxis: [1, 0, 0] },
+    { asset: "QuenaTube2.stl", x: -46.4027, y: 11.9, z: 12.95, bodyX0: -59.2223, rotationZ: 0, outwardRoll: 90, openingAxis: [0, 1, 0] },
+    { asset: "QuenaMouthpiece.stl", x: 89.325, y: 11.9, z: 12.95, bodyX0: -31.3, rotationZ: 180, outwardRoll: 180, openingAxis: [1, 0, 0] },
   ],
 };
 

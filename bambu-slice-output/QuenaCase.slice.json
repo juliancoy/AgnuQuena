@@ -1,17 +1,17 @@
 {
   "gcode": {
     "file": "QuenaCase.gcode",
-    "sha256": "61d8f9de651bd6ea849fc33bb15f20cbb649205b25c71f0fa0c515a6c9a451dd"
+    "sha256": "0a954f8731e3c62d024cb68e6677e277ed76000ff4d748ebeb7bd05f76789e2f"
   },
-  "generated_at": "2026-08-04T05:24:46.139010+00:00",
+  "generated_at": "2026-08-04T05:55:27.732796+00:00",
   "job": "QuenaCase",
   "printable_3mf": {
     "file": "QuenaCase.gcode.3mf",
-    "sha256": "8dd70298fde841716bf0156d87904498ef438f73af5769a2d5e889e8c8ccefd8"
+    "sha256": "3ac5217981cd15f8dadbea2cab058a3ee6875544acaf85a6e7282a927a67f51b"
   },
   "project": {
     "file": "QuenaCase.3mf",
-    "sha256": "681eca072b65574020f64a6c2d4bab7c7b1de570bc2fe7a8b0ff24d5b85a119b"
+    "sha256": "6872a71943b3b3efc01043994c3747fbcb05be555aa59c17c1bb04692b80c022"
   },
   "schema_version": 1,
   "slicer": {
@@ -32,14 +32,14 @@
       {
         "filament_id": "GFB60",
         "id": 1,
-        "main_used_g": 93.66812133789062,
-        "total_used_g": 94.23426818847656
+        "main_used_g": 93.62786865234375,
+        "total_used_g": 94.19401550292969
       },
       {
         "filament_id": "GFB60",
         "id": 2,
-        "main_used_g": 1.083638072013855,
-        "total_used_g": 1.1938480138778687
+        "main_used_g": 1.083639144897461,
+        "total_used_g": 1.1938492059707642
       }
     ],
     "layers": 96,

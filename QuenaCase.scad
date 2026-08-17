@@ -336,15 +336,12 @@ module lid_thumb_grip() {
         ], thumb_grip_rib_h / 2);
 }
 
-// Distribute the short row across the available inner length with the same
-// printable land at the left edge, between its two parts, and at the right
-// edge. This remains valid when a longer connector makes the short row the
-// dimension that controls the case length.
-short_row_gap = (case_inner_l - profile_cut_spans[1] - profile_cut_spans[2]) / 3;
-short_tube_cut_center = -case_inner_l / 2 + short_row_gap
-    + profile_cut_spans[1] / 2;
-mouth_cut_center = case_inner_l / 2 - short_row_gap
-    - profile_cut_spans[2] / 2;
+// Align the short-row pockets to the P1 pocket ends: P2's sleeved end uses
+// P1's left edge, and the mouthpiece connector uses P1's right edge.
+p1_cut_left = -profile_cut_spans[0] / 2;
+p1_cut_right = profile_cut_spans[0] / 2;
+short_tube_cut_center = p1_cut_left + profile_cut_spans[1] / 2;
+mouth_cut_center = p1_cut_right - profile_cut_spans[2] / 2;
 slot_xs = [
     // Keep the longest tube body centered axially.  Its connector and free-end
     // clearances remain intentionally asymmetric inside the channel profile.

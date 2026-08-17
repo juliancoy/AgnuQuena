@@ -406,8 +406,7 @@ difference() {{
 
 
 def run_channel_layout_checks() -> None:
-    horizontal_land = scad_scalar("short_row_min_gap")
-    actual_horizontal_land = scad_scalar("short_row_gap")
+    minimum_horizontal_gap = scad_scalar("short_row_min_gap")
     vertical_land = scad_scalar("row_gap")
     edge_land = scad_scalar("channel_edge_land")
     deck_h = scad_scalar("channel_deck_h")
@@ -479,12 +478,10 @@ def run_channel_layout_checks() -> None:
     if "lid_retention_relief();" not in source:
         raise AssertionError("lid does not remove the continuous ridge envelope")
 
-    if horizontal_land < 5.3:
+    if minimum_horizontal_gap < 5.3:
         raise AssertionError(
-            f"horizontal channel land is only {horizontal_land:.2f} mm"
+            f"horizontal channel land is only {minimum_horizontal_gap:.2f} mm"
         )
-    if actual_horizontal_land < horizontal_land - 0.01:
-        raise AssertionError("short-row distribution is below its minimum land")
     if vertical_land < 2.5:
         raise AssertionError(f"vertical channel land is only {vertical_land:.2f} mm")
     if edge_land < 2.5:
@@ -502,17 +499,23 @@ def run_channel_layout_checks() -> None:
     p2_right = slot_xs[1] + profile_cut_spans[1] / 2
     mouth_left = slot_xs[2] - profile_cut_spans[2] / 2
     mouth_right = slot_xs[2] + profile_cut_spans[2] / 2
-    distribution_gaps = (
-        p2_left + case_inner_l / 2,
-        mouth_left - p2_right,
-        case_inner_l / 2 - mouth_right,
-    )
-    if any(
-        not math.isclose(gap, actual_horizontal_land, abs_tol=0.01)
-        for gap in distribution_gaps
-    ):
+    actual_horizontal_gap = mouth_left - p2_right
+    if actual_horizontal_gap < minimum_horizontal_gap - 0.01:
         raise AssertionError(
-            f"short-row distribution gaps differ: {distribution_gaps}"
+            f"short-row gap is {actual_horizontal_gap:.2f} mm; "
+            f"minimum is {minimum_horizontal_gap:.2f} mm"
+        )
+    p1_left = slot_xs[0] - profile_cut_spans[0] / 2
+    p1_right = slot_xs[0] + profile_cut_spans[0] / 2
+    if not math.isclose(p2_left, p1_left, abs_tol=0.01):
+        raise AssertionError(
+            f"P2 left pocket edge {p2_left:.2f} mm does not align with "
+            f"P1 left edge {p1_left:.2f} mm"
+        )
+    if not math.isclose(mouth_right, p1_right, abs_tol=0.01):
+        raise AssertionError(
+            f"mouthpiece right pocket edge {mouth_right:.2f} mm does not align "
+            f"with P1 right edge {p1_right:.2f} mm"
         )
     p1_edge_land = (case_inner_l - profile_cut_spans[0]) / 2
     if p1_edge_land < edge_land - 0.01:
@@ -529,14 +532,14 @@ def run_channel_layout_checks() -> None:
         raise AssertionError("channel bed leaves a moat at the bottom shell edge")
     print(
         "QuenaCase channel layout: ok, "
-        f"{actual_horizontal_land:.2f} mm horizontal distribution gap, "
+        f"{actual_horizontal_gap:.2f} mm short-row gap, "
         f"{vertical_land:.1f} mm vertical land, "
         f"{edge_land:.1f} mm perimeter land, "
         f"{deck_h:.2f} mm single raised bed aligned to the shell, "
         f"{equator_pass:.2f} mm past equator, "
         f"{snap_interference:.2f} mm diametral snap interference along the "
         "continuous raised lip, P2-owned joint sleeve, "
-        "equal short-row edge and center lands, "
+        "P2/mouthpiece edges aligned to P1, "
         f"{axial_clearance:.2f} mm axial and {radial_clearance:.2f} mm radial clearance"
     )
 
