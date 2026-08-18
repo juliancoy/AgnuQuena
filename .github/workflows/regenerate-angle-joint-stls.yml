@@ -34,10 +34,11 @@ jobs:
             repos/${{ github.repository }}/statuses/${{ github.sha }} \
             -f state=pending \
             -f context=stl-regeneration \
-            -f description='Building OpenSCAD and regenerating production STLs'
+            -f description='Building OpenSCAD and regenerating production STLs' \
+            -f target_url='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
 
       - name: Check out the pinned OpenSCAD source
-        run: git submodule update --init --depth 1 openscad
+        run: git submodule update --init openscad
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -194,7 +195,8 @@ jobs:
             repos/${{ github.repository }}/statuses/${{ github.sha }} \
             -f state=success \
             -f context=stl-regeneration \
-            -f description='Production STLs regenerated and validated'
+            -f description='Production STLs regenerated and validated' \
+            -f target_url='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
 
       - name: Mark STL regeneration as failed
         if: failure()
@@ -206,4 +208,5 @@ jobs:
             repos/${{ github.repository }}/statuses/${{ github.sha }} \
             -f state=failure \
             -f context=stl-regeneration \
-            -f description='STL regeneration failed; inspect the workflow log'
+            -f description='STL regeneration failed; inspect the workflow log' \
+            -f target_url='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
