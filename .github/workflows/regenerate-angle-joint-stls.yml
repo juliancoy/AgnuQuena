@@ -1,0 +1,212 @@
+name: Regenerate angled tube-joint STL assets
+
+on:
+  push:
+    branches:
+      - agent/angle-joint-radius-transition
+    paths:
+      - Quena.scad
+      - .github/workflows/regenerate-angle-joint-stls.yml
+
+permissions:
+  contents: write
+  statuses: write
+
+jobs:
+  export-and-commit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out the fix branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          fetch-depth: 0
+          submodules: false
+
+      - name: Mark STL regeneration as running
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+            --method POST \
+            repos/${{ github.repository }}/statuses/${{ github.sha }} \
+            -f state=pending \
+            -f context=stl-regeneration \
+            -f description='Building OpenSCAD and regenerating production STLs' \
+            -f target_url='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+
+      - name: Check out the pinned OpenSCAD source
+        run: git submodule update --init openscad
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install mesh-validation dependencies
+        run: python -m pip install --disable-pip-version-check numpy trimesh networkx
+
+      - name: Export the three parts and combined layout
+        run: |
+          set -euo pipefail
+          python tools/generate_quena.py --check
+          python tools/export_quena.py --part all --output-dir build/quena
+          python tools/export_quena.py --part layout --output-dir build/quena-layout
+
+          cp build/quena/QuenaTube1.stl QuenaPart2.stl
+          cp build/quena/QuenaTube2.stl QuenaPart3.stl
+          cp build/quena-layout/QuenaLayout.stl Quena.stl
+
+          mkdir -p website/assets site-hosting/public/assets
+          cp QuenaPart2.stl website/assets/QuenaTube1.stl
+          cp QuenaPart3.stl website/assets/QuenaTube2.stl
+          cp QuenaPart2.stl site-hosting/public/assets/QuenaTube1.stl
+          cp QuenaPart3.stl site-hosting/public/assets/QuenaTube2.stl
+
+      - name: Validate watertight meshes and complementary tapers
+        run: |
+          python - <<'PY'
+          from __future__ import annotations
+
+          from pathlib import Path
+
+          import numpy as np
+          import trimesh
+
+          expected_components = {
+              Path("QuenaPart2.stl"): 1,
+              Path("QuenaPart3.stl"): 1,
+              Path("Quena.stl"): 3,
+              Path("website/assets/QuenaTube1.stl"): 1,
+              Path("website/assets/QuenaTube2.stl"): 1,
+              Path("site-hosting/public/assets/QuenaTube1.stl"): 1,
+              Path("site-hosting/public/assets/QuenaTube2.stl"): 1,
+          }
+
+          meshes: dict[Path, trimesh.Trimesh] = {}
+          for path, count in expected_components.items():
+              mesh = trimesh.load(path, force="mesh")
+              components = mesh.split(only_watertight=False)
+              assert mesh.is_watertight, f"{path} is not watertight"
+              assert mesh.is_winding_consistent, f"{path} has inconsistent winding"
+              assert len(components) == count, (
+                  f"{path} has {len(components)} components; expected {count}"
+              )
+              meshes[path] = mesh
+
+          tube1 = meshes[Path("QuenaPart2.stl")]
+          tube2 = meshes[Path("QuenaPart3.stl")]
+
+          part1_length = 241.25
+          transition_height = 3.0
+          body_radius = 19.1 / 2.0
+          bore_radius = 17.5 / 2.0
+          sleeve_outer_start = (19.1 + 2.0 * 0.8) / 2.0
+
+          def section_radii(mesh: trimesh.Trimesh, z: float) -> np.ndarray:
+              section = mesh.section(
+                  plane_origin=np.array([0.0, 0.0, z]),
+                  plane_normal=np.array([0.0, 0.0, 1.0]),
+              )
+              assert section is not None, f"no section at z={z}"
+              radii = np.linalg.norm(section.vertices[:, :2], axis=1)
+              assert len(radii) >= 8, f"undersampled section at z={z}"
+              return radii
+
+          mating_errors = []
+          male_samples = []
+          socket_inner_samples = []
+          socket_outer_samples = []
+
+          for distance_from_joint in (0.5, 1.5, 2.5):
+              fraction = distance_from_joint / transition_height
+              male_z = part1_length - distance_from_joint
+              socket_z = -distance_from_joint
+
+              expected_mating_radius = bore_radius + (
+                  body_radius - bore_radius
+              ) * fraction
+              expected_socket_outer_radius = body_radius + (
+                  sleeve_outer_start - body_radius
+              ) * fraction
+
+              male_radii = section_radii(tube1, male_z)
+              socket_radii = section_radii(tube2, socket_z)
+
+              male_outer = float(np.max(male_radii))
+              socket_inner = float(
+                  socket_radii[np.argmin(np.abs(socket_radii - expected_mating_radius))]
+              )
+              socket_outer = float(np.max(socket_radii))
+
+              assert abs(male_outer - expected_mating_radius) < 0.03
+              assert abs(socket_inner - expected_mating_radius) < 0.03
+              assert abs(socket_outer - expected_socket_outer_radius) < 0.03
+
+              mating_errors.append(abs(male_outer - socket_inner))
+              male_samples.append(male_outer)
+              socket_inner_samples.append(socket_inner)
+              socket_outer_samples.append(socket_outer)
+
+          assert max(mating_errors) < 0.03, "male and socket tapers do not match"
+          assert male_samples[0] < male_samples[-1], "P1 radius change is not angled"
+          assert socket_inner_samples[0] < socket_inner_samples[-1], (
+              "P2 receiving radius change is not angled"
+          )
+          assert socket_outer_samples[0] < socket_outer_samples[-1], (
+              "P2 outer shoulder radius change is not angled"
+          )
+
+          print(
+              "validated complementary 3 mm tapers; max mating error = "
+              f"{max(mating_errors):.5f} mm"
+          )
+          PY
+
+      - name: Commit regenerated production assets
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          git rm .github/workflows/regenerate-angle-joint-stls.yml
+          git add -- \
+            Quena.stl \
+            QuenaPart2.stl \
+            QuenaPart3.stl \
+            website/assets/QuenaTube1.stl \
+            website/assets/QuenaTube2.stl \
+            site-hosting/public/assets/QuenaTube1.stl \
+            site-hosting/public/assets/QuenaTube2.stl
+
+          git commit -m "Regenerate angled tube joint STL assets"
+          git pull --rebase origin agent/angle-joint-radius-transition
+          git push origin HEAD:agent/angle-joint-radius-transition
+
+      - name: Mark STL regeneration as successful
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+            --method POST \
+            repos/${{ github.repository }}/statuses/${{ github.sha }} \
+            -f state=success \
+            -f context=stl-regeneration \
+            -f description='Production STLs regenerated and validated' \
+            -f target_url='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+
+      - name: Mark STL regeneration as failed
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+            --method POST \
+            repos/${{ github.repository }}/statuses/${{ github.sha }} \
+            -f state=failure \
+            -f context=stl-regeneration \
+            -f description='STL regeneration failed; inspect the workflow log' \
+            -f target_url='${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'

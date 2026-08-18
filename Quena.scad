@@ -124,6 +124,11 @@ module piece(pieceno, yfactor, z=0){
             if(pieceno==len(part_lengths) - 1)
                 translate([0, 0, part_lengths[pieceno]]) cylinder(h = total_height, d = od * 1.1);    // top cut
             if (pieceno == 0)
+                translate([0, 0, part_lengths[pieceno] - angled_transition_z])
+                    tube_joint_male_tip_cut(
+                        part_lengths[pieceno] / total_height
+                    );
+            if (pieceno == 0)
                 translate([0,0,-e]) sleve_wide_outer(
                     part_start[pieceno] / total_height,
                     pieceno == 0 ? mouthpiece_overlap : tube_joint_overlap,
@@ -132,20 +137,12 @@ module piece(pieceno, yfactor, z=0){
         }
         if (pieceno == len(part_lengths) - 1) { // P2 lower outer sleeve
             difference() {
-                union() {
-                    color("green")
-                        lower_tube_joint_sleeve(
-                            part_start[pieceno] / total_height,
-                            tube_joint_overlap,
-                            connector_radial_clearance
-                        );
-                    // Turn the otherwise coplanar sleeve/body interface into
-                    // a real printable solid without changing the fit face.
-                    cylinder(
-                        h = e * 10,
-                        d = od + (shell_width + connector_radial_clearance) * 2
+                color("green")
+                    lower_tube_joint_sleeve(
+                        part_start[pieceno] / total_height,
+                        tube_joint_overlap,
+                        connector_radial_clearance
                     );
-                }
                 translate([0, 0, -part_start[pieceno]]) tube_negative();
             }
         }
@@ -193,29 +190,121 @@ module printable_piece(pieceno, yfactor=0) {
     }
 }
 
+// Use the same conical primitive for every connector radius change. This
+// keeps the mouthpiece connector and both halves of the tube joint angled in
+// the SCAD source and in every exported STL.
+module angled_radius_transition(
+    transition_h,
+    from_d,
+    to_d,
+    extension=0
+) {
+    diameter_slope = (to_d - from_d) / transition_h;
+    translate([0, 0, -extension])
+        cylinder(
+            h = transition_h + extension * 2,
+            d1 = from_d - diameter_slope * extension,
+            d2 = to_d + diameter_slope * extension
+        );
+}
+
+module angled_annular_transition(
+    transition_h,
+    outer_from_d,
+    outer_to_d,
+    inner_from_d,
+    inner_to_d
+) {
+    difference() {
+        angled_radius_transition(
+            transition_h,
+            outer_from_d,
+            outer_to_d
+        );
+        angled_radius_transition(
+            transition_h,
+            inner_from_d,
+            inner_to_d,
+            e
+        );
+    }
+}
+
+// Remove the material outside the complementary male taper on P1. Its outer
+// surface reaches the bore at the joint face, so it fills P2's conical socket
+// without introducing an acoustic step or a horizontal printing ledge.
+module tube_joint_male_tip_cut(joint_height_normalized) {
+    transition_start = joint_height_normalized
+        - angled_transition_z / total_height;
+    transition_start_od = od * (1 - transition_start)
+        + odo * transition_start;
+    joint_id = id * (1 - joint_height_normalized)
+        + ido * joint_height_normalized;
+
+    difference() {
+        translate([0, 0, -e])
+            cylinder(
+                h = angled_transition_z + e * 2,
+                d = max(od, odo) * 1.2
+            );
+        angled_radius_transition(
+            angled_transition_z,
+            transition_start_od,
+            joint_id,
+            e
+        );
+    }
+}
+
 module lower_tube_joint_sleeve(
     joint_height_normalized,
     overlap,
     radial_clearance=0
 ) {
+    transition_h = min(angled_transition_z, overlap);
+    straight_h = overlap - transition_h;
     far_height = joint_height_normalized - overlap / total_height;
+    transition_start = joint_height_normalized
+        - transition_h / total_height;
     joint_od = od * (1 - joint_height_normalized)
         + odo * joint_height_normalized;
+    joint_id = id * (1 - joint_height_normalized)
+        + ido * joint_height_normalized;
     far_od = od * (1 - far_height) + odo * far_height;
-    translate([0, 0, -overlap])
-        difference() {
-            cylinder(
-                h = overlap + e * 10,
-                d1 = far_od + (shell_width + radial_clearance) * 2,
-                d2 = joint_od + (shell_width + radial_clearance) * 2
-            );
-            translate([0, 0, -e])
+    transition_start_od = od * (1 - transition_start)
+        + odo * transition_start;
+    sleeve_extra_d = (shell_width + radial_clearance) * 2;
+    cavity_extra_d = radial_clearance * 2;
+
+    union() {
+        // Full-diameter socket before the complementary 3 mm taper.
+        translate([0, 0, -overlap])
+            difference() {
                 cylinder(
-                    h = overlap + e * 12,
-                    d1 = far_od + radial_clearance * 2,
-                    d2 = joint_od + radial_clearance * 2
+                    h = straight_h + e,
+                    d1 = far_od + sleeve_extra_d,
+                    d2 = transition_start_od + sleeve_extra_d
                 );
-        }
+                translate([0, 0, -e])
+                    cylinder(
+                        h = straight_h + e * 2,
+                        d1 = far_od + cavity_extra_d,
+                        d2 = transition_start_od + cavity_extra_d
+                    );
+            }
+
+        // Angle both the outer diameter and the receiving radius into the P2
+        // body. P1 carries the matching male taper, so the assembled bore stays
+        // continuous while every new print layer remains supported.
+        translate([0, 0, -transition_h])
+            angled_annular_transition(
+                transition_h,
+                transition_start_od + sleeve_extra_d,
+                joint_od,
+                transition_start_od + cavity_extra_d,
+                joint_id
+            );
+    }
 }
 
 
@@ -266,16 +355,16 @@ module sleve_wide_outer(
                 d2 = odlt + (shell_width + radial_clearance)*2
             );
             translate([0,0,-angled_transition_z])
-            cylinder(
-                h = angled_transition_z,
-                d1 = odlb,
-                d2 = odlt + (shell_width + radial_clearance)*2
+            angled_radius_transition(
+                angled_transition_z,
+                odlb,
+                odlt + (shell_width + radial_clearance)*2
             );
             translate([0,0,overlap - ztolerence])
-            cylinder(
-                h = angled_transition_z,
-                d1 = odlt + (shell_width + radial_clearance)*2,
-                d2 = odlb
+            angled_radius_transition(
+                angled_transition_z,
+                odlt + (shell_width + radial_clearance)*2,
+                odlb
             );
         }            
         cylinder(
