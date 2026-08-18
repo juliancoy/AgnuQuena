@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: write
+  statuses: write
 
 jobs:
   export-and-commit:
@@ -23,6 +24,17 @@ jobs:
           ref: ${{ github.ref_name }}
           fetch-depth: 0
           submodules: false
+
+      - name: Mark STL regeneration as running
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+            --method POST \
+            repos/${{ github.repository }}/statuses/${{ github.sha }} \
+            -f state=pending \
+            -f context=stl-regeneration \
+            -f description='Building OpenSCAD and regenerating production STLs'
 
       - name: Check out the pinned OpenSCAD source
         run: git submodule update --init --depth 1 openscad
@@ -57,7 +69,6 @@ jobs:
           python - <<'PY'
           from __future__ import annotations
 
-          import math
           from pathlib import Path
 
           import numpy as np
@@ -110,7 +121,6 @@ jobs:
 
           for distance_from_joint in (0.5, 1.5, 2.5):
               fraction = distance_from_joint / transition_height
-
               male_z = part1_length - distance_from_joint
               socket_z = -distance_from_joint
 
@@ -171,4 +181,29 @@ jobs:
             site-hosting/public/assets/QuenaTube2.stl
 
           git commit -m "Regenerate angled tube joint STL assets"
+          git pull --rebase origin agent/angle-joint-radius-transition
           git push origin HEAD:agent/angle-joint-radius-transition
+
+      - name: Mark STL regeneration as successful
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+            --method POST \
+            repos/${{ github.repository }}/statuses/${{ github.sha }} \
+            -f state=success \
+            -f context=stl-regeneration \
+            -f description='Production STLs regenerated and validated'
+
+      - name: Mark STL regeneration as failed
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api \
+            --method POST \
+            repos/${{ github.repository }}/statuses/${{ github.sha }} \
+            -f state=failure \
+            -f context=stl-regeneration \
+            -f description='STL regeneration failed; inspect the workflow log'
