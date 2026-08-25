@@ -17,22 +17,25 @@ from bambu_studio import PROFILE_ROOT, command, environment, require
 
 ROOT = Path(__file__).resolve().parents[1]
 TWO_COLOR_OUTPUT = ROOT / "QuenaCase.3mf"
+ELI_TWO_COLOR_OUTPUT = ROOT / "QuenaCaseEli.3mf"
 SINGLE_FILAMENT_OUTPUT = ROOT / "QuenaCaseSingleFilament.3mf"
 SETTINGS_TEMPLATE = ROOT / "config" / "bambu_p1s_abs_project_settings.json"
 SINGLE_FILAMENT_CASE_STL = ROOT / "QuenaCasePrintInPlace.stl"
 TWO_COLOR_CASE_STL = ROOT / "QuenaCaseTwoColorPrintInPlace.stl"
 ARTWORK_STL = ROOT / "QuenaCaseArtwork.stl"
+ELI_TWO_COLOR_CASE_STL = ROOT / "QuenaCaseEliTwoColorPrintInPlace.stl"
+ELI_ARTWORK_STL = ROOT / "QuenaCaseEliArtwork.stl"
 MACHINE_PROFILE = PROFILE_ROOT / "machine" / "Bambu Lab P1S 0.4 nozzle.json"
 PROCESS_PROFILE = PROFILE_ROOT / "process" / "0.20mm Strength @BBL X1C.json"
 FILAMENT_PROFILE = PROFILE_ROOT / "filament" / "PolyLite ABS @BBL X1C.json"
 PLATE_TRANSFORM = "1 0 0 0 1 0 0 0 1 128 156.685 0"
 
 
-def project_settings(*, two_color: bool) -> dict[str, object]:
+def project_settings(*, two_color: bool, name: str | None = None) -> dict[str, object]:
     settings = json.loads(SETTINGS_TEMPLATE.read_text(encoding="utf-8"))
     settings.update(
         {
-            "name": (
+            "name": name or (
                 "AgnuQuena two-color print-in-place case"
                 if two_color
                 else "AgnuQuena single-filament print-in-place case"
@@ -80,10 +83,16 @@ def project_settings(*, two_color: bool) -> dict[str, object]:
     return settings
 
 
-def bambu_skeleton(output: Path, *, two_color: bool) -> None:
+def bambu_skeleton(
+    output: Path,
+    *,
+    two_color: bool,
+    case_stl: Path = TWO_COLOR_CASE_STL,
+    artwork_stl: Path = ARTWORK_STL,
+) -> None:
     require()
     models = (
-        (TWO_COLOR_CASE_STL, ARTWORK_STL)
+        (case_stl, artwork_stl)
         if two_color
         else (SINGLE_FILAMENT_CASE_STL,)
     )
@@ -135,7 +144,13 @@ def patched_model_xml(data: bytes) -> bytes:
     return source.encode("utf-8")
 
 
-def patched_model_settings(data: bytes, *, two_color: bool) -> bytes:
+def patched_model_settings(
+    data: bytes,
+    *,
+    two_color: bool,
+    case_stl: Path = TWO_COLOR_CASE_STL,
+    artwork_stl: Path = ARTWORK_STL,
+) -> bytes:
     root = ET.fromstring(data)
     obj = root.find("object")
     if obj is None:
@@ -148,7 +163,7 @@ def patched_model_settings(data: bytes, *, two_color: bool) -> bytes:
             f"Bambu project must contain exactly {expected_parts} case part(s)"
         )
     names = (
-        (TWO_COLOR_CASE_STL.name, ARTWORK_STL.name)
+        (case_stl.name, artwork_stl.name)
         if two_color
         else (SINGLE_FILAMENT_CASE_STL.name,)
     )
@@ -190,15 +205,30 @@ def patched_model_settings(data: bytes, *, two_color: bool) -> bytes:
     return ET.tostring(root, encoding="utf-8", xml_declaration=True)
 
 
-def write_project(skeleton: Path, output: Path, *, two_color: bool) -> None:
+def write_project(
+    skeleton: Path,
+    output: Path,
+    *,
+    two_color: bool,
+    case_stl: Path = TWO_COLOR_CASE_STL,
+    artwork_stl: Path = ARTWORK_STL,
+    project_name: str | None = None,
+) -> None:
     with zipfile.ZipFile(skeleton) as archive:
         files = {name: archive.read(name) for name in archive.namelist()}
     files["3D/3dmodel.model"] = patched_model_xml(files["3D/3dmodel.model"])
     files["Metadata/model_settings.config"] = patched_model_settings(
-        files["Metadata/model_settings.config"], two_color=two_color
+        files["Metadata/model_settings.config"],
+        two_color=two_color,
+        case_stl=case_stl,
+        artwork_stl=artwork_stl,
     )
     files["Metadata/project_settings.config"] = (
-        json.dumps(project_settings(two_color=two_color), indent=2, sort_keys=True).encode(
+        json.dumps(
+            project_settings(two_color=two_color, name=project_name),
+            indent=2,
+            sort_keys=True,
+        ).encode(
             "utf-8"
         )
         + b"\n"
@@ -214,12 +244,31 @@ def write_project(skeleton: Path, output: Path, *, two_color: bool) -> None:
     temporary.replace(output)
 
 
-def build_project(output: Path, *, two_color: bool) -> None:
+def build_project(
+    output: Path,
+    *,
+    two_color: bool,
+    case_stl: Path = TWO_COLOR_CASE_STL,
+    artwork_stl: Path = ARTWORK_STL,
+    project_name: str | None = None,
+) -> None:
     label = "two_color" if two_color else "single_filament"
     with tempfile.TemporaryDirectory(prefix=f".bambu_case_{label}_", dir=ROOT) as temp_dir:
         skeleton = Path(temp_dir) / output.name
-        bambu_skeleton(skeleton, two_color=two_color)
-        write_project(skeleton, output, two_color=two_color)
+        bambu_skeleton(
+            skeleton,
+            two_color=two_color,
+            case_stl=case_stl,
+            artwork_stl=artwork_stl,
+        )
+        write_project(
+            skeleton,
+            output,
+            two_color=two_color,
+            case_stl=case_stl,
+            artwork_stl=artwork_stl,
+            project_name=project_name,
+        )
     print(output.relative_to(ROOT))
 
 
@@ -227,7 +276,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--mode",
-        choices=("all", "two-color", "single"),
+        choices=("all", "two-color", "eli", "single"),
         default="all",
         help="select which case project variant to export",
     )
@@ -235,6 +284,8 @@ def main() -> None:
     required = [SETTINGS_TEMPLATE]
     if args.mode in ("all", "two-color"):
         required.extend((TWO_COLOR_CASE_STL, ARTWORK_STL))
+    if args.mode in ("all", "eli"):
+        required.extend((ELI_TWO_COLOR_CASE_STL, ELI_ARTWORK_STL))
     if args.mode in ("all", "single"):
         required.append(SINGLE_FILAMENT_CASE_STL)
     for path in required:
@@ -242,6 +293,14 @@ def main() -> None:
             raise SystemExit(f"missing {path.name}; render case assets first")
     if args.mode in ("all", "two-color"):
         build_project(TWO_COLOR_OUTPUT, two_color=True)
+    if args.mode in ("all", "eli"):
+        build_project(
+            ELI_TWO_COLOR_OUTPUT,
+            two_color=True,
+            case_stl=ELI_TWO_COLOR_CASE_STL,
+            artwork_stl=ELI_ARTWORK_STL,
+            project_name="AgnuQuena ELI 2026 two-color print-in-place case",
+        )
     if args.mode in ("all", "single"):
         build_project(SINGLE_FILAMENT_OUTPUT, two_color=False)
 

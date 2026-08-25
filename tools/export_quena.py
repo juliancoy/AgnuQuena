@@ -157,6 +157,7 @@ def validate_rounded_mouthpiece_lip(
 def validate_tube_joint_owner(
     results: list[dict[str, object]],
     generated_manifest: dict[str, object],
+    output_dir: Path,
 ) -> None:
     by_part = {str(result["part"]): result for result in results}
     if not {"tube1", "tube2"} <= by_part.keys():
@@ -166,7 +167,8 @@ def validate_tube_joint_owner(
         raise RuntimeError("production tube-joint sleeve must belong to P2")
     parts = {part["name"]: part for part in generated_manifest["parts"]}
     overlap = float(connector["tube_joint_overlap_mm"])
-    connector_extra = overlap
+    tip_transition = float(connector["tube_joint_tip_transition_mm"])
+    connector_extra = overlap + tip_transition
     tube1_bounds = by_part["tube1"]["bounds_mm"]
     tube2_bounds = by_part["tube2"]["bounds_mm"]
     if not math.isclose(float(tube1_bounds[0][2]), 0.0, abs_tol=0.01):
@@ -185,6 +187,116 @@ def validate_tube_joint_owner(
         abs_tol=0.01,
     ):
         raise RuntimeError("P2 body origin or free end moved unexpectedly")
+
+    tube1 = trimesh.load(output_dir / PARTS["tube1"][1], force="mesh")
+    tube2 = trimesh.load(output_dir / PARTS["tube2"][1], force="mesh")
+    tube_outer_diameter = float(
+        generated_manifest["geometry"]["outer_diameter_mm"]
+    )
+    tube1_xy_extents = np.asarray(tube1.extents[:2], dtype=float)
+    if np.max(np.abs(tube1_xy_extents - tube_outer_diameter)) > 0.01:
+        raise RuntimeError("P1 tube radius changed outside the overlap socket")
+    by_part["tube1"]["unchanged_tube_outer_diameter_mm"] = tube_outer_diameter
+    tube1_length = float(parts["tube_1"]["length_mm"])
+    expected_clearance = float(connector["tube_joint_radial_clearance_mm"])
+    measured_clearances = []
+    # Sample the complete socket away from its two boundary faces. P1's
+    # outside radius must follow P2's inside radius for the full overlap.
+    for fraction in np.linspace(0.05, 0.95, 10):
+        insertion = overlap * float(fraction)
+        p1_section = tube1.section(
+            plane_origin=[0, 0, tube1_length - overlap + insertion],
+            plane_normal=[0, 0, 1],
+        )
+        p2_section = tube2.section(
+            plane_origin=[0, 0, -overlap + insertion],
+            plane_normal=[0, 0, 1],
+        )
+        if p1_section is None or p2_section is None:
+            raise RuntimeError("tube-joint fit section is missing from an export")
+        p1_outer_radius = float(
+            np.max(np.linalg.norm(p1_section.vertices[:, :2], axis=1))
+        )
+        p2_inner_radius = float(
+            np.min(np.linalg.norm(p2_section.vertices[:, :2], axis=1))
+        )
+        measured_clearances.append(p2_inner_radius - p1_outer_radius)
+
+    if max(abs(value - expected_clearance) for value in measured_clearances) > 0.03:
+        raise RuntimeError(
+            "P1/P2 cylindrical fit does not span the complete tube-joint overlap"
+        )
+    by_part["tube2"]["tube_joint_cylindrical_engagement_mm"] = overlap
+    by_part["tube2"]["tube_joint_max_measured_radial_clearance_mm"] = max(
+        measured_clearances
+    )
+
+    if "mouthpiece" in by_part:
+        mouthpiece = trimesh.load(
+            output_dir / PARTS["mouthpiece"][1], force="mesh"
+        )
+        mouthpiece_overlap = float(connector["mouthpiece_overlap_mm"])
+        mouthpiece_length = float(parts["mouthpiece"]["length_mm"])
+        expected_interference = float(
+            connector["mouthpiece_radial_interference_mm"]
+        )
+        mouthpiece_fit = []
+        for fraction in np.linspace(0.1, 0.9, 9):
+            insertion = mouthpiece_overlap * float(fraction)
+            mouth_section = mouthpiece.section(
+                plane_origin=[0, 0, mouthpiece_length + insertion],
+                plane_normal=[0, 0, 1],
+            )
+            tube1_section = tube1.section(
+                plane_origin=[0, 0, insertion],
+                plane_normal=[0, 0, 1],
+            )
+            if mouth_section is None or tube1_section is None:
+                raise RuntimeError("mouthpiece fit section is missing from an export")
+            mouth_inner_radius = float(
+                np.min(np.linalg.norm(mouth_section.vertices[:, :2], axis=1))
+            )
+            tube1_outer_radius = float(
+                np.max(np.linalg.norm(tube1_section.vertices[:, :2], axis=1))
+            )
+            mouthpiece_fit.append(tube1_outer_radius - mouth_inner_radius)
+        if max(
+            abs(value - expected_interference) for value in mouthpiece_fit
+        ) > 0.03:
+            raise RuntimeError(
+                "mouthpiece interference does not span the complete overlap"
+            )
+        by_part["mouthpiece"]["cylindrical_engagement_mm"] = mouthpiece_overlap
+        by_part["mouthpiece"]["max_measured_radial_interference_mm"] = max(
+            mouthpiece_fit
+        )
+
+        transition = float(connector["tube_joint_tip_transition_mm"])
+        tip_errors = []
+        for fraction in np.linspace(0.1, 0.9, 9):
+            distance = transition * float(fraction)
+            mouth_section = mouthpiece.section(
+                plane_origin=[0, 0, float(mouthpiece.bounds[1][2]) - distance],
+                plane_normal=[0, 0, 1],
+            )
+            tube2_section = tube2.section(
+                plane_origin=[0, 0, float(tube2.bounds[0][2]) + distance],
+                plane_normal=[0, 0, 1],
+            )
+            if mouth_section is None or tube2_section is None:
+                raise RuntimeError("connector-tip transition is missing from an export")
+            mouth_radii = np.linalg.norm(mouth_section.vertices[:, :2], axis=1)
+            tube2_radii = np.linalg.norm(tube2_section.vertices[:, :2], axis=1)
+            tip_errors.extend(
+                [
+                    abs(float(np.min(mouth_radii)) - float(np.min(tube2_radii))),
+                    abs(float(np.max(mouth_radii)) - float(np.max(tube2_radii))),
+                ]
+            )
+        if max(tip_errors) > 0.03:
+            raise RuntimeError("P2 connector tip does not match the mouthpiece transition")
+        by_part["tube2"]["mouthpiece_matching_tip_transition_mm"] = transition
+        by_part["tube2"]["tip_transition_max_profile_error_mm"] = max(tip_errors)
 
 
 def atomic_write_text(path: Path, content: str) -> None:
@@ -238,7 +350,7 @@ def main() -> int:
             f"height={result['extents_mm'][2]:.3f} mm"
         )
 
-    validate_tube_joint_owner(results, generated_manifest)
+    validate_tube_joint_owner(results, generated_manifest, args.output_dir)
 
     export_manifest = {
         "schema_version": 1,

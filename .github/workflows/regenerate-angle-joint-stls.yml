@@ -1,4 +1,4 @@
-name: Regenerate angled tube-joint STL assets
+name: Regenerate tight tube-joint STL assets
 
 on:
   push:
@@ -65,7 +65,7 @@ jobs:
           cp QuenaPart2.stl site-hosting/public/assets/QuenaTube1.stl
           cp QuenaPart3.stl site-hosting/public/assets/QuenaTube2.stl
 
-      - name: Validate watertight meshes and complementary tapers
+      - name: Validate watertight meshes and full cylindrical engagement
         run: |
           python - <<'PY'
           from __future__ import annotations
@@ -100,10 +100,8 @@ jobs:
           tube2 = meshes[Path("QuenaPart3.stl")]
 
           part1_length = 241.25
-          transition_height = 3.0
+          overlap = 15.0
           body_radius = 19.1 / 2.0
-          bore_radius = 17.5 / 2.0
-          sleeve_outer_start = (19.1 + 2.0 * 0.8) / 2.0
 
           def section_radii(mesh: trimesh.Trimesh, z: float) -> np.ndarray:
               section = mesh.section(
@@ -116,51 +114,25 @@ jobs:
               return radii
 
           mating_errors = []
-          male_samples = []
-          socket_inner_samples = []
-          socket_outer_samples = []
-
-          for distance_from_joint in (0.5, 1.5, 2.5):
-              fraction = distance_from_joint / transition_height
+          for distance_from_joint in np.linspace(0.5, overlap - 0.5, 10):
               male_z = part1_length - distance_from_joint
               socket_z = -distance_from_joint
-
-              expected_mating_radius = bore_radius + (
-                  body_radius - bore_radius
-              ) * fraction
-              expected_socket_outer_radius = body_radius + (
-                  sleeve_outer_start - body_radius
-              ) * fraction
 
               male_radii = section_radii(tube1, male_z)
               socket_radii = section_radii(tube2, socket_z)
 
               male_outer = float(np.max(male_radii))
-              socket_inner = float(
-                  socket_radii[np.argmin(np.abs(socket_radii - expected_mating_radius))]
-              )
-              socket_outer = float(np.max(socket_radii))
+              socket_inner = float(np.min(socket_radii))
 
-              assert abs(male_outer - expected_mating_radius) < 0.03
-              assert abs(socket_inner - expected_mating_radius) < 0.03
-              assert abs(socket_outer - expected_socket_outer_radius) < 0.03
+              assert abs(male_outer - body_radius) < 0.03
+              assert abs(socket_inner - body_radius) < 0.03
 
               mating_errors.append(abs(male_outer - socket_inner))
-              male_samples.append(male_outer)
-              socket_inner_samples.append(socket_inner)
-              socket_outer_samples.append(socket_outer)
 
-          assert max(mating_errors) < 0.03, "male and socket tapers do not match"
-          assert male_samples[0] < male_samples[-1], "P1 radius change is not angled"
-          assert socket_inner_samples[0] < socket_inner_samples[-1], (
-              "P2 receiving radius change is not angled"
-          )
-          assert socket_outer_samples[0] < socket_outer_samples[-1], (
-              "P2 outer shoulder radius change is not angled"
-          )
+          assert max(mating_errors) < 0.03, "P1 and P2 cylinders do not match"
 
           print(
-              "validated complementary 3 mm tapers; max mating error = "
+              "validated full 15 mm cylindrical engagement; max mating error = "
               f"{max(mating_errors):.5f} mm"
           )
           PY
@@ -181,7 +153,7 @@ jobs:
             site-hosting/public/assets/QuenaTube1.stl \
             site-hosting/public/assets/QuenaTube2.stl
 
-          git commit -m "Regenerate angled tube joint STL assets"
+          git commit -m "Regenerate tight tube joint STL assets"
           git pull --rebase origin agent/angle-joint-radius-transition
           git push origin HEAD:agent/angle-joint-radius-transition
 

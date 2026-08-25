@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUTPUT = ROOT / "Quena.3mf"
 LAYOUT_STL = ROOT / "Quena.stl"
 SETTINGS_TEMPLATE = ROOT / "config" / "bambu_p1s_abs_project_settings.json"
+QUENA_SETTINGS = ROOT / "config" / "quena_print_settings.json"
 MACHINE_PROFILE = PROFILE_ROOT / "machine" / "Bambu Lab P1S 0.4 nozzle.json"
 PROCESS_PROFILE = PROFILE_ROOT / "process" / "0.20mm Strength @BBL X1C.json"
 FILAMENT_PROFILE = PROFILE_ROOT / "filament" / "PolyLite ABS @BBL X1C.json"
@@ -72,6 +73,7 @@ def production_settings(settings: dict[str, object]) -> dict[str, object]:
             "printer_settings_id": "Bambu Lab P1S 0.4 nozzle",
             "print_settings_id": "0.20mm Strength @BBL X1C",
             "printable_area": ["0x0", "256x0", "256x256", "0x256"],
+            "curr_bed_type": "Textured PEI Plate",
             "nozzle_diameter": ["0.4"],
             "layer_height": "0.2",
             "initial_layer_print_height": "0.2",
@@ -86,9 +88,12 @@ def production_settings(settings: dict[str, object]) -> dict[str, object]:
             "single_extruder_multi_material": "0",
             "enable_prime_tower": "0",
             "filament_colour": ["#FFF144"],
+            "filament_diameter": ["1.75"],
             "filament_type": ["ABS"],
             "filament_settings_id": ["PolyLite ABS @BBL X1C"],
             "filament_map": ["1"],
+            "inherits_group": ["", "", ""],
+            "different_settings_to_system": ["", "", ""],
         }
     )
     return settings
@@ -169,6 +174,7 @@ def publish_project(skeleton: Path) -> None:
         files = {name: archive.read(name) for name in archive.namelist()}
     settings_path = "Metadata/project_settings.config"
     settings = json.loads(SETTINGS_TEMPLATE.read_text(encoding="utf-8"))
+    settings.update(json.loads(QUENA_SETTINGS.read_text(encoding="utf-8")))
     files[settings_path] = (
         json.dumps(production_settings(settings), indent=2, sort_keys=True).encode("utf-8")
         + b"\n"
@@ -200,7 +206,7 @@ def publish_project(skeleton: Path) -> None:
 
 
 def main() -> None:
-    for path in (LAYOUT_STL, SETTINGS_TEMPLATE):
+    for path in (LAYOUT_STL, SETTINGS_TEMPLATE, QUENA_SETTINGS):
         if not path.exists():
             raise SystemExit(f"missing {path.name}; export the print projects first")
     require_bambu_studio()

@@ -1,0 +1,12 @@
+{
+  "bridge_flow": "0.9",
+  "bridge_speed": [
+    "25",
+    "25"
+  ],
+  "overhang_fan_speed": [
+    "95",
+    "95"
+  ],
+  "seam_placement_away_from_overhangs": "1"
+}

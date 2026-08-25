@@ -66,6 +66,18 @@ JOBS = (
         1,
     ),
     PrintJob(
+        "QuenaCaseEli",
+        ROOT / "QuenaCaseEli.3mf",
+        ROOT / "QuenaCaseEliTwoColorPrintInPlace.stl",
+        "QuenaCaseEli.gcode",
+        ("Assembly",),
+        2,
+        10.0,
+        (1, 2),
+        True,
+        1,
+    ),
+    PrintJob(
         "QuenaCaseSingleFilament",
         ROOT / "QuenaCaseSingleFilament.3mf",
         ROOT / "QuenaCasePrintInPlace.stl",

@@ -1,11 +1,16 @@
 {
   "connectors": {
-    "diametral_clearance_mm": 0.0,
+    "mouthpiece_diametral_interference_mm": 0.1,
+    "mouthpiece_fit_surface": "socket_inner_radius",
     "mouthpiece_overlap_mm": 32.0,
+    "mouthpiece_radial_interference_mm": 0.05,
     "outer_diameter_mm": 20.700000000000003,
-    "radial_clearance_mm": 0.0,
     "tube_joint_connector_part": 2,
+    "tube_joint_diametral_clearance_mm": 0.4,
+    "tube_joint_fit_surface": "p2_socket_inner_radius",
     "tube_joint_overlap_mm": 15.0,
+    "tube_joint_radial_clearance_mm": 0.2,
+    "tube_joint_tip_transition_mm": 3.0,
     "wall_width_mm": 0.8
   },
   "design_id": "agnuquena-g",
@@ -355,12 +360,12 @@
     {
       "length_mm": 133.44451663034812,
       "name": "tube_2",
-      "print_height_mm": 148.44451663034812,
+      "print_height_mm": 151.44451663034812,
       "start_z_mm": 241.25
     }
   ],
   "schema_version": 1,
-  "spec_sha256": "7a5be4d5fcc11ae19114969f2a0dae9f556bb1a15ad0b820fda51e613e63caec",
+  "spec_sha256": "ed0d8e62bb5494337440af4dffdfefca89c3bfb1da32a103c7362bc21d440b46",
   "tone_hole_profile": {
     "axial_scale": 1.0,
     "circumferential_scale": 1.0,

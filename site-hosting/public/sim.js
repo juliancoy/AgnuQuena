@@ -8,21 +8,21 @@ const MM_TO_M = 0.001;
 const DEG = Math.PI / 180;
 const MAX_SWEEP_DEG = 180;
 const INITIAL_ANGLE_DEG = 180;
-const ASSET_REVISION = "complete-latch-nubs-v2";
+const ASSET_REVISION = "large-latch-nubs-v3";
 
 const dims = {
   hingeAxis: { x: 0, y: -28.35, z: 14.40 },
   lidClosedZ: 14.55,
   latch: {
     xs: [-72, 72],
-    y: 27.2,
-    localZ: -2.35,
-    radius: 2.0,
-    releaseAngle: 4,
+    y: 28.2,
+    localZ: -3.35,
+    radius: 3.0,
+    releaseAngle: 5,
   },
   quenaSlots: [
     { asset: "QuenaTube1.stl", x: 0, y: -11.9, z: 12.95, bodyX0: -120.625, rotationZ: 0, outwardRoll: 270, openingAxis: [0, -1, 0] },
-    { asset: "QuenaTube2.stl", x: -46.4027, y: 11.9, z: 12.95, bodyX0: -59.2223, rotationZ: 0, outwardRoll: 90, openingAxis: [0, 1, 0] },
+    { asset: "QuenaTube2.stl", x: -44.9027, y: 11.9, z: 12.95, bodyX0: -57.7223, rotationZ: 0, outwardRoll: 90, openingAxis: [0, 1, 0] },
     { asset: "QuenaMouthpiece.stl", x: 89.325, y: 11.9, z: 12.95, bodyX0: -31.3, rotationZ: 180, outwardRoll: 180, openingAxis: [1, 0, 0] },
   ],
 };

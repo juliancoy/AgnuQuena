@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree as ET
 
+import numpy as np
 import trimesh
 
 
@@ -46,12 +47,17 @@ OBSOLETE_VIEWER_EXPORTS = (
 
 EXPECTED = {
     "QuenaCasePrintInPlace.stl": {
-        "size": (252.85, 113.948, 19.4),
+        "size": (252.85, 115.946, 20.595),
         "min_triangles": 18000,
         "components": 2,
     },
     "QuenaCaseTwoColorPrintInPlace.stl": {
-        "size": (252.85, 113.948, 19.4),
+        "size": (252.85, 115.946, 20.595),
+        "min_triangles": 18000,
+        "components": 2,
+    },
+    "QuenaCaseEliTwoColorPrintInPlace.stl": {
+        "size": (252.85, 115.946, 20.595),
         "min_triangles": 18000,
         "components": 2,
     },
@@ -61,7 +67,7 @@ EXPECTED = {
         "components": 1,
     },
     "QuenaCaseLid.stl": {
-        "size": (252.85, 62.448, 19.3),
+        "size": (252.85, 64.446, 20.595),
         "min_triangles": 1200,
         "components": 1,
     },
@@ -71,7 +77,7 @@ EXPECTED = {
         "components": 31,
     },
     "QuenaCaseAssembly.stl": {
-        "size": (252.85, 62.448, 28.8),
+        "size": (252.85, 64.446, 28.8),
         "min_triangles": 18000,
         "components": 2,
     },
@@ -83,7 +89,7 @@ CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
 # Canonical 32 mm mouthpiece pocket, 5.3 mm short-row gaps, 1.5 mm bed-edge
 # rounding, retention border, swapped artwork faces, two flourishes, and
 # enclosed round hinge ends, and complete spherical latch nubs.
-EXPECTED_CASE_VOLUME_MM3 = 261_864.03
+EXPECTED_CASE_VOLUME_MM3 = 261_017.01
 CASE_VOLUME_TOLERANCE_MM3 = 10.0
 # OpenSCAD's ASCII STL coordinate quantization accumulates a sub-voxel volume
 # difference after the rigid 180-degree print-pose transform of rounded shells.
@@ -336,7 +342,7 @@ def run_latch_design_checks() -> None:
     travel = protrusion - indent
     if not 0.20 <= travel <= 0.55:
         raise AssertionError(f"latch release travel {travel:.2f} mm is unsuitable")
-    if nub_r < 1.95 or indent < 0.80:
+    if nub_r < 2.95 or indent < 0.80:
         raise AssertionError("latch nub or receiving depth is undersized")
     if tongue_w < 17.5 or tongue_t < 1.2 or flex_l < 15.8:
         raise AssertionError("latch tongue is too thin or too short")
@@ -417,9 +423,7 @@ def run_channel_layout_checks() -> None:
     deck_shell_overlap = scad_scalar("deck_shell_overlap")
     tube_d = scad_scalar("id") + 2 * scad_scalar("shell_width")
     channel_d = tube_d + 2 * scad_scalar("part_clearance")
-    connector_d = tube_d + 2 * (
-        scad_scalar("shell_width") + scad_scalar("connector_radial_clearance")
-    )
+    connector_d = tube_d + 2 * scad_scalar("shell_width")
     max_channel_d = connector_d + 2 * scad_scalar("part_clearance")
     equator_pass = scad_scalar("equator_pass")
     axial_clearance = scad_scalar("axial_clearance")
@@ -592,8 +596,10 @@ def run_exterior_design_checks() -> None:
         raise AssertionError("mandala ornament is not procedurally repeated")
     if "flourish_2d();" not in source:
         raise AssertionError("mandala panel is missing its interstitial flourishes")
-    if "lid_ornament_recess(ornament_depth);" not in source:
-        raise AssertionError("mandala ornament is not cut into the production lid")
+    if not re.search(
+        r"lid_ornament_recess\(ornament_depth,\s*ornament_pattern\)", source
+    ):
+        raise AssertionError("selected ornament is not cut into the production lid")
     if "bottom_logo_recess(logo_depth);" not in source:
         raise AssertionError("upright logo is not cut into the upper print-pose panel")
     logo_module = source.split("module case_logo_2d()", 1)[1].split(
@@ -1107,10 +1113,62 @@ def run_color_project_checks() -> None:
         raise AssertionError(
             "single-filament 3MF differs beyond Bambu's degenerate-facet cleanup"
         )
+
+    eli_artwork = trimesh.load(ROOT / "QuenaCaseEliArtwork.stl", force="mesh")
+    eli_case = trimesh.load(
+        ROOT / "QuenaCaseEliTwoColorPrintInPlace.stl", force="mesh"
+    )
+    if not eli_artwork.is_watertight or not eli_artwork.is_winding_consistent:
+        raise AssertionError("ELI artwork must be a watertight, consistently wound mesh")
+    if not math.isclose(float(eli_artwork.bounds[0][2]), 0.0, abs_tol=0.01) or not math.isclose(
+        float(eli_artwork.bounds[1][2]), 0.2, abs_tol=0.01
+    ):
+        raise AssertionError("ELI artwork must occupy exactly one bed-facing layer")
+
+    eli_logo_parts = [
+        component
+        for component in eli_artwork.split(only_watertight=False)
+        if float(component.bounds[1][1]) > -case_outer_w / 2
+    ]
+    eli_logo = trimesh.util.concatenate(eli_logo_parts)
+    if (
+        len(eli_logo.faces) != len(logo.faces)
+        or not np.allclose(eli_logo.bounds, logo.bounds, atol=0.001)
+        or not math.isclose(float(eli_logo.volume), float(logo.volume), abs_tol=0.01)
+    ):
+        raise AssertionError("ELI variant changed the Eurasian Synergy side")
+
+    eli_recess_volume = float(solid_case.volume - eli_case.volume)
+    if not math.isclose(
+        eli_recess_volume,
+        float(eli_artwork.volume),
+        abs_tol=max(0.2, float(eli_artwork.volume) * 0.005),
+    ):
+        raise AssertionError("ELI artwork does not exactly fill its production recess")
+
+    eli_project = ROOT / "QuenaCaseEli.3mf"
+    with zipfile.ZipFile(eli_project) as archive:
+        if archive.testzip() is not None:
+            raise AssertionError("ELI case 3MF contains a corrupt member")
+        eli_metadata = archive.read("Metadata/model_settings.config").decode("utf-8")
+        eli_settings = json.loads(archive.read("Metadata/project_settings.config"))
+    for name in ("QuenaCaseEliTwoColorPrintInPlace.stl", "QuenaCaseEliArtwork.stl"):
+        if name not in eli_metadata:
+            raise AssertionError(f"ELI case 3MF is missing {name}")
+    if eli_settings.get("name") != "AgnuQuena ELI 2026 two-color print-in-place case":
+        raise AssertionError("ELI case 3MF does not identify the alternate pattern")
+    if 'key="extruder" value="1"' not in eli_metadata or 'key="extruder" value="2"' not in eli_metadata:
+        raise AssertionError("ELI case 3MF does not map both colors")
+
+    source = (ROOT / "QuenaCase.scad").read_text(encoding="utf-8")
+    if not re.search(r'text\(\s*"ELI"', source) or not re.search(
+        r'text\(\s*"2026"', source
+    ):
+        raise AssertionError("ELI pattern does not contain the requested name and year")
     print(
-        "QuenaCase colour project: ok, upright upper-panel logo and lower-panel "
-        "mandala/flourish inlays traced for a 0.4 mm nozzle, one 0.2 mm colour "
-        "layer, compact first-layer prime tower"
+        "QuenaCase colour projects: ok, unchanged Eurasian Synergy side, "
+        "canonical mandala and alternate embroidered ELI 2026 backs, one "
+        "0.2 mm colour layer, compact first-layer prime tower"
     )
 
 def run_hinge_sweep_check() -> None:

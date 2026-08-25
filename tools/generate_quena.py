@@ -229,12 +229,20 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
         "connectors.angled_transition_mm",
     )
     accent_ring = number(connectors["accent_ring_mm"], "connectors.accent_ring_mm")
-    radial_clearance = number(
-        connectors["radial_clearance_mm"],
-        "connectors.radial_clearance_mm",
+    tube_joint_radial_clearance = number(
+        connectors["tube_joint_radial_clearance_mm"],
+        "connectors.tube_joint_radial_clearance_mm",
     )
-    if radial_clearance < 0:
-        raise DesignError("radial_clearance_mm must be non-negative")
+    if tube_joint_radial_clearance < 0:
+        raise DesignError("tube_joint_radial_clearance_mm must be non-negative")
+    mouthpiece_radial_interference = number(
+        connectors["mouthpiece_radial_interference_mm"],
+        "connectors.mouthpiece_radial_interference_mm",
+    )
+    if mouthpiece_radial_interference < 0:
+        raise DesignError("mouthpiece_radial_interference_mm must be non-negative")
+    if mouthpiece_radial_interference >= shell_width:
+        raise DesignError("mouthpiece radial interference must be smaller than the wall")
     insert_tolerance = number(
         connectors["insert_z_tolerance_mm"],
         "connectors.insert_z_tolerance_mm",
@@ -590,7 +598,7 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
     print_heights = {
         "mouthpiece": mouthpiece_total + connector_extra(mouthpiece_overlap),
         "tube_1": tube_part_1_length,
-        "tube_2": tube_part_2_length + tube_joint_overlap,
+        "tube_2": tube_part_2_length + tube_joint_overlap + transition,
     }
     for part_name, height in print_heights.items():
         if height > maximum_print_height + 1e-9:
@@ -635,7 +643,8 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
             "rendering.layout_spacing_factor",
         ),
         "e": positive(rendering["epsilon_mm"], "rendering.epsilon_mm"),
-        "connector_radial_clearance": radial_clearance,
+        "tube_joint_radial_clearance": tube_joint_radial_clearance,
+        "mouthpiece_radial_interference": mouthpiece_radial_interference,
         "insert_z_tolerance": insert_tolerance,
         "tone_hole_axial_scale": axial_scale,
         "tone_hole_circumferential_scale": circumferential_scale,
@@ -671,11 +680,17 @@ def generate(spec: dict[str, Any]) -> tuple[dict[str, float], dict[str, Any]]:
         "connectors": {
             "mouthpiece_overlap_mm": mouthpiece_overlap,
             "tube_joint_overlap_mm": tube_joint_overlap,
+            "tube_joint_tip_transition_mm": transition,
             "tube_joint_connector_part": tube_joint_connector_part,
-            "radial_clearance_mm": radial_clearance,
-            "diametral_clearance_mm": radial_clearance * 2.0,
+            "tube_joint_radial_clearance_mm": tube_joint_radial_clearance,
+            "tube_joint_diametral_clearance_mm": tube_joint_radial_clearance * 2.0,
+            "mouthpiece_radial_interference_mm": mouthpiece_radial_interference,
+            "mouthpiece_diametral_interference_mm": mouthpiece_radial_interference
+            * 2.0,
+            "mouthpiece_fit_surface": "socket_inner_radius",
+            "tube_joint_fit_surface": "p2_socket_inner_radius",
             "outer_diameter_mm": outer_diameter
-            + 2.0 * (shell_width + radial_clearance),
+            + 2.0 * shell_width,
             "wall_width_mm": shell_width,
         },
         "parts": [
@@ -775,7 +790,8 @@ def render_scad(spec: dict[str, Any], params: dict[str, float]) -> str:
     for name in (
         "tube_spacing_factor",
         "e",
-        "connector_radial_clearance",
+        "tube_joint_radial_clearance",
+        "mouthpiece_radial_interference",
         "insert_z_tolerance",
         "tone_hole_axial_scale",
         "tone_hole_circumferential_scale",

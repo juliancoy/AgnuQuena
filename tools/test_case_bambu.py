@@ -78,11 +78,11 @@ def main() -> None:
     bbox = plate["objects"][0]["bbox"]
     expected_bbox = {
         "x": 1.575,
-        "y": 70.787,
+        "y": 68.789,
         "z": 0.0,
         "width": 252.85,
-        "depth": 113.948,
-        "height": 19.3,
+        "depth": 115.946,
+        "height": 20.596,
     }
     for key, expected in expected_bbox.items():
         if not math.isclose(float(bbox[key]), expected, abs_tol=0.02):
@@ -115,7 +115,7 @@ def main() -> None:
             r"^; layer num/total_layer_count: \d+/(\d+)$", gcode, re.MULTILINE
         )
     }
-    if layer_totals != {96}:
+    if layer_totals != {103}:
         raise AssertionError(f"Bambu produced unexpected layer counts: {layer_totals}")
     if any(match.start() > layer_two for match in re.finditer(r"^T1$", gcode, re.MULTILINE)):
         raise AssertionError("black artwork is not confined to the first layer")
@@ -135,7 +135,7 @@ def main() -> None:
         )
 
     print(
-        "QuenaCase Bambu slice: ok, P1S plate, 96 layers, 2 ABS filaments, "
+        "QuenaCase Bambu slice: ok, P1S plate, 103 layers, 2 ABS filaments, "
         "2 walls, 2-layer skins, 10% combined rectilinear infill, "
         "120 mm/s broad outer walls, 1 change, "
         f"{gap_fill_seconds:.1f} s detail-only gap fill, "

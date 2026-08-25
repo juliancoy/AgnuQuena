@@ -77,7 +77,7 @@ module mouthpiece(){
 
     // connector
     difference() {
-        color("green") translate([0, 0, mouthpiece_actual_length-accent_ring_z]) sleve_wide_outer((mouthpiece_actual_length) / total_height, mouthpiece_overlap, connector_radial_clearance, insert_z_tolerance);
+        color("green") translate([0, 0, mouthpiece_actual_length-accent_ring_z]) sleve_wide_outer((mouthpiece_actual_length) / total_height, mouthpiece_overlap, -mouthpiece_radial_interference, insert_z_tolerance);
         translate([0,0,-1])
         tube_negative();
     }
@@ -124,11 +124,6 @@ module piece(pieceno, yfactor, z=0){
             if(pieceno==len(part_lengths) - 1)
                 translate([0, 0, part_lengths[pieceno]]) cylinder(h = total_height, d = od * 1.1);    // top cut
             if (pieceno == 0)
-                translate([0, 0, part_lengths[pieceno] - angled_transition_z])
-                    tube_joint_male_tip_cut(
-                        part_lengths[pieceno] / total_height
-                    );
-            if (pieceno == 0)
                 translate([0,0,-e]) sleve_wide_outer(
                     part_start[pieceno] / total_height,
                     pieceno == 0 ? mouthpiece_overlap : tube_joint_overlap,
@@ -141,7 +136,7 @@ module piece(pieceno, yfactor, z=0){
                     lower_tube_joint_sleeve(
                         part_start[pieceno] / total_height,
                         tube_joint_overlap,
-                        connector_radial_clearance
+                        tube_joint_radial_clearance
                     );
                 translate([0, 0, -part_start[pieceno]]) tube_negative();
             }
@@ -180,19 +175,20 @@ module piecewise(){
 }
 
 module printable_piece(pieceno, yfactor=0) {
-    bed_offset = tube_joint_connector_part == 2 && pieceno == 1
-        ? tube_joint_overlap
-        : 0;
+    // Put each tube's plain free end on the bed. Connector features then build
+    // upward, including P2's tapered sleeve lead-in.
     difference(){
-        translate([0, 0, bed_offset]) piece(pieceno, yfactor);
+        translate([0, 0, part_lengths[pieceno]])
+            rotate([180, 0, 0])
+                piece(pieceno, yfactor);
         translate([0,0,-cube_cut/2])
         cube([cube_cut,cube_cut,cube_cut], center=true);
     }
 }
 
 // Use the same conical primitive for every connector radius change. This
-// keeps the mouthpiece connector and both halves of the tube joint angled in
-// the SCAD source and in every exported STL.
+// keeps the mouthpiece and P2 insertion lead-ins identical in the SCAD source
+// and in every exported STL.
 module angled_radius_transition(
     transition_h,
     from_d,
@@ -230,78 +226,68 @@ module angled_annular_transition(
     }
 }
 
-// Remove the material outside the complementary male taper on P1. Its outer
-// surface reaches the bore at the joint face, so it fills P2's conical socket
-// without introducing an acoustic step or a horizontal printing ledge.
-module tube_joint_male_tip_cut(joint_height_normalized) {
-    transition_start = joint_height_normalized
-        - angled_transition_z / total_height;
-    transition_start_od = od * (1 - transition_start)
-        + odo * transition_start;
-    joint_id = id * (1 - joint_height_normalized)
-        + ido * joint_height_normalized;
-
-    difference() {
-        translate([0, 0, -e])
-            cylinder(
-                h = angled_transition_z + e * 2,
-                d = max(od, odo) * 1.2
-            );
-        angled_radius_transition(
-            angled_transition_z,
-            transition_start_od,
-            joint_id,
-            e
-        );
-    }
-}
-
 module lower_tube_joint_sleeve(
     joint_height_normalized,
     overlap,
     radial_clearance=0
 ) {
-    transition_h = min(angled_transition_z, overlap);
-    straight_h = overlap - transition_h;
     far_height = joint_height_normalized - overlap / total_height;
-    transition_start = joint_height_normalized
-        - transition_h / total_height;
     joint_od = od * (1 - joint_height_normalized)
         + odo * joint_height_normalized;
     joint_id = id * (1 - joint_height_normalized)
         + ido * joint_height_normalized;
     far_od = od * (1 - far_height) + odo * far_height;
-    transition_start_od = od * (1 - transition_start)
-        + odo * transition_start;
-    sleeve_extra_d = (shell_width + radial_clearance) * 2;
+    fit_lead = min(0.5, overlap / 4);
+    lead_height = far_height + fit_lead / total_height;
+    lead_od = od * (1 - lead_height) + odo * lead_height;
+    sleeve_extra_d = shell_width * 2;
     cavity_extra_d = radial_clearance * 2;
 
     union() {
-        // Full-diameter socket before the complementary 3 mm taper.
+        // Match the mouthpiece sleeve's tapered insertion lead-in. It adds no
+        // radial clearance to the cylindrical retaining surface above it.
+        translate([0, 0, -overlap - angled_transition_z])
+            angled_annular_transition(
+                angled_transition_z,
+                far_od,
+                far_od + sleeve_extra_d,
+                far_od,
+                far_od
+            );
+
+        // Keep the complete overlap cylindrical, like the mouthpiece socket.
+        // The printed P1/P2 fit must not depend on a short terminal taper.
         translate([0, 0, -overlap])
             difference() {
                 cylinder(
-                    h = straight_h + e,
+                    h = overlap + e,
                     d1 = far_od + sleeve_extra_d,
-                    d2 = transition_start_od + sleeve_extra_d
+                    d2 = joint_od + sleeve_extra_d
                 );
-                translate([0, 0, -e])
-                    cylinder(
-                        h = straight_h + e * 2,
-                        d1 = far_od + cavity_extra_d,
-                        d2 = transition_start_od + cavity_extra_d
-                    );
+                union() {
+                    translate([0, 0, -e])
+                        cylinder(
+                            h = fit_lead + e,
+                            d1 = far_od,
+                            d2 = lead_od + cavity_extra_d
+                        );
+                    translate([0, 0, fit_lead - e])
+                        cylinder(
+                            h = overlap - fit_lead + e * 2,
+                            d1 = lead_od + cavity_extra_d,
+                            d2 = joint_od + cavity_extra_d
+                        );
+                }
             }
 
-        // Angle both the outer diameter and the receiving radius into the P2
-        // body. P1 carries the matching male taper, so the assembled bore stays
-        // continuous while every new print layer remains supported.
-        translate([0, 0, -transition_h])
+        // Blend only the outside of the sleeve into P2. The inner shoulder is
+        // intentionally left at the joint face so all 15 mm retain P1.
+        translate([0, 0, -e])
             angled_annular_transition(
-                transition_h,
-                transition_start_od + sleeve_extra_d,
+                angled_transition_z + e,
+                joint_od + sleeve_extra_d,
                 joint_od,
-                transition_start_od + cavity_extra_d,
+                joint_id,
                 joint_id
             );
     }
@@ -338,42 +324,58 @@ module inner_curve_ring(i=0){
 module sleve_wide_outer(
     height_on_tube_normalized,
     overlap,
-    radial_clearance=0,
+    socket_radial_adjustment=0,
     ztolerence=0,
     direction=1
 ) {
     odlb = od * (1 - height_on_tube_normalized) + odo * height_on_tube_normalized; // outer diameter linear interpolate bottom
     far_height = height_on_tube_normalized + direction * overlap / total_height;
     odlt = od * (1 - far_height) + odo * far_height; // outer diameter at the sleeve's far end
+    cylinder_height = overlap - ztolerence;
+    fit_lead = min(0.5, cylinder_height / 4);
+    lead_height = height_on_tube_normalized
+        + direction * (cylinder_height - fit_lead) / total_height;
+    lead_od = od * (1 - lead_height) + odo * lead_height;
 
     translate([0,0,-2])
     difference(){
         union(){
             cylinder(
-                h = overlap - ztolerence,
-                d1 = odlb + (shell_width + radial_clearance)*2,
-                d2 = odlt + (shell_width + radial_clearance)*2
+                h = cylinder_height,
+                d1 = odlb + shell_width * 2,
+                d2 = odlt + shell_width * 2
             );
             translate([0,0,-angled_transition_z])
             angled_radius_transition(
                 angled_transition_z,
                 odlb,
-                odlt + (shell_width + radial_clearance)*2
+                odlt + shell_width * 2
             );
-            translate([0,0,overlap - ztolerence])
+            translate([0,0,cylinder_height])
             angled_radius_transition(
                 angled_transition_z,
-                odlt + (shell_width + radial_clearance)*2,
+                odlt + shell_width * 2,
                 odlb
             );
-        }            
-        cylinder(
-            h = angled_transition_z+overlap - ztolerence,
-            d1 = odlb + radial_clearance*2,
-            d2 = odlt + radial_clearance*2
-        );
-
-        
+        }
+        union() {
+            cylinder(
+                h = cylinder_height - fit_lead + e,
+                d1 = odlb + socket_radial_adjustment * 2,
+                d2 = lead_od + socket_radial_adjustment * 2
+            );
+            translate([0, 0, cylinder_height - fit_lead])
+                cylinder(
+                    h = fit_lead + e,
+                    d1 = lead_od + socket_radial_adjustment * 2,
+                    d2 = odlt
+                );
+            translate([0, 0, cylinder_height - e])
+                cylinder(
+                    h = angled_transition_z + e * 2,
+                    d = odlt
+                );
+        }
     }
 
 }
@@ -419,7 +421,8 @@ export_part = "layout";
 if (export_part == "part1") {
     mouthpiece();
 } else if (export_part == "part2") {
-    printable_piece(0);
+    // Preserve assembly coordinates; only the combined print layout flips it.
+    piece(0, 0);
 } else if (export_part == "part3") {
     // Preserve P2's joint-relative origin for assembly consumers. Slicers
     // place this standalone mesh on the bed automatically; the combined

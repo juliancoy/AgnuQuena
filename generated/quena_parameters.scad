@@ -2,7 +2,7 @@
 // Source: designs/quena.json
 // Regenerate: python3 tools/generate_quena.py
 generated_design_id = "agnuquena-g";
-generated_spec_sha256 = "7a5be4d5fcc11ae19114969f2a0dae9f556bb1a15ad0b820fda51e613e63caec";
+generated_spec_sha256 = "ed0d8e62bb5494337440af4dffdfefca89c3bfb1da32a103c7362bc21d440b46";
 
 quena_facet_count = 100.0;
 shell_width = 0.8;
@@ -32,7 +32,8 @@ part_lengths = [tube_part_1_length, tube_part_2_length];
 part_start = [0, tube_part_1_length];
 tube_spacing_factor = 0.6;
 e = 0.004;
-connector_radial_clearance = 0.0;
+tube_joint_radial_clearance = 0.2;
+mouthpiece_radial_interference = 0.05;
 insert_z_tolerance = 0.4;
 tone_hole_axial_scale = 1.0;
 tone_hole_circumferential_scale = 1.0;

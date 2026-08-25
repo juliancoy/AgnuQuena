@@ -18,7 +18,8 @@
     "tube_joint_connector_part": 2,
     "angled_transition_mm": 3.0,
     "accent_ring_mm": 0.0,
-    "radial_clearance_mm": 0.0,
+    "tube_joint_radial_clearance_mm": 0.2,
+    "mouthpiece_radial_interference_mm": 0.05,
     "insert_z_tolerance_mm": 0.4
   },
   "rendering": {

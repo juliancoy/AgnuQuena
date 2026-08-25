@@ -9,7 +9,8 @@ include <generated/quena_parameters.scad>
 include <generated/case_logo_dimensions.scad>
 
 // Select "bottom", "mandala_panel", "lid", "case_engraving", "print_in_place",
-// "print_in_place_two_color", "case_logo", "case_artwork_print", "latch",
+// "print_in_place_two_color", "print_in_place_eli_two_color", "case_logo",
+// "case_artwork_print", "case_eli_artwork_print", "latch",
 // "assembly", "preview", or "none".
 // Override from the CLI with:
 // openscad -D 'part="print_in_place"' -o QuenaCasePrintInPlace.stl QuenaCase.scad
@@ -19,7 +20,7 @@ part = is_undef(part) ? "preview" : part;
 // Close, printable fit around each part.  These are diametral/radial clearances;
 // the separate axial clearance below controls end play.
 part_clearance = 0.3;
-connector_d = od + (shell_width + connector_radial_clearance) * 2;
+connector_d = od + shell_width * 2;
 channel_d = od + part_clearance * 2;
 connector_channel_d = connector_d + part_clearance * 2;
 max_channel_d = connector_channel_d;
@@ -61,6 +62,9 @@ mandala_radius = 22;
 mandala_centers = [-78, 0, 78];
 flourish_width = 30;
 flourish_height = 12;
+eli_stitch_width = 1.0;
+eli_stitch_pitch = 2.6;
+eli_frame_inset = 7;
 
 // The logo uses a deeper recess in single-filament mode for visibility.
 logo_inlay_depth = 0.6;
@@ -102,7 +106,7 @@ slot_connector_overlaps = [0, tube_joint_overlap, mouthpiece_overlap];
 function connector_expand_end(i) =
     slot_connector_overlaps[i] - insert_z_tolerance - 2;
 function connector_extra_l(i) = slot_connector_sides[i] < 0
-    ? slot_connector_overlaps[i]
+    ? slot_connector_overlaps[i] + angled_transition_z
     : connector_expand_end(i) + angled_transition_z;
 profile_lengths = [
     tube_part_1_length,
@@ -266,11 +270,11 @@ latch_tongue_w = 18.0;
 latch_tongue_t = 1.6;
 latch_tongue_flex_l = 15.9;
 latch_tongue_y = case_outer_w / 2 - latch_tongue_t / 2;
-latch_nub_r = 2.0;
+latch_nub_r = 3.0;
 latch_nub_protrusion = 1.25;
 latch_indent_depth = 0.85;
 latch_release_deflection = latch_nub_protrusion - latch_indent_depth;
-latch_nub_z = case_outer_h - 2.05;
+latch_nub_z = case_outer_h - latch_nub_r - 0.05;
 latch_point_xs = [-72, 72];
 latch_point_count = 2;
 latch_tongue_tip_w = 15.5;
@@ -525,18 +529,108 @@ module mandala_panel_2d() {
     }
 }
 
-module lid_ornament_recess(depth = mandala_depth) {
-    translate([0, 0, lid_outer_h - depth])
-        linear_extrude(height = depth + 0.01)
-            mandala_panel_2d();
+module embroidered_fill_2d(stitch_width = eli_stitch_width) {
+    // A continuous edge plus closely spaced diagonal satin stitches gives
+    // lettering the structure of embroidery without nozzle-width hairlines.
+    union() {
+        difference() {
+            offset(delta = stitch_width * 0.7) children();
+            offset(delta = -stitch_width * 0.3) children();
+        }
+        intersection() {
+            children();
+            for (x = [-180 : eli_stitch_pitch : 180])
+                translate([x, 0]) rotate(-18)
+                    square([stitch_width, 180], center = true);
+        }
+    }
 }
 
-module lid_ornament_inlay(depth = mandala_depth) {
+module cross_stitch_2d(size = 3.2, stroke = eli_stitch_width) {
+    rotate(45) {
+        square([size, stroke], center = true);
+        square([stroke, size], center = true);
+    }
+}
+
+module eli_panel_2d() {
+    frame_r = corner_r - eli_frame_inset;
+    inner_size = [
+        case_outer_l - 2 * eli_frame_inset,
+        case_outer_w - 2 * eli_frame_inset
+    ];
+    union() {
+        // Double stitched frame reads like the edge of an embroidered patch.
+        for (offset_mm = [0, 2.8])
+            difference() {
+                rounded_rect_2d(
+                    [inner_size[0] - offset_mm * 2, inner_size[1] - offset_mm * 2],
+                    frame_r - offset_mm
+                );
+                offset(delta = -eli_stitch_width)
+                    rounded_rect_2d(
+                        [inner_size[0] - offset_mm * 2, inner_size[1] - offset_mm * 2],
+                        frame_r - offset_mm
+                    );
+            }
+
+        translate([-32, 0])
+            embroidered_fill_2d()
+                text(
+                    "ELI",
+                    size = 27,
+                    font = "DejaVu Sans:style=Bold",
+                    halign = "center",
+                    valign = "center",
+                    spacing = 1.25
+                );
+        translate([45, 0])
+            embroidered_fill_2d(0.9)
+                text(
+                    "2026",
+                    size = 13,
+                    font = "DejaVu Sans:style=Bold",
+                    halign = "center",
+                    valign = "center",
+                    spacing = 1.08
+                );
+
+        // Loose cross-stitches and short thread flourishes fill the long back
+        // panel while keeping ELI unmistakably dominant.
+        for (x = [-108, -98, 98, 108])
+            for (y = [-12, 12])
+                translate([x, y]) cross_stitch_2d();
+        for (sx = [-1, 1])
+            scale([sx, 1]) {
+                stroke_path_2d(
+                    [[78, -12], [86, -8], [94, -11], [103, -6]],
+                    eli_stitch_width
+                );
+                translate([104, -6]) rotate(-25)
+                    flourish_leaf_2d(5.2, 2.4);
+            }
+    }
+}
+
+module lid_pattern_2d(pattern = "mandala") {
+    if (pattern == "eli")
+        eli_panel_2d();
+    else
+        mandala_panel_2d();
+}
+
+module lid_ornament_recess(depth = mandala_depth, pattern = "mandala") {
+    translate([0, 0, lid_outer_h - depth])
+        linear_extrude(height = depth + 0.01)
+            lid_pattern_2d(pattern);
+}
+
+module lid_ornament_inlay(depth = mandala_depth, pattern = "mandala") {
     intersection() {
         translate([0, 0, lid_outer_h - depth])
             linear_extrude(height = depth)
-                mandala_panel_2d();
-        lid_assembly(false);
+                lid_pattern_2d(pattern);
+        lid_assembly(false, mandala_depth, pattern);
     }
 }
 
@@ -618,6 +712,12 @@ module stored_profile_envelope(
         cx0 = connector_x0(i);
         profiled_segment(
             cx0 - terminal_extension,
+            cx0 + angled_transition_z,
+            normal_d,
+            expanded_d
+        );
+        profiled_segment(
+            cx0 + angled_transition_z,
             x0,
             expanded_d,
             expanded_d
@@ -1400,7 +1500,8 @@ module bottom_assembly(with_logo_recess = true, logo_depth = logo_inlay_depth) {
 
 module lid_case(
     with_ornament_recess = true,
-    ornament_depth = mandala_depth
+    ornament_depth = mandala_depth,
+    ornament_pattern = "mandala"
 ) {
     // The two case halves have identical outside height.  Their meeting faces
     // are flat; no tongue, ridge, or receiving groove crosses the seam.
@@ -1415,20 +1516,22 @@ module lid_case(
         translate([0, 0, -lid_closed_z])
             all_channel_cuts(4, false);
         lid_retention_relief();
-        if (with_ornament_recess) lid_ornament_recess(ornament_depth);
+        if (with_ornament_recess)
+            lid_ornament_recess(ornament_depth, ornament_pattern);
     }
 }
 
 module lid_assembly(
     with_ornament_recess = true,
-    ornament_depth = mandala_depth
+    ornament_depth = mandala_depth,
+    ornament_pattern = "mandala"
 ) {
     union() {
         // The bottom-knuckle clearance belongs to the lid shell only.  Keep
         // it out of the hinge union so it cannot square-cut the rounded pins.
         difference() {
             union() {
-                lid_case(with_ornament_recess, ornament_depth);
+                lid_case(with_ornament_recess, ornament_depth, ornament_pattern);
                 lid_simple_latch_tongues();
                 lid_thumb_grip();
             }
@@ -1473,20 +1576,25 @@ module lid_in_print_pose() {
             ]) children();
 }
 
-module case_artwork_in_print_pose(depth = two_color_inlay_depth) {
+module case_artwork_in_print_pose(
+    depth = two_color_inlay_depth,
+    ornament_pattern = "mandala"
+) {
     bottom_logo_inlay(depth);
-    lid_in_print_pose() lid_ornament_inlay(depth);
+    lid_in_print_pose() lid_ornament_inlay(depth, ornament_pattern);
 }
 
 module print_in_place_case(
     logo_depth = logo_inlay_depth,
-    ornament_depth = mandala_depth
+    ornament_depth = mandala_depth,
+    ornament_pattern = "mandala"
 ) {
     // Rotate the closed lid exactly 180 degrees about the production hinge.
     // This puts both exterior backs at Z=0 and leaves the two rear shell edges
     // separated by hinge_print_shell_gap on the build plate.
     bottom_assembly(true, logo_depth);
-    lid_in_print_pose() lid_assembly(true, ornament_depth);
+    lid_in_print_pose()
+        lid_assembly(true, ornament_depth, ornament_pattern);
 }
 
 if (part == "none") {
@@ -1494,6 +1602,8 @@ if (part == "none") {
     bottom_assembly();
 } else if (part == "mandala_panel") {
     mandala_panel_2d();
+} else if (part == "eli_panel") {
+    eli_panel_2d();
 } else if (part == "lid") {
     lid_assembly();
 } else if (part == "case_engraving") {
@@ -1502,12 +1612,22 @@ if (part == "none") {
     bottom_logo_inlay();
 } else if (part == "case_artwork_print") {
     case_artwork_in_print_pose();
+} else if (part == "case_eli_engraving") {
+    lid_ornament_inlay(mandala_depth, "eli");
+} else if (part == "case_eli_artwork_print") {
+    case_artwork_in_print_pose(two_color_inlay_depth, "eli");
 } else if (part == "latch") {
     lid_simple_latch();
 } else if (part == "assembly") {
     closed_assembly_case();
 } else if (part == "print_in_place_two_color") {
     print_in_place_case(two_color_inlay_depth, two_color_inlay_depth);
+} else if (part == "print_in_place_eli_two_color") {
+    print_in_place_case(
+        two_color_inlay_depth,
+        two_color_inlay_depth,
+        "eli"
+    );
 } else if (part == "print_in_place") {
     print_in_place_case();
 } else {

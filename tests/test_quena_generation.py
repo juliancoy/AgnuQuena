@@ -32,18 +32,24 @@ def test_generated_artifacts_match_the_canonical_spec():
     assert MANIFEST_PATH.read_text(encoding="utf-8") == render_manifest(manifest)
 
 
-def test_two_wall_shell_and_tight_connector_fit_are_explicit():
+def test_two_wall_shell_and_loosened_connector_fit_are_explicit():
     parameters, manifest = generate(load_spec())
 
     assert parameters["shell_width"] == pytest.approx(0.8)
     assert parameters["od"] == pytest.approx(19.1)
-    assert parameters["connector_radial_clearance"] == pytest.approx(0.0)
-    assert manifest["connectors"]["radial_clearance_mm"] == pytest.approx(0.0)
-    assert manifest["connectors"]["diametral_clearance_mm"] == pytest.approx(0.0)
+    assert parameters["tube_joint_radial_clearance"] == pytest.approx(0.2)
+    assert parameters["mouthpiece_radial_interference"] == pytest.approx(0.05)
+    assert manifest["connectors"]["tube_joint_radial_clearance_mm"] == pytest.approx(0.2)
+    assert manifest["connectors"]["tube_joint_diametral_clearance_mm"] == pytest.approx(0.4)
+    assert manifest["connectors"]["mouthpiece_radial_interference_mm"] == pytest.approx(0.05)
+    assert manifest["connectors"]["mouthpiece_diametral_interference_mm"] == pytest.approx(0.1)
+    assert manifest["connectors"]["mouthpiece_fit_surface"] == "socket_inner_radius"
+    assert manifest["connectors"]["tube_joint_fit_surface"] == "p2_socket_inner_radius"
     assert manifest["connectors"]["outer_diameter_mm"] == pytest.approx(20.7)
     assert manifest["connectors"]["wall_width_mm"] == pytest.approx(0.8)
     assert manifest["connectors"]["mouthpiece_overlap_mm"] == pytest.approx(32.0)
     assert manifest["connectors"]["tube_joint_overlap_mm"] == pytest.approx(15.0)
+    assert manifest["connectors"]["tube_joint_tip_transition_mm"] == pytest.approx(3.0)
     assert manifest["connectors"]["tube_joint_connector_part"] == 2
     mouthpiece = next(
         part for part in manifest["parts"] if part["name"] == "mouthpiece"
@@ -53,7 +59,15 @@ def test_two_wall_shell_and_tight_connector_fit_are_explicit():
 
 def test_negative_connector_clearance_is_rejected():
     spec = copy.deepcopy(load_spec())
-    spec["connectors"]["radial_clearance_mm"] = -0.01
+    spec["connectors"]["tube_joint_radial_clearance_mm"] = -0.01
+
+    with pytest.raises(DesignError, match="non-negative"):
+        generate(spec)
+
+
+def test_invalid_mouthpiece_interference_is_rejected():
+    spec = copy.deepcopy(load_spec())
+    spec["connectors"]["mouthpiece_radial_interference_mm"] = -0.01
 
     with pytest.raises(DesignError, match="non-negative"):
         generate(spec)
@@ -76,7 +90,7 @@ def test_measured_axial_retune_and_shifted_tube_break_are_explicit():
     assert tube_1["length_mm"] == 241.25
     assert tube_1["print_height_mm"] == pytest.approx(241.25)
     assert tube_2["print_height_mm"] == pytest.approx(
-        tube_2["length_mm"] + 15.0
+        tube_2["length_mm"] + 15.0 + 3.0
     )
     assert manifest["manufacturing_validation"][
         "minimum_sleeve_to_hole_clearance_mm"
