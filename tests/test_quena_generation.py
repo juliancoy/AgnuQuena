@@ -37,12 +37,12 @@ def test_two_wall_shell_and_loosened_connector_fit_are_explicit():
 
     assert parameters["shell_width"] == pytest.approx(0.8)
     assert parameters["od"] == pytest.approx(19.1)
-    assert parameters["tube_joint_radial_clearance"] == pytest.approx(0.2)
-    assert parameters["mouthpiece_radial_interference"] == pytest.approx(0.05)
-    assert manifest["connectors"]["tube_joint_radial_clearance_mm"] == pytest.approx(0.2)
-    assert manifest["connectors"]["tube_joint_diametral_clearance_mm"] == pytest.approx(0.4)
-    assert manifest["connectors"]["mouthpiece_radial_interference_mm"] == pytest.approx(0.05)
-    assert manifest["connectors"]["mouthpiece_diametral_interference_mm"] == pytest.approx(0.1)
+    assert parameters["tube_joint_radial_clearance"] == pytest.approx(0.3)
+    assert parameters["mouthpiece_radial_interference"] == pytest.approx(0.15)
+    assert manifest["connectors"]["tube_joint_radial_clearance_mm"] == pytest.approx(0.3)
+    assert manifest["connectors"]["tube_joint_diametral_clearance_mm"] == pytest.approx(0.6)
+    assert manifest["connectors"]["mouthpiece_radial_interference_mm"] == pytest.approx(0.15)
+    assert manifest["connectors"]["mouthpiece_diametral_interference_mm"] == pytest.approx(0.3)
     assert manifest["connectors"]["mouthpiece_fit_surface"] == "socket_inner_radius"
     assert manifest["connectors"]["tube_joint_fit_surface"] == "p2_socket_inner_radius"
     assert manifest["connectors"]["outer_diameter_mm"] == pytest.approx(20.7)

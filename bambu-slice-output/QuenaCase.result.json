@@ -1,49 +1,49 @@
 {
     "error_string": "Success.",
-    "export_time": 791,
+    "export_time": 763,
     "layer_height": 0.20000000298023224,
     "plate_index": 0,
-    "prepare_time": 247,
+    "prepare_time": 237,
     "return_code": 0,
     "sliced_plates": [
         {
             "feature_type_times": {
-                "Bottom surface": 834.2037963867188,
-                "Bridge": 732.9208374023438,
+                "Bottom surface": 834.203125,
+                "Bridge": 732.5200805664063,
                 "Custom": 364.9645080566406,
                 "Flush": 147.36376953125,
-                "Gap infill": 127.99788665771484,
-                "Inner wall": 1539.45263671875,
-                "Internal solid infill": 2561.562744140625,
-                "Outer wall": 2879.07080078125,
+                "Gap infill": 127.81925964355469,
+                "Inner wall": 1539.55615234375,
+                "Internal solid infill": 2489.90478515625,
+                "Outer wall": 2882.19189453125,
                 "Overhang wall": 102.94490814208984,
                 "Prime tower": 30.15276336669922,
-                "Sparse infill": 1656.400146484375,
-                "Top surface": 986.8652954101563,
-                "Travel": 1361.972412109375,
-                "Undefined": 1346.445068359375
+                "Sparse infill": 1655.7445068359375,
+                "Top surface": 986.9376831054688,
+                "Travel": 1388.0594482421875,
+                "Undefined": 1372.5321044921875
             },
             "filament_change_times": 1,
             "filaments": [
                 {
                     "filament_id": "GFB60",
                     "id": 1,
-                    "main_used_g": 93.61934661865234,
-                    "total_used_g": 94.18550109863281
+                    "main_used_g": 93.62504577636719,
+                    "total_used_g": 94.1911849975586
                 },
                 {
                     "filament_id": "GFB60",
                     "id": 2,
-                    "main_used_g": 1.0836384296417236,
-                    "total_used_g": 1.1938483715057373
+                    "main_used_g": 1.0836371183395386,
+                    "total_used_g": 1.1938471794128418
                 }
             ],
-            "generate_support_material_time": 48,
+            "generate_support_material_time": 42,
             "id": 1,
-            "infill_time": 465,
+            "infill_time": 470,
             "layer_filament_change": 0,
-            "main_predication": 12752.697265625,
-            "make_perimeters_time": 505,
+            "main_predication": 12709.341796875,
+            "make_perimeters_time": 490,
             "obj_cached_cnt": 0,
             "objects": [
                 {
@@ -60,9 +60,9 @@
                     "triangle_count": 117914
                 }
             ],
-            "sliced_time": 2263,
-            "sliced_time_with_cache": 1108,
-            "total_predication": 13308.6201171875,
+            "sliced_time": 2139,
+            "sliced_time_with_cache": 1003,
+            "total_predication": 13265.265625,
             "triangle_count": 117914,
             "warning_message": ""
         }

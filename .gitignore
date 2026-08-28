@@ -8,3 +8,4 @@ acoustics/out/
 
 # CalculiX result dumps are generated and can exceed GitHub's 100 MB limit.
 analysis/*.frd
+bambu-slice*

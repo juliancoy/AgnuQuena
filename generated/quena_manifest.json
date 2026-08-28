@@ -1,15 +1,15 @@
 {
   "connectors": {
-    "mouthpiece_diametral_interference_mm": 0.1,
+    "mouthpiece_diametral_interference_mm": 0.3,
     "mouthpiece_fit_surface": "socket_inner_radius",
     "mouthpiece_overlap_mm": 32.0,
-    "mouthpiece_radial_interference_mm": 0.05,
+    "mouthpiece_radial_interference_mm": 0.15,
     "outer_diameter_mm": 20.700000000000003,
     "tube_joint_connector_part": 2,
-    "tube_joint_diametral_clearance_mm": 0.4,
+    "tube_joint_diametral_clearance_mm": 0.6,
     "tube_joint_fit_surface": "p2_socket_inner_radius",
     "tube_joint_overlap_mm": 15.0,
-    "tube_joint_radial_clearance_mm": 0.2,
+    "tube_joint_radial_clearance_mm": 0.3,
     "tube_joint_tip_transition_mm": 3.0,
     "wall_width_mm": 0.8
   },
@@ -365,7 +365,7 @@
     }
   ],
   "schema_version": 1,
-  "spec_sha256": "ed0d8e62bb5494337440af4dffdfefca89c3bfb1da32a103c7362bc21d440b46",
+  "spec_sha256": "78776a7f97b22bc189ecade1e8e214ab233824be949ac349e1e93f1ddb342eb4",
   "tone_hole_profile": {
     "axial_scale": 1.0,
     "circumferential_scale": 1.0,
