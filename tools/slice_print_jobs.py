@@ -38,6 +38,7 @@ class PrintJob:
     expected_filaments: tuple[int, ...]
     multi_material: bool
     expected_filament_changes: int
+    expected_material_sequence: tuple[int, ...] = ()
 
 
 JOBS = (
@@ -64,6 +65,7 @@ JOBS = (
         (1, 2),
         True,
         1,
+        (1, 0),
     ),
     PrintJob(
         "QuenaCaseEli",
@@ -76,6 +78,20 @@ JOBS = (
         (1, 2),
         True,
         1,
+        (1, 0),
+    ),
+    PrintJob(
+        "QuenaCaseLoafBoof",
+        ROOT / "QuenaCaseLoafBoof.3mf",
+        ROOT / "QuenaCaseLoafBoofTwoColorPrintInPlace.stl",
+        "QuenaCaseLoafBoof.gcode",
+        ("Assembly",),
+        2,
+        10.0,
+        (1, 2),
+        True,
+        1,
+        (1, 0),
     ),
     PrintJob(
         "QuenaCaseSingleFilament",
@@ -168,6 +184,15 @@ def validate_slice(job: PrintJob, result: dict[str, object], gcode: str) -> dict
         raise RuntimeError(f"{job.name}: G-code has the wrong prime-tower mode")
     if not job.multi_material and re.search(r"^(?:T1|M620 S1A)$", gcode, re.MULTILINE):
         raise RuntimeError(f"{job.name}: single-filament G-code requests a second tool")
+    material_sequence = tuple(
+        int(match.group(1))
+        for match in re.finditer(r"^M620 S(\d+)A\b", gcode, re.MULTILINE)
+    )
+    if job.expected_material_sequence and material_sequence != job.expected_material_sequence:
+        raise RuntimeError(
+            f"{job.name}: expected M620 material sequence "
+            f"{job.expected_material_sequence}, got {material_sequence}"
+        )
     layer_match = re.search(r"^; total layer number:\s*(\d+)$", gcode, re.MULTILINE)
     if not layer_match:
         raise RuntimeError(f"{job.name}: G-code does not report a layer count")
@@ -181,6 +206,7 @@ def validate_slice(job: PrintJob, result: dict[str, object], gcode: str) -> dict
         "supports": False,
         "multi_material": job.multi_material,
         "prime_tower": job.multi_material,
+        "material_sequence": material_sequence,
     }
 
 

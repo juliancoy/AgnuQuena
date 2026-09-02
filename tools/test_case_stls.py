@@ -61,6 +61,11 @@ EXPECTED = {
         "min_triangles": 18000,
         "components": 2,
     },
+    "QuenaCaseLoafBoofTwoColorPrintInPlace.stl": {
+        "size": (252.85, 115.946, 20.595),
+        "min_triangles": 18000,
+        "components": 2,
+    },
     "QuenaCaseBottom.stl": {
         "size": (252.85, 61.3, 19.4),
         "min_triangles": 2200,
@@ -85,11 +90,13 @@ EXPECTED = {
 
 LID_SWEEP_MAX_DEG = 180
 CONTACT_TOLERANCE_MM = 0.05
+LOADED_FLUTE_LID_CLEARANCE_MM = 0.30
 CLOSED_OVERLAP_VOLUME_TOLERANCE_MM3 = 0.1
 # Canonical 32 mm mouthpiece pocket, 5.3 mm short-row gaps, 1.5 mm bed-edge
-# rounding, retention border, swapped artwork faces, two flourishes, and
-# enclosed round hinge ends, and complete spherical latch nubs.
-EXPECTED_CASE_VOLUME_MM3 = 261_017.01
+# rounding, retention border, enlarged lidward flute relief, swapped artwork
+# faces, two flourishes, enclosed round hinge ends, and complete spherical
+# latch nubs.
+EXPECTED_CASE_VOLUME_MM3 = 256_281.51
 CASE_VOLUME_TOLERANCE_MM3 = 10.0
 # OpenSCAD's ASCII STL coordinate quantization accumulates a sub-voxel volume
 # difference after the rigid 180-degree print-pose transform of rounded shells.
@@ -434,6 +441,7 @@ def run_channel_layout_checks() -> None:
     retention_root_overlap = scad_scalar("retention_ridge_root_overlap")
     retention_fusion_overlap = scad_scalar("retention_ridge_fusion_overlap")
     retention_lid_clearance = scad_scalar("retention_lid_clearance")
+    loaded_lid_clearance = scad_scalar("loaded_lid_clearance")
     slot_xs = [scad_scalar(f"slot_xs[{i}]") for i in range(3)]
     profile_lengths = [scad_scalar(f"profile_lengths[{i}]") for i in range(3)]
     profile_cut_spans = [scad_scalar(f"profile_cut_spans[{i}]") for i in range(3)]
@@ -475,8 +483,12 @@ def run_channel_layout_checks() -> None:
         raise AssertionError("continuous retention ridge fusion overlap is unsuitable")
     if retention_root_overlap < 0.3:
         raise AssertionError("continuous retention ridge lacks a fused root overlap")
-    if retention_lid_clearance < 0.2:
+    if retention_lid_clearance < 0.4:
         raise AssertionError("lid retention relief lacks printable clearance")
+    if loaded_lid_clearance < LOADED_FLUTE_LID_CLEARANCE_MM:
+        raise AssertionError(
+            "lid flute relief is smaller than the loaded clearance requirement"
+        )
     if "retention_clip" in source:
         raise AssertionError("isolated retention clips remain in the continuous cradle")
     if "lid_retention_relief();" not in source:
@@ -544,7 +556,8 @@ def run_channel_layout_checks() -> None:
         f"{snap_interference:.2f} mm diametral snap interference along the "
         "continuous raised lip, P2-owned joint sleeve, "
         "P2/mouthpiece edges aligned to P1, "
-        f"{axial_clearance:.2f} mm axial and {radial_clearance:.2f} mm radial clearance"
+        f"{axial_clearance:.2f} mm axial and {radial_clearance:.2f} mm radial clearance, "
+        f"{loaded_lid_clearance:.2f} mm lidward relief"
     )
 
 
@@ -1114,60 +1127,106 @@ def run_color_project_checks() -> None:
             "single-filament 3MF differs beyond Bambu's degenerate-facet cleanup"
         )
 
-    eli_artwork = trimesh.load(ROOT / "QuenaCaseEliArtwork.stl", force="mesh")
-    eli_case = trimesh.load(
-        ROOT / "QuenaCaseEliTwoColorPrintInPlace.stl", force="mesh"
+    def check_alternate_project(
+        label: str,
+        project_name: str,
+        case_stl: str,
+        artwork_stl: str,
+    ) -> tuple[dict[str, object], str]:
+        alternate_artwork = trimesh.load(ROOT / artwork_stl, force="mesh")
+        alternate_case = trimesh.load(ROOT / case_stl, force="mesh")
+        if not alternate_artwork.is_watertight or not alternate_artwork.is_winding_consistent:
+            raise AssertionError(
+                f"{label} artwork must be a watertight, consistently wound mesh"
+            )
+        if not math.isclose(
+            float(alternate_artwork.bounds[0][2]), 0.0, abs_tol=0.01
+        ) or not math.isclose(float(alternate_artwork.bounds[1][2]), 0.2, abs_tol=0.01):
+            raise AssertionError(f"{label} artwork must occupy exactly one bed-facing layer")
+
+        alternate_logo_parts = [
+            component
+            for component in alternate_artwork.split(only_watertight=False)
+            if float(component.bounds[1][1]) > -case_outer_w / 2
+        ]
+        alternate_logo = trimesh.util.concatenate(alternate_logo_parts)
+        if (
+            len(alternate_logo.faces) != len(logo.faces)
+            or not np.allclose(alternate_logo.bounds, logo.bounds, atol=0.001)
+            or not math.isclose(
+                float(alternate_logo.volume), float(logo.volume), abs_tol=0.01
+            )
+        ):
+            raise AssertionError(f"{label} variant changed the Eurasian Synergy side")
+
+        alternate_recess_volume = float(solid_case.volume - alternate_case.volume)
+        if not math.isclose(
+            alternate_recess_volume,
+            float(alternate_artwork.volume),
+            abs_tol=max(0.2, float(alternate_artwork.volume) * 0.005),
+        ):
+            raise AssertionError(f"{label} artwork does not exactly fill its production recess")
+
+        project_path = ROOT / project_name
+        with zipfile.ZipFile(project_path) as archive:
+            if archive.testzip() is not None:
+                raise AssertionError(f"{label} case 3MF contains a corrupt member")
+            alternate_metadata = archive.read("Metadata/model_settings.config").decode(
+                "utf-8"
+            )
+            alternate_settings = json.loads(archive.read("Metadata/project_settings.config"))
+        for name in (case_stl, artwork_stl):
+            if name not in alternate_metadata:
+                raise AssertionError(f"{label} case 3MF is missing {name}")
+        if 'key="extruder" value="1"' not in alternate_metadata or 'key="extruder" value="2"' not in alternate_metadata:
+            raise AssertionError(f"{label} case 3MF does not map both colors")
+        return alternate_settings, alternate_metadata
+
+    eli_settings, _eli_metadata = check_alternate_project(
+        "ELI",
+        "QuenaCaseEli.3mf",
+        "QuenaCaseEliTwoColorPrintInPlace.stl",
+        "QuenaCaseEliArtwork.stl",
     )
-    if not eli_artwork.is_watertight or not eli_artwork.is_winding_consistent:
-        raise AssertionError("ELI artwork must be a watertight, consistently wound mesh")
-    if not math.isclose(float(eli_artwork.bounds[0][2]), 0.0, abs_tol=0.01) or not math.isclose(
-        float(eli_artwork.bounds[1][2]), 0.2, abs_tol=0.01
-    ):
-        raise AssertionError("ELI artwork must occupy exactly one bed-facing layer")
-
-    eli_logo_parts = [
-        component
-        for component in eli_artwork.split(only_watertight=False)
-        if float(component.bounds[1][1]) > -case_outer_w / 2
-    ]
-    eli_logo = trimesh.util.concatenate(eli_logo_parts)
-    if (
-        len(eli_logo.faces) != len(logo.faces)
-        or not np.allclose(eli_logo.bounds, logo.bounds, atol=0.001)
-        or not math.isclose(float(eli_logo.volume), float(logo.volume), abs_tol=0.01)
-    ):
-        raise AssertionError("ELI variant changed the Eurasian Synergy side")
-
-    eli_recess_volume = float(solid_case.volume - eli_case.volume)
-    if not math.isclose(
-        eli_recess_volume,
-        float(eli_artwork.volume),
-        abs_tol=max(0.2, float(eli_artwork.volume) * 0.005),
-    ):
-        raise AssertionError("ELI artwork does not exactly fill its production recess")
-
-    eli_project = ROOT / "QuenaCaseEli.3mf"
-    with zipfile.ZipFile(eli_project) as archive:
-        if archive.testzip() is not None:
-            raise AssertionError("ELI case 3MF contains a corrupt member")
-        eli_metadata = archive.read("Metadata/model_settings.config").decode("utf-8")
-        eli_settings = json.loads(archive.read("Metadata/project_settings.config"))
-    for name in ("QuenaCaseEliTwoColorPrintInPlace.stl", "QuenaCaseEliArtwork.stl"):
-        if name not in eli_metadata:
-            raise AssertionError(f"ELI case 3MF is missing {name}")
     if eli_settings.get("name") != "AgnuQuena ELI 2026 two-color print-in-place case":
         raise AssertionError("ELI case 3MF does not identify the alternate pattern")
-    if 'key="extruder" value="1"' not in eli_metadata or 'key="extruder" value="2"' not in eli_metadata:
-        raise AssertionError("ELI case 3MF does not map both colors")
 
     source = (ROOT / "QuenaCase.scad").read_text(encoding="utf-8")
     if not re.search(r'text\(\s*"ELI"', source) or not re.search(
         r'text\(\s*"2026"', source
     ):
         raise AssertionError("ELI pattern does not contain the requested name and year")
+    loaf_boof_settings, loaf_boof_metadata = check_alternate_project(
+        "Loaf Boof",
+        "QuenaCaseLoafBoof.3mf",
+        "QuenaCaseLoafBoofTwoColorPrintInPlace.stl",
+        "QuenaCaseLoafBoofArtwork.stl",
+    )
+    if loaf_boof_settings.get("name") != (
+        "AgnuQuena Loaf Boof 26 two-color print-in-place case"
+    ):
+        raise AssertionError("Loaf Boof case 3MF does not identify the alternate pattern")
+    if loaf_boof_settings.get("first_layer_print_sequence") != ["2", "1"]:
+        raise AssertionError("Loaf Boof project must request black before yellow")
+    if 'key="first_layer_print_sequence" value="2 1"' not in loaf_boof_metadata:
+        raise AssertionError("Loaf Boof plate must request black before yellow")
+    loaf_boof_module = source.split("module loaf_boof_panel_2d()", 1)[1].split(
+        "module lid_pattern_2d(", 1
+    )[0]
+    for label in ("LOAF", "BOOF", "26"):
+        if not re.search(rf'filled_label_2d\("{label}"', loaf_boof_module):
+            raise AssertionError(f"Loaf Boof pattern is missing filled text {label}")
+    if "embroidered_fill_2d" in loaf_boof_module:
+        raise AssertionError("Loaf Boof text must be filled, not striped embroidery")
+    filled_label_module = source.split("module filled_label_2d(", 1)[1].split(
+        "module loaf_boof_panel_2d()", 1
+    )[0]
+    if "text(" not in filled_label_module:
+        raise AssertionError("filled Loaf Boof labels must use solid OpenSCAD text")
     print(
         "QuenaCase colour projects: ok, unchanged Eurasian Synergy side, "
-        "canonical mandala and alternate embroidered ELI 2026 backs, one "
+        "canonical mandala, alternate embroidered ELI 2026 back, and filled "
+        "Loaf Boof 26 back, one "
         "0.2 mm colour layer, compact first-layer prime tower"
     )
 
@@ -1335,6 +1394,7 @@ def run_hinge_sweep_check() -> None:
                 p.resetBasePositionAndOrientation(
                     stored_parts_body, flute_position, [0, 0, 0, 1]
                 )
+                closest_loaded_gap = float("inf")
                 for deg in range(LID_SWEEP_MAX_DEG + 1):
                     radians = math.radians(deg)
                     hinge_to_lid = subtract_points(closed_lid_position, hinge_axis)
@@ -1359,6 +1419,23 @@ def run_hinge_sweep_check() -> None:
                             f"{len(contacts)} contacts, deepest penetration "
                             f"{-deepest:.3f} mm"
                         )
+                    close_points = p.getClosestPoints(
+                        lid_body,
+                        stored_parts_body,
+                        distance=LOADED_FLUTE_LID_CLEARANCE_MM,
+                    )
+                    if close_points:
+                        closest_loaded_gap = min(
+                            closest_loaded_gap,
+                            min(contact[8] for contact in close_points),
+                        )
+                if closest_loaded_gap < LOADED_FLUTE_LID_CLEARANCE_MM:
+                    raise AssertionError(
+                        "QuenaCase loaded hinge sweep: flute/lid clearance is only "
+                        f"{closest_loaded_gap:.3f} mm with flute offset "
+                        f"{flute_position}; minimum is "
+                        f"{LOADED_FLUTE_LID_CLEARANCE_MM:.2f} mm"
+                    )
 
         print(
             "QuenaCase hinge sweep: ok, "
@@ -1368,7 +1445,8 @@ def run_hinge_sweep_check() -> None:
         print(
             "QuenaCase loaded hinge sweep: ok, 3 stored-part envelopes, "
             f"{len(clearance_poses)} clearance-limit poses, "
-            f"0-{LID_SWEEP_MAX_DEG} deg"
+            f"0-{LID_SWEEP_MAX_DEG} deg, "
+            f">= {LOADED_FLUTE_LID_CLEARANCE_MM:.2f} mm flute/lid clearance"
         )
     finally:
         p.disconnect(physics_client)

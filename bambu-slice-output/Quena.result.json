@@ -1,9 +1,9 @@
 {
     "error_string": "Success.",
-    "export_time": 347,
+    "export_time": 643,
     "layer_height": 0.20000000298023224,
     "plate_index": 0,
-    "prepare_time": 50,
+    "prepare_time": 108,
     "return_code": 0,
     "sliced_plates": [
         {
@@ -12,12 +12,12 @@
                 "Custom": 364.09869384765625,
                 "Flush": 29.0,
                 "Gap infill": 69.54801177978516,
-                "Inner wall": 10.171258926391602,
-                "Outer wall": 4956.53369140625,
+                "Inner wall": 10.171281814575195,
+                "Outer wall": 4956.52783203125,
                 "Overhang wall": 5.319519519805908,
                 "Top surface": 3.8356192111968994,
-                "Travel": 594.8853759765625,
-                "Undefined": 588.637451171875
+                "Travel": 596.8379516601563,
+                "Undefined": 590.5900268554688
             },
             "filament_change_times": 0,
             "filaments": [
@@ -28,12 +28,12 @@
                     "total_used_g": 20.235986709594727
                 }
             ],
-            "generate_support_material_time": 986,
+            "generate_support_material_time": 1846,
             "id": 1,
-            "infill_time": 65,
+            "infill_time": 148,
             "layer_filament_change": 0,
-            "main_predication": 5793.0078125,
-            "make_perimeters_time": 663,
+            "main_predication": 5794.95947265625,
+            "make_perimeters_time": 1580,
             "obj_cached_cnt": 0,
             "objects": [
                 {
@@ -50,9 +50,9 @@
                     "triangle_count": 19564
                 }
             ],
-            "sliced_time": 3543,
-            "sliced_time_with_cache": 1193,
-            "total_predication": 6208.828125,
+            "sliced_time": 7085,
+            "sliced_time_with_cache": 2214,
+            "total_predication": 6210.77978515625,
             "triangle_count": 19564,
             "warning_message": ""
         }

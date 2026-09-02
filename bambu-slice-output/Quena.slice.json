@@ -1,17 +1,17 @@
 {
   "gcode": {
     "file": "Quena.gcode",
-    "sha256": "2a3d6916a3930999cbd849bf940c360f00f59973e95c0a1763fac23d3e9599f5"
+    "sha256": "0ab3017a590ec66ee6bcaea6375bd9676c93d0029462eda5cdb07dc3a0f10e34"
   },
-  "generated_at": "2026-08-28T21:56:24.805569+00:00",
+  "generated_at": "2026-09-02T04:28:54.508389+00:00",
   "job": "Quena",
   "printable_3mf": {
     "file": "Quena.gcode.3mf",
-    "sha256": "f978abf148de86789d6a20c6656841c9f2d626bdd47272496aa82c5f0209cdb2"
+    "sha256": "3d85ae5a48768a6556ec7c28570791e053fe6e4c0db78833576eabae67412823"
   },
   "project": {
     "file": "Quena.3mf",
-    "sha256": "da5a0897587260cff16c9325d0c35784f8d190e99406e4ccae290fc50341591b"
+    "sha256": "481ecd235b2c56927f87cdd0d4fca3e8f64872979d782c07028c045df11e2d5d"
   },
   "schema_version": 1,
   "slicer": {
@@ -37,6 +37,9 @@
       }
     ],
     "layers": 1206,
+    "material_sequence": [
+      0
+    ],
     "multi_material": false,
     "prime_tower": false,
     "sparse_infill_density_percent": 25.0,

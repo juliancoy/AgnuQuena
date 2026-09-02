@@ -42,6 +42,11 @@ MESHES = [
         ROOT / "QuenaCaseEliTwoColorPrintInPlace.stl",
         True,
     ),
+    (
+        "print_in_place_loaf_boof_two_color",
+        ROOT / "QuenaCaseLoafBoofTwoColorPrintInPlace.stl",
+        True,
+    ),
     # Canonical model-space components are shared by engineering validation
     # and the browser. A separate print-pose STL is unavoidable because its
     # lid is rigidly rotated 180 degrees onto the build plate.
@@ -52,6 +57,8 @@ MESHES = [
     ("case_artwork_print", ROOT / "QuenaCaseArtwork.stl", True),
     ("case_eli_engraving", ROOT / "QuenaCaseEliEngraving.stl", True),
     ("case_eli_artwork_print", ROOT / "QuenaCaseEliArtwork.stl", True),
+    ("case_loaf_boof_engraving", ROOT / "QuenaCaseLoafBoofEngraving.stl", True),
+    ("case_loaf_boof_artwork_print", ROOT / "QuenaCaseLoafBoofArtwork.stl", True),
     ("assembly", ROOT / "QuenaCaseAssembly.stl", True),
 ]
 
@@ -159,10 +166,12 @@ def render_stl(part: str, output: Path, *, force: bool = False) -> None:
         "bottom",
         "case_artwork_print",
         "case_eli_artwork_print",
+        "case_loaf_boof_artwork_print",
         "lid",
         "print_in_place",
         "print_in_place_two_color",
         "print_in_place_eli_two_color",
+        "print_in_place_loaf_boof_two_color",
         "assembly",
     }
     dependencies = (

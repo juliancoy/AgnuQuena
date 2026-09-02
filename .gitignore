@@ -9,3 +9,10 @@ acoustics/out/
 # CalculiX result dumps are generated and can exceed GitHub's 100 MB limit.
 analysis/*.frd
 bambu-slice*
+result.json
+!bambu-slice-output/
+!bambu-slice-output/QuenaCaseLoafBoof.3mf
+!bambu-slice-output/QuenaCaseLoafBoof.gcode
+!bambu-slice-output/QuenaCaseLoafBoof.gcode.3mf
+!bambu-slice-output/QuenaCaseLoafBoof.result.json
+!bambu-slice-output/QuenaCaseLoafBoof.slice.json

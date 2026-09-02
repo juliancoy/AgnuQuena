@@ -22,13 +22,16 @@ make print-slice
 ```
 
 The retained source projects, printable `.gcode.3mf` files, and plain G-code
-are named `Quena`, `QuenaCase`, and `QuenaCaseSingleFilament` under
-`bambu-slice-output/`, alongside job-specific slicer results and SHA-256
-manifests. The printable 3MF files already contain the validated slice and open
-directly in Preview, so printing does not depend on the desktop Slice action.
-The two-color case confines all artwork
-to the first `0.20 mm` layer, reducing the job to one material change. The
-single-filament case preserves the
+are named `Quena`, `QuenaCase`, `QuenaCaseEli`, `QuenaCaseLoafBoof`, and
+`QuenaCaseSingleFilament` under `bambu-slice-output/`, alongside job-specific
+slicer results and SHA-256 manifests. The printable 3MF files already contain
+the validated slice for printer upload, but this Bambu Studio build only opens
+files ending in `.gcode` directly in the G-code preview. Open the source `.3mf`
+to inspect/edit geometry in Prepare, or open the retained `.gcode` to inspect
+the validated toolpath without slicing.
+The stock, Eli, and Loaf Boof two-color cases confine all artwork to the first
+`0.20 mm` layer and print black before yellow, reducing each job to one
+material change. The single-filament case preserves the
 recessed logo and mandala/flourish engraving but omits the separate inlay mesh,
 second filament, and prime tower. It is the unattended option for a printer
 equipped with one AMS HT. Bambu Studio 2.8's mixed external/AMS mapping supports

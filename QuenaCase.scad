@@ -9,8 +9,9 @@ include <generated/quena_parameters.scad>
 include <generated/case_logo_dimensions.scad>
 
 // Select "bottom", "mandala_panel", "lid", "case_engraving", "print_in_place",
-// "print_in_place_two_color", "print_in_place_eli_two_color", "case_logo",
-// "case_artwork_print", "case_eli_artwork_print", "latch",
+// "print_in_place_two_color", "print_in_place_eli_two_color",
+// "print_in_place_loaf_boof_two_color", "case_logo", "case_artwork_print",
+// "case_eli_artwork_print", "case_loaf_boof_artwork_print", "latch",
 // "assembly", "preview", or "none".
 // Override from the CLI with:
 // openscad -D 'part="print_in_place"' -o QuenaCasePrintInPlace.stl QuenaCase.scad
@@ -93,7 +94,8 @@ retention_lip_overrun = 3.0;
 retention_ridge_wall = wall;
 retention_ridge_root_overlap = 0.4;
 retention_ridge_fusion_overlap = 0.04;
-retention_lid_clearance = 0.25;
+retention_lid_clearance = 0.45;
+loaded_lid_clearance = 0.35;
 connector_backset = angled_transition_z + 2;
 connector_expand_start = 2;
 slot_lengths = [tube_part_1_length, tube_part_2_length, mouthpiece_total_length];
@@ -612,9 +614,64 @@ module eli_panel_2d() {
     }
 }
 
+module filled_label_2d(label, size, spacing = 1.0) {
+    text(
+        label,
+        size = size,
+        font = "DejaVu Sans:style=Bold",
+        halign = "center",
+        valign = "center",
+        spacing = spacing
+    );
+}
+
+module loaf_boof_panel_2d() {
+    frame_r = corner_r - eli_frame_inset;
+    inner_size = [
+        case_outer_l - 2 * eli_frame_inset,
+        case_outer_w - 2 * eli_frame_inset
+    ];
+    union() {
+        for (offset_mm = [0, 2.8])
+            difference() {
+                rounded_rect_2d(
+                    [inner_size[0] - offset_mm * 2, inner_size[1] - offset_mm * 2],
+                    frame_r - offset_mm
+                );
+                offset(delta = -eli_stitch_width)
+                    rounded_rect_2d(
+                        [inner_size[0] - offset_mm * 2, inner_size[1] - offset_mm * 2],
+                        frame_r - offset_mm
+                    );
+            }
+
+        translate([-33, 5])
+            filled_label_2d("LOAF", 18, 1.05);
+        translate([30, -8])
+            filled_label_2d("BOOF", 18, 1.05);
+        translate([83, 4])
+            filled_label_2d("26", 14, 1.0);
+
+        for (x = [-108, -98, 98, 108])
+            for (y = [-12, 12])
+                translate([x, y]) cross_stitch_2d();
+        for (sx = [-1, 1])
+            scale([sx, 1]) {
+                stroke_path_2d(
+                    [[78, -12], [86, -8], [94, -11], [103, -6]],
+                    eli_stitch_width
+                );
+                translate([104, -6]) rotate(-25)
+                    flourish_leaf_2d(5.2, 2.4);
+            }
+    }
+}
+
 module lid_pattern_2d(pattern = "mandala") {
     if (pattern == "eli")
         eli_panel_2d();
+    else if (pattern == "loaf_boof")
+        loaf_boof_panel_2d();
     else
         mandala_panel_2d();
 }
@@ -787,11 +844,15 @@ module profiled_channel_cut(
     }
 }
 
-module all_channel_cuts(extra_depth = 0, flat_relief = true) {
+module all_channel_cuts(
+    extra_depth = 0,
+    flat_relief = true,
+    diameter_offset = 0
+) {
     for (i = [0 : 2])
         translate([slot_x(i), slot_y(i), slot_z])
             rotate([0, 0, slot_rot_z(i)])
-                profiled_channel_cut(i, extra_depth, flat_relief);
+                profiled_channel_cut(i, extra_depth, flat_relief, diameter_offset);
 }
 
 module retention_ridge_local(i, cavity = false) {
@@ -1514,7 +1575,7 @@ module lid_case(
             round_top = true
         );
         translate([0, 0, -lid_closed_z])
-            all_channel_cuts(4, false);
+            all_channel_cuts(4, false, loaded_lid_clearance * 2);
         lid_retention_relief();
         if (with_ornament_recess)
             lid_ornament_recess(ornament_depth, ornament_pattern);
@@ -1604,6 +1665,8 @@ if (part == "none") {
     mandala_panel_2d();
 } else if (part == "eli_panel") {
     eli_panel_2d();
+} else if (part == "loaf_boof_panel") {
+    loaf_boof_panel_2d();
 } else if (part == "lid") {
     lid_assembly();
 } else if (part == "case_engraving") {
@@ -1616,6 +1679,10 @@ if (part == "none") {
     lid_ornament_inlay(mandala_depth, "eli");
 } else if (part == "case_eli_artwork_print") {
     case_artwork_in_print_pose(two_color_inlay_depth, "eli");
+} else if (part == "case_loaf_boof_engraving") {
+    lid_ornament_inlay(mandala_depth, "loaf_boof");
+} else if (part == "case_loaf_boof_artwork_print") {
+    case_artwork_in_print_pose(two_color_inlay_depth, "loaf_boof");
 } else if (part == "latch") {
     lid_simple_latch();
 } else if (part == "assembly") {
@@ -1627,6 +1694,12 @@ if (part == "none") {
         two_color_inlay_depth,
         two_color_inlay_depth,
         "eli"
+    );
+} else if (part == "print_in_place_loaf_boof_two_color") {
+    print_in_place_case(
+        two_color_inlay_depth,
+        two_color_inlay_depth,
+        "loaf_boof"
     );
 } else if (part == "print_in_place") {
     print_in_place_case();

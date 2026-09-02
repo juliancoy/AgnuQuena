@@ -255,6 +255,13 @@ print contract. It contains one assembly with:
 - Supports, brims, and skirts disabled; a compact `20 mm` prime tower with a
   `1 mm` brim is limited to the active colour layer and ends at `Z=0.2`.
 
+`QuenaCaseEli.3mf` and `QuenaCaseLoafBoof.3mf` use the same two-colour print
+contract with alternate lower-panel artwork. The Loaf Boof version replaces the
+stitched Eli label with filled `Loaf Boof 26` text while keeping the shared
+Eurasian Synergy upper-panel artwork unchanged. Its first-layer sequence is
+forced to black filament 2 before yellow filament 1, so the filled-text slice
+keeps black geometry on the first layer only with one counted material change.
+
 The two-colour slice has one material transition. With only one AMS HT,
 map black filament 2 to External and yellow filament 1 to the AMS HT in the
 Bambu Studio 2.8 send dialog. Its mixed external/AMS workflow pauses for the
